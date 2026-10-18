@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthPrompt } from "../context/AuthPromptContext";
 import { client } from "../api/client";
 import { Badge } from "./ui";
 import Icon from "./Icon";
 import { visibleTabs } from "../config/roles";
+import NotificationPopover from "./NotificationPopover";
 
 /* ------------------------------------------------------------------ */
 /* Brand                                                               */
@@ -40,6 +42,8 @@ function navItemClass({ isActive }) {
 }
 
 function SideNav({ user, onNavigate }) {
+  const { promptAuth } = useAuthPrompt();
+  const location = useLocation();
   const tabs = useMemo(() => visibleTabs(user), [user]);
   const sections = useMemo(() => {
     const order = [];
@@ -64,7 +68,21 @@ function SideNav({ user, onNavigate }) {
           </p>
           <div className="flex flex-col gap-1">
             {section.tabs.map((t) => (
-              <NavLink key={t.key} to={t.to} end={t.to === "/"} className={navItemClass} onClick={onNavigate}>
+              <NavLink
+                key={t.key}
+                to={t.to}
+                end={t.end ?? t.to === "/"}
+                className={navItemClass}
+                onClick={(e) => {
+                  if (!user && location.pathname === "/" && t.to !== "/") {
+                    e.preventDefault();
+                    onNavigate?.();
+                    promptAuth({ to: t.to, badge: t.label });
+                    return;
+                  }
+                  onNavigate?.();
+                }}
+              >
                 <Icon name={t.icon || t.key} className="h-[18px] w-[18px] shrink-0" />
                 <span className="truncate">{t.label}</span>
               </NavLink>
@@ -104,7 +122,7 @@ function useUnread(user) {
     async function poll() {
       try {
         const { data } = await client.get("/notifications", { params: { unreadOnly: true } });
-        if (!cancelled) setUnread(data.unreadCount || 0);
+        if (!cancelled && typeof data.unreadCount === "number") setUnread(data.unreadCount);
       } catch {
         /* ignore polling errors */
       }
@@ -116,7 +134,42 @@ function useUnread(user) {
       clearInterval(id);
     };
   }, [user]);
-  return unread;
+  return [unread, setUnread];
+}
+
+/* ------------------------------------------------------------------ */
+/* Onboarding status (merchant / organizer applications)               */
+/* ------------------------------------------------------------------ */
+function useOnboardingStatus(user) {
+  const [status, setStatus] = useState(null);
+  useEffect(() => {
+    if (!user || user.role !== "student") {
+      setStatus(null);
+      return;
+    }
+    let cancelled = false;
+    client
+      .get("/onboarding/status")
+      .then(({ data }) => {
+        if (!cancelled) setStatus(data);
+      })
+      .catch(() => {
+        if (!cancelled) setStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+  return status;
+}
+
+function onboardingEntry(app, { applyTo, dashTo, label, icon }) {
+  if (!app) return { to: applyTo, label: `Become a ${label}`, icon };
+  if (app.status === "approved") return { to: dashTo, label: `${label} Dashboard`, icon: "dashboard" };
+  if (app.status === "pending_review") {
+    return { to: applyTo, label: `${label} Application`, icon: "clock", badge: "Pending", tone: "warn" };
+  }
+  return { to: applyTo, label: `${label} Application`, icon: "alert", badge: "Rejected", tone: "danger" };
 }
 
 /* ------------------------------------------------------------------ */
@@ -134,7 +187,7 @@ function roleLabel(role) {
   );
 }
 
-function UserMenu({ user, unread, onLogout }) {
+function UserMenu({ user, unread, onLogout, onboarding }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -147,6 +200,23 @@ function UserMenu({ user, unread, onLogout }) {
   }, []);
 
   const initial = user.name?.[0]?.toUpperCase() || "U";
+
+  const merchantEntry =
+    user.role === "student" &&
+    onboardingEntry(onboarding?.merchant, {
+      applyTo: "/merchant-apply",
+      dashTo: "/merchant",
+      label: "Merchant",
+      icon: "store",
+    });
+  const organizerEntry =
+    user.role === "student" &&
+    onboardingEntry(onboarding?.organizer, {
+      applyTo: "/organizer-apply",
+      dashTo: "/organizer",
+      label: "Organizer",
+      icon: "events",
+    });
 
   return (
     <div className="relative" ref={ref}>
@@ -174,7 +244,7 @@ function UserMenu({ user, unread, onLogout }) {
       {open && (
         <div
           role="menu"
-          className="glass-panel animate-rise absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl"
+          className="glass-panel animate-rise absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl"
         >
           <div className="border-b border-slate-200/70 bg-slate-50/70 px-4 py-3">
             <p className="truncate text-sm font-semibold text-slate-900">{user.name}</p>
@@ -189,10 +259,42 @@ function UserMenu({ user, unread, onLogout }) {
             <MenuLink to="/profile" icon="user" onClick={() => setOpen(false)}>
               My Profile
             </MenuLink>
+            <MenuLink to="/orders" icon="orders" onClick={() => setOpen(false)}>
+              My Orders
+            </MenuLink>
+            <MenuLink to="/favorites" icon="favorites" onClick={() => setOpen(false)}>
+              Saved Items
+            </MenuLink>
             <MenuLink to="/notifications" icon="bell" onClick={() => setOpen(false)} badge={unread}>
               Notifications
             </MenuLink>
           </div>
+          {(merchantEntry || organizerEntry) && (
+            <div className="border-t border-slate-200/70 p-1.5">
+              {merchantEntry && (
+                <MenuLink
+                  to={merchantEntry.to}
+                  icon={merchantEntry.icon}
+                  onClick={() => setOpen(false)}
+                  badgeLabel={merchantEntry.badge}
+                  badgeTone={merchantEntry.tone}
+                >
+                  {merchantEntry.label}
+                </MenuLink>
+              )}
+              {organizerEntry && (
+                <MenuLink
+                  to={organizerEntry.to}
+                  icon={organizerEntry.icon}
+                  onClick={() => setOpen(false)}
+                  badgeLabel={organizerEntry.badge}
+                  badgeTone={organizerEntry.tone}
+                >
+                  {organizerEntry.label}
+                </MenuLink>
+              )}
+            </div>
+          )}
           <div className="border-t border-slate-200/70 p-1.5">
             <button
               type="button"
@@ -212,7 +314,7 @@ function UserMenu({ user, unread, onLogout }) {
   );
 }
 
-function MenuLink({ to, icon, children, onClick, badge }) {
+function MenuLink({ to, icon, children, onClick, badge, badgeLabel, badgeTone }) {
   return (
     <Link
       to={to}
@@ -222,6 +324,7 @@ function MenuLink({ to, icon, children, onClick, badge }) {
     >
       <Icon name={icon} className="h-4 w-4" />
       <span className="flex-1">{children}</span>
+      {badgeLabel && <Badge tone={badgeTone || "slate"}>{badgeLabel}</Badge>}
       {badge > 0 && <Badge tone="accent">{badge}</Badge>}
     </Link>
   );
@@ -260,7 +363,7 @@ function SearchBox({ className = "", onDone }) {
 /* ------------------------------------------------------------------ */
 /* Mobile drawer + bottom nav                                          */
 /* ------------------------------------------------------------------ */
-function MobileDrawer({ open, onClose, user, unread, onLogout }) {
+function MobileDrawer({ open, onClose, user, unread, onLogout, onboarding }) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -306,6 +409,38 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
         <div className="border-t border-slate-200/70 p-3">
           {user ? (
             <div className="flex flex-col gap-1">
+              {user.role === "student" && (
+                <>
+                  {(() => {
+                    const entries = [
+                      onboardingEntry(onboarding?.merchant, {
+                        applyTo: "/merchant-apply",
+                        dashTo: "/merchant",
+                        label: "Merchant",
+                        icon: "store",
+                      }),
+                      onboardingEntry(onboarding?.organizer, {
+                        applyTo: "/organizer-apply",
+                        dashTo: "/organizer",
+                        label: "Organizer",
+                        icon: "events",
+                      }),
+                    ];
+                    return entries.map((entry) => (
+                      <NavLink key={entry.label} to={entry.to} onClick={onClose} className={navItemClass}>
+                        <Icon name={entry.icon || "compass"} className="h-[18px] w-[18px]" />
+                        <span className="truncate">{entry.label}</span>
+                        {entry.badge && (
+                          <Badge tone={entry.tone || "slate"} className="ml-auto">
+                            {entry.badge}
+                          </Badge>
+                        )}
+                      </NavLink>
+                    ));
+                  })()}
+                  <div className="hairline mx-1 my-1 h-px" />
+                </>
+              )}
               <NavLink to="/notifications" onClick={onClose} className={navItemClass}>
                 <Icon name="bell" className="h-[18px] w-[18px]" />
                 Notifications
@@ -352,6 +487,8 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
 }
 
 function BottomNav({ user }) {
+  const { promptAuth } = useAuthPrompt();
+  const location = useLocation();
   const items = [
     { to: "/", label: "Home", icon: "home", end: true },
     { to: "/marketplace", label: "Shop", icon: "marketplace" },
@@ -368,6 +505,12 @@ function BottomNav({ user }) {
           key={it.to}
           to={it.to}
           end={it.end}
+          onClick={(e) => {
+            if (!user && location.pathname === "/" && it.to !== "/" && it.to !== "/login") {
+              e.preventDefault();
+              promptAuth({ to: it.to, badge: it.label });
+            }
+          }}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition ${
               isActive ? "text-slate-900 font-semibold" : "text-slate-500 hover:text-slate-800"
@@ -389,10 +532,12 @@ export { roleLabel };
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const { promptAuth } = useAuthPrompt();
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const unread = useUnread(user);
+  const [unread, setUnread] = useUnread(user);
+  const onboarding = useOnboardingStatus(user);
 
   async function handleLogout() {
     await logout();
@@ -426,19 +571,8 @@ export default function AppLayout({ children }) {
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
             {user ? (
               <>
-                <Link
-                  to="/notifications"
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/90 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white hover:text-slate-900"
-                  aria-label="Notifications"
-                >
-                  <Icon name="bell" />
-                  {unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#1c222c] px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                      {unread > 99 ? "99+" : unread}
-                    </span>
-                  )}
-                </Link>
-                <UserMenu user={user} unread={unread} onLogout={handleLogout} />
+                <NotificationPopover unreadCount={unread} onUnreadChange={setUnread} />
+                <UserMenu user={user} unread={unread} onLogout={handleLogout} onboarding={onboarding} />
               </>
             ) : (
               <>
@@ -504,6 +638,17 @@ export default function AppLayout({ children }) {
               <p className="mt-1 text-xs text-slate-600">Post items to sell or rent to peers</p>
               <Link
                 to="/listings/new"
+                onClick={(e) => {
+                  if (!user && location.pathname === "/") {
+                    e.preventDefault();
+                    promptAuth({
+                      to: "/listings/new",
+                      badge: "Create Listing",
+                      description:
+                        "Log in or sign up with your campus account to list items for sale or rent.",
+                    });
+                  }
+                }}
                 className="mt-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-[#1c222c] hover:bg-[#2c3545] px-3 py-2 text-xs font-medium text-white shadow-sm transition"
               >
                 <span>Create Listing</span>
@@ -561,6 +706,7 @@ export default function AppLayout({ children }) {
         user={user}
         unread={unread}
         onLogout={handleLogout}
+        onboarding={onboarding}
       />
     </div>
   );

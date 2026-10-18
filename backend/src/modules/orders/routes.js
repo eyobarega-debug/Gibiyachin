@@ -278,7 +278,15 @@ router.patch(
     );
 
     try {
-      await notify(order.buyer_id, "order_update", orderStatus.BUYER_MESSAGE[target], `Order #${orderStatus.shortId(order.id)}`);
+      await notify(
+        order.buyer_id,
+        "order_update",
+        orderStatus.BUYER_MESSAGE[target],
+        `Order #${orderStatus.shortId(order.id)}`,
+        `/orders?orderId=${order.id}`,
+        "order",
+        order.id
+      );
     } catch (err) {
       console.warn("[orders] status notification failed (non-fatal):", err.message); // the status change already committed
     }
@@ -325,6 +333,45 @@ router.post(
       return updated;
     });
 
+    try {
+      if (result.status === "cancellation_requested") {
+        await notify(
+          result.merchant_id,
+          "order_update",
+          "Order cancellation requested",
+          `Buyer requested cancellation for Order #${orderStatus.shortId(result.id)}.`,
+          `/merchant?tab=Orders&orderId=${result.id}`,
+          "order",
+          result.id
+        );
+      } else if (result.status === "cancelled") {
+        if (req.user.id !== result.buyer_id) {
+          await notify(
+            result.buyer_id,
+            "order_update",
+            "Order cancelled",
+            `Order #${orderStatus.shortId(result.id)} was cancelled.`,
+            `/orders?orderId=${result.id}`,
+            "order",
+            result.id
+          );
+        }
+        if (req.user.id !== result.merchant_id) {
+          await notify(
+            result.merchant_id,
+            "order_update",
+            "Order cancelled",
+            `Order #${orderStatus.shortId(result.id)} was cancelled.`,
+            `/merchant?tab=Orders&orderId=${result.id}`,
+            "order",
+            result.id
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("[orders] cancellation notification failed (non-fatal):", err.message);
+    }
+
     res.json({ order: present(result, req.user) });
   })
 );
@@ -364,7 +411,10 @@ router.post(
         result.merchant_id,
         "order_update",
         "Material receipt confirmed",
-        `The buyer confirmed receiving Order #${orderStatus.shortId(result.id)}.`
+        `The buyer confirmed receiving Order #${orderStatus.shortId(result.id)}.`,
+        `/merchant?tab=Orders&orderId=${result.id}`,
+        "order",
+        result.id
       );
     } catch (err) {
       console.warn("[orders] receipt notification failed (non-fatal):", err.message);
@@ -397,11 +447,17 @@ payments.registerFinalizer("order", {
     const { order } = await orderStatus.transition(client, orderId, "confirmed", { actorId: null, note: "Merchant confirmed payment receipt" });
     await orderStatus.queueNotification(
       client, order.merchant_id, "New order received",
-      `Order #${orderStatus.shortId(order.id)} — ${Number(order.total_amount).toFixed(2)} birr`
+      `Order #${orderStatus.shortId(order.id)} — ${Number(order.total_amount).toFixed(2)} birr`,
+      `/merchant?tab=Orders&orderId=${order.id}`,
+      "order",
+      order.id
     );
     await orderStatus.queueNotification(
       client, order.buyer_id, "Payment confirmed",
-      `${orderStatus.BUYER_MESSAGE.confirmed} (Order #${orderStatus.shortId(order.id)})`
+      `${orderStatus.BUYER_MESSAGE.confirmed} (Order #${orderStatus.shortId(order.id)})`,
+      `/orders?orderId=${order.id}`,
+      "order",
+      order.id
     );
   },
   // Payment failed / expired -> cancel the unpaid order and give the stock back.
@@ -414,7 +470,10 @@ payments.registerFinalizer("order", {
     await orderStatus.releaseStock(client, orderId);
     await orderStatus.queueNotification(
       client, order.buyer_id, "Payment failed",
-      `Your order #${orderStatus.shortId(order.id)} could not be paid for. Stock has been released.`
+      `Your order #${orderStatus.shortId(order.id)} could not be paid for. Stock has been released.`,
+      `/orders?orderId=${order.id}`,
+      "order",
+      order.id
     );
   },
   // Full refund of the payment -> the order becomes Refunded and the stock goes back on sale.
@@ -428,10 +487,16 @@ payments.registerFinalizer("order", {
     await orderStatus.releaseStock(client, orderId);
     await orderStatus.queueNotification(
       client, order.buyer_id, "Order refunded",
-      `${orderStatus.BUYER_MESSAGE.refunded} (Order #${orderStatus.shortId(order.id)})`
+      `${orderStatus.BUYER_MESSAGE.refunded} (Order #${orderStatus.shortId(order.id)})`,
+      `/orders?orderId=${order.id}`,
+      "order",
+      order.id
     );
     await orderStatus.queueNotification(
-      client, order.merchant_id, "Order refunded", `Order #${orderStatus.shortId(order.id)} was refunded.`
+      client, order.merchant_id, "Order refunded", `Order #${orderStatus.shortId(order.id)} was refunded.`,
+      `/merchant?tab=Orders&orderId=${order.id}`,
+      "order",
+      order.id
     );
   },
 });

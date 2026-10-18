@@ -36,7 +36,15 @@ async function notifyWaitlistIfAvailable(ticketTypeId, client) {
   const entry = waiting[0];
   if (!entry) return;
   await exec.query("UPDATE waitlist_entries SET status='notified', notified_at=now() WHERE id=$1", [entry.id]);
-  await notify(entry.user_id, "ticket_update", `A spot opened up for "${entry.event_title}"`, "Buy now before it's gone.");
+  await notify(
+    entry.user_id,
+    "ticket_update",
+    `A spot opened up for "${entry.event_title}"`,
+    "Buy now before it's gone.",
+    `/events/${entry.event_id}`,
+    "event",
+    entry.event_id
+  );
 }
 
 // FR-030 — view my tickets (QR is regenerated on demand — see utils/qr.js)
@@ -612,21 +620,33 @@ payments.registerFinalizer("ticket", {
     );
     const ticket = rows[0];
     const ev = await client.query("SELECT title FROM events WHERE id = $1", [ticket.event_id]);
-    await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'ticket_update',$2,$3)", [
-      ticket.holder_id,
-      "Your ticket is ready",
-      `${ev.rows[0].title} — view your QR code in My Tickets.`,
-    ]);
+    await client.query(
+      "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'ticket_update',$2,$3,$4,$5,$6)",
+      [
+        ticket.holder_id,
+        "Your ticket is ready",
+        `${ev.rows[0].title} — view your QR code in My Tickets.`,
+        `/tickets?ticketId=${ticket.id}`,
+        "ticket",
+        ticket.id,
+      ]
+    );
   },
   onFailed: async (ticketId, client) => {
     const { rows } = await client.query("UPDATE tickets SET status='cancelled' WHERE id=$1 RETURNING *", [ticketId]);
     const ticket = rows[0];
     await client.query("UPDATE ticket_types SET quantity_sold = GREATEST(0, quantity_sold - 1) WHERE id = $1", [ticket.ticket_type_id]);
-    await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'ticket_update',$2,$3)", [
-      ticket.holder_id,
-      "Ticket payment failed",
-      "Your reserved ticket was released. Please try again.",
-    ]);
+    await client.query(
+      "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'ticket_update',$2,$3,$4,$5,$6)",
+      [
+        ticket.holder_id,
+        "Ticket payment failed",
+        "Your reserved ticket was released. Please try again.",
+        `/events/${ticket.event_id}`,
+        "event",
+        ticket.event_id,
+      ]
+    );
     await notifyWaitlistIfAvailable(ticket.ticket_type_id, client);
   },
   onRefunded: async (ticketId, client, { reason, actorId } = {}) => {
@@ -644,11 +664,17 @@ payments.registerFinalizer("ticket", {
       }
       const ev = await client.query("SELECT title FROM events WHERE id = $1", [ticket.event_id]);
       const eventTitle = ev.rows[0]?.title || "Event";
-      await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'ticket_update',$2,$3)", [
-        ticket.holder_id,
-        "Ticket refunded",
-        `Your ticket for "${eventTitle}" was refunded and cancelled.`,
-      ]);
+      await client.query(
+        "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'ticket_update',$2,$3,$4,$5,$6)",
+        [
+          ticket.holder_id,
+          "Ticket refunded",
+          `Your ticket for "${eventTitle}" was refunded and cancelled.`,
+          `/tickets?ticketId=${ticket.id}`,
+          "ticket",
+          ticket.id,
+        ]
+      );
     }
   },
 });

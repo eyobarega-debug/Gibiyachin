@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, Checkbox, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorBanner, Input, Modal, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
 import VerificationDocument from "../components/VerificationDocument";
 import ProofImage from "../components/ProofImage";
 import Icon from "../components/Icon";
@@ -10,6 +10,7 @@ import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
   "Merchants",
+  "Organizer Applications",
   "Events",
   "Event Payments",
   "Organizer Payouts",
@@ -25,7 +26,40 @@ const TABS = [
 
 export default function Admin() {
   const { user } = useAuth();
-  const [tab, setTab] = useState("Merchants");
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const targetApplicationId = searchParams.get("applicationId");
+  const targetRequestId = searchParams.get("requestId");
+  const targetEventId = searchParams.get("eventId");
+  const targetReportId = searchParams.get("reportId");
+  const targetPaymentId = searchParams.get("paymentId");
+
+  const resolveTabFromParam = (param) => {
+    if (!param) return "Merchants";
+    const p = param.toLowerCase();
+    if (p.includes("merchant")) return "Merchants";
+    if (p.includes("organizer")) return "Organizer Applications";
+    if (p.includes("event payment")) return "Event Payments";
+    if (p.includes("event")) return "Events";
+    if (p.includes("payout")) return "Organizer Payouts";
+    if (p.includes("commission")) return "Commission Payments";
+    if (p.includes("receiving")) return "Receiving Accounts";
+    if (p.includes("report") || p.includes("dispute")) return "Reports & Disputes";
+    if (p.includes("user")) return "Users";
+    if (p.includes("club")) return "Clubs";
+    if (p.includes("verification")) return "Verifications";
+    if (p.includes("analytic")) return "Analytics";
+    if (p.includes("audit")) return "Audit Log";
+    return "Merchants";
+  };
+
+  const [tab, setTab] = useState(() => resolveTabFromParam(tabParam));
+
+  useEffect(() => {
+    if (tabParam) {
+      setTab(resolveTabFromParam(tabParam));
+    }
+  }, [tabParam]);
 
   if (user?.role === "super_admin") {
     return (
@@ -38,18 +72,17 @@ export default function Admin() {
           <div className="flex justify-center text-accent-dark">
             <Icon name="university" className="h-10 w-10" />
           </div>
-          <h2 className="text-xl font-bold text-ink">Platform Superadmin Overview</h2>
+          <h2 className="text-xl font-bold text-ink">Super Admin Console</h2>
           <p className="text-sm text-muted max-w-md mx-auto">
-            You are logged in as a platform-level Super Administrator. Campus-specific administrative consoles (merchants, events, clubs, verifications, and disputes) are scoped to individual universities and require a campus administrator account.
+            Campus-scoped consoles (merchants, events, clubs, verifications and disputes) belong to individual
+            university administrators. As a platform-level Super Administrator you have a dedicated console for
+            cross-campus work.
           </p>
-          <div className="rounded-xl border border-slate-200/80 bg-white/70 p-4 text-xs text-slate-600 max-w-md mx-auto space-y-1 text-left shadow-xs">
-            <p className="font-semibold text-slate-900">Platform Superadmin Controls:</p>
-            <p>• Multi-campus university management via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/universities</code></p>
-            <p>• Global platform metrics via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/stats</code></p>
-            <p>• Platform-wide audit trails via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/audit-logs</code></p>
-          </div>
-          <div className="pt-2">
-            <Button as={Link} to="/marketplace" variant="primary">
+          <div className="pt-2 flex flex-wrap justify-center gap-2">
+            <Button as={Link} to="/super-admin" variant="primary">
+              Open Super Admin Console
+            </Button>
+            <Button as={Link} to="/marketplace" variant="outline">
               Return to Marketplace
             </Button>
           </div>
@@ -76,71 +109,263 @@ export default function Admin() {
           </button>
         ))}
       </div>
-      {tab === "Merchants" && <MerchantsTab />}
-      {tab === "Events" && <EventsTab />}
-      {tab === "Event Payments" && <EventPaymentsTab />}
+      {tab === "Merchants" && <ApplicationsReviewTab kind="merchant" targetId={targetApplicationId} />}
+      {tab === "Organizer Applications" && <ApplicationsReviewTab kind="organizer" targetId={targetApplicationId} />}
+      {tab === "Events" && <EventsTab targetId={targetEventId} />}
+      {tab === "Event Payments" && <EventPaymentsTab targetId={targetPaymentId} />}
       {tab === "Organizer Payouts" && <OrganizerPayoutsTab />}
-      {tab === "Commission Payments" && <CommissionPaymentsTab />}
+      {tab === "Commission Payments" && <CommissionPaymentsTab targetId={targetPaymentId} />}
       {tab === "Receiving Accounts" && <ReceivingAccountsTab />}
-      {tab === "Reports & Disputes" && <ReportsTab />}
+      {tab === "Reports & Disputes" && <ReportsTab targetId={targetReportId} />}
       {tab === "Users" && <UsersTab />}
       {tab === "Clubs" && <ClubsTab />}
-      {tab === "Verifications" && <VerificationsTab />}
+      {tab === "Verifications" && <VerificationsTab targetId={targetRequestId} />}
       {tab === "Analytics" && <AnalyticsTab />}
       {tab === "Audit Log" && <AuditLogTab />}
     </div>
   );
 }
 
-function MerchantsTab() {
+const APPLICATION_TAB_CONFIG = {
+  merchant: {
+    listUrl: "/merchants/applications",
+    decideUrl: (id) => `/merchants/${id}/decision`,
+    title: "Merchant Applications",
+    nameOf: (a) => a.business_name,
+    detailRows: (a) => [
+      ["Category", a.category || "—"],
+      ["Contact & location", a.contact_info || "—"],
+    ],
+  },
+  organizer: {
+    listUrl: "/organizers/applications",
+    decideUrl: (id) => `/organizers/applications/${id}/decision`,
+    title: "Organizer Applications",
+    nameOf: (a) => a.organizer_name,
+    detailRows: (a) => [
+      ["Organization", a.organization_name || "—"],
+      ["Organizer type", a.organizer_type || "—"],
+      ["Phone", a.phone || "—"],
+      ["Description", a.description || "—"],
+    ],
+  },
+};
+
+const APPLICATION_STATUS_TONES = { pending_review: "warn", approved: "ok", rejected: "danger" };
+const APPLICATION_STATUS_LABELS = { pending_review: "Pending", approved: "Approved", rejected: "Rejected" };
+
+function ApplicationsReviewTab({ kind, targetId }) {
+  const cfg = APPLICATION_TAB_CONFIG[kind];
   const [apps, setApps] = useState(null);
+  const [status, setStatus] = useState("pending_review");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
-    const { data } = await client.get("/merchants/applications", { params: { status: "pending_review" } });
-    setApps(data.applications);
+    setError("");
+    try {
+      const { data } = await client.get(cfg.listUrl, { params: { status } });
+      setApps(data.applications);
+    } catch (err) {
+      setError(errMsg(err, "Could not load applications"));
+      setApps([]);
+    }
   }
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
-  async function decide(id, decision) {
+  useEffect(() => {
+    if (!apps || !targetId) return;
+    const found = apps.find((a) => a.id === targetId);
+    if (found) {
+      setSelected(found);
+      setTimeout(() => {
+        const el = document.getElementById(`app-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    } else if (status !== "all") {
+      setStatus("all");
+    }
+  }, [apps, targetId, status]);
+
+  async function decide(app, decision) {
+    setBusy(true);
     setError("");
+    setSuccess("");
     try {
-      await client.patch(`/merchants/${id}/decision`, { decision });
-      load();
+      await client.patch(cfg.decideUrl(app.id), {
+        decision,
+        reason: decision === "reject" ? rejectReason.trim() : undefined,
+      });
+      setSuccess(
+        decision === "approve"
+          ? `${cfg.title.replace(" Applications", "")} application approved — the user now has the role.`
+          : "Application rejected — the applicant will see your reason."
+      );
+      setSelected(null);
+      setRejecting(false);
+      setRejectReason("");
+      await load();
     } catch (err) {
       setError(errMsg(err, "Could not record decision"));
+    } finally {
+      setBusy(false);
     }
   }
 
   if (!apps) return <Spinner />;
   return (
-    <div>
-      <ErrorBanner message={error} />
+    <div className="space-y-6">
+      <ErrorBanner message={error} onClose={() => setError("")} />
+      <SuccessBanner message={success} onClose={() => setSuccess("")} />
+
+      <div className="flex flex-wrap items-end gap-2">
+        <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-[180px]">
+          <option value="pending_review">Pending review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All</option>
+        </Select>
+      </div>
+
       {apps.length === 0 ? (
-        <p className="text-sm text-muted">No pending merchant applications.</p>
+        <p className="text-sm text-muted">
+          {status === "pending_review" ? `No pending ${kind} applications.` : `No ${kind} applications match this filter.`}
+        </p>
       ) : (
         <div className="space-y-2">
-          {apps.map((a) => (
-            <Card key={a.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold text-ink">{a.business_name}</p>
-                <p className="text-xs text-muted">{a.applicant_name} · {a.applicant_email} · {a.category || "No category"}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="accent" onClick={() => decide(a.id, "approve")}>Approve</Button>
-                <Button variant="danger" onClick={() => decide(a.id, "reject")}>Reject</Button>
+          {apps.map((a) => {
+            const isSelected = targetId && a.id === targetId;
+            return (
+              <Card
+                key={a.id}
+                id={`app-${a.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                } ${
+                  selected?.id === a.id ? "border-white/30 bg-white/8" : ""
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">{cfg.nameOf(a)}</p>
+                  <p className="text-xs text-muted">
+                    {a.applicant_name} · {a.applicant_email} · {a.university_name || "No campus"} · submitted{" "}
+                    {new Date(a.submitted_at || a.created_at).toLocaleString()}
+                  </p>
+                  {a.status === "rejected" && a.reason && (
+                    <p className="text-xs text-danger">Rejected: {a.reason}</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isSelected && (
+                    <Badge tone="accent" className="animate-pulse">
+                      Selected from notification
+                    </Badge>
+                  )}
+                  <Badge tone={APPLICATION_STATUS_TONES[a.status] || "slate"}>
+                    {APPLICATION_STATUS_LABELS[a.status] || a.status}
+                  </Badge>
+                  <Button variant="outline" onClick={() => { setSelected(selected?.id === a.id ? null : a); setRejecting(false); setRejectReason(""); }}>
+                    {selected?.id === a.id ? "Close" : "View"}
+                  </Button>
+                {a.status === "pending_review" && (
+                  <>
+                    <Button variant="accent" disabled={busy} onClick={() => decide(a, "approve")}>
+                      Approve
+                    </Button>
+                    <Button variant="danger" disabled={busy} onClick={() => { setSelected(a); setRejecting(true); }}>
+                      Reject
+                    </Button>
+                  </>
+                )}
               </div>
             </Card>
-          ))}
+          );
+        })}
         </div>
+      )}
+
+      {selected && (
+        <Card className="glass-panel p-5">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-ink">{cfg.nameOf(selected)}</h3>
+              <p className="text-sm text-muted">
+                {selected.applicant_name} · {selected.applicant_email}
+              </p>
+              <p className="text-xs text-muted">
+                {selected.university_name || "No campus"} · submitted{" "}
+                {new Date(selected.submitted_at || selected.created_at).toLocaleString()}
+                {selected.agreement_version ? ` · agreed to terms v${selected.agreement_version}` : ""}
+              </p>
+              <div className="mt-1">
+                <Badge tone={APPLICATION_STATUS_TONES[selected.status] || "slate"}>
+                  {APPLICATION_STATUS_LABELS[selected.status] || selected.status}
+                </Badge>
+              </div>
+            </div>
+            <Button variant="ghost" onClick={() => { setSelected(null); setRejecting(false); }}>Close</Button>
+          </div>
+
+          <dl className="mb-4 grid gap-2 sm:grid-cols-2">
+            {cfg.detailRows(selected).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</dt>
+                <dd className="text-sm text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {selected.status === "rejected" && selected.reason && (
+            <div className="mb-3 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
+              <span className="font-medium">Rejection reason:</span> {selected.reason}
+            </div>
+          )}
+
+          {selected.status === "pending_review" && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="accent" disabled={busy} onClick={() => decide(selected, "approve")}>
+                  {busy ? "Saving..." : "Approve"}
+                </Button>
+                <Button variant="danger" disabled={busy} onClick={() => setRejecting((v) => !v)}>
+                  Reject
+                </Button>
+              </div>
+              {rejecting && (
+                <div className="space-y-2 rounded-lg border border-slate/20 p-3">
+                  <TextArea
+                    label="Rejection reason (required)"
+                    rows={3}
+                    required
+                    placeholder="e.g. Incomplete business details / unable to verify"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                  />
+                  <Button
+                    variant="danger"
+                    disabled={busy || rejectReason.trim().length < 2}
+                    onClick={() => decide(selected, "reject")}
+                  >
+                    Confirm rejection
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
       )}
     </div>
   );
 }
 
-function EventsTab() {
+function EventsTab({ targetId }) {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState("");
 
@@ -151,6 +376,17 @@ function EventsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!events || !targetId) return;
+    const found = events.find((e) => e.id === targetId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`event-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [events, targetId]);
 
   async function decide(id, decision) {
     setError("");
@@ -170,18 +406,34 @@ function EventsTab() {
         <p className="text-sm text-muted">No events pending review.</p>
       ) : (
         <div className="space-y-2">
-          {events.map((e) => (
-            <Card key={e.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold text-ink">{e.title}</p>
-                <p className="text-xs text-muted">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="accent" onClick={() => decide(e.id, "approve")}>Approve</Button>
-                <Button variant="danger" onClick={() => decide(e.id, "reject")}>Reject</Button>
-              </div>
-            </Card>
-          ))}
+          {events.map((e) => {
+            const isSelected = targetId && e.id === targetId;
+            return (
+              <Card
+                key={e.id}
+                id={`event-${e.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-ink">{e.title}</p>
+                    {isSelected && (
+                      <Badge tone="accent" className="animate-pulse">
+                        Selected from notification
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="accent" onClick={() => decide(e.id, "approve")}>Approve</Button>
+                  <Button variant="danger" onClick={() => decide(e.id, "reject")}>Reject</Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -190,7 +442,7 @@ function EventsTab() {
 
 const ACTIONS = ["dismiss", "warn", "remove_listing", "suspend", "refund"];
 
-function ReportsTab() {
+function ReportsTab({ targetId }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -202,6 +454,17 @@ function ReportsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!data || !targetId) return;
+    const found = data.reports?.find((r) => r.id === targetId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`report-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [data, targetId]);
 
   async function resolveReport(id, action) {
     setBusyId(id);
@@ -239,19 +502,35 @@ function ReportsTab() {
           <p className="text-sm text-muted">No open reports.</p>
         ) : (
           <div className="space-y-2">
-            {data.reports.map((r) => (
-              <Card key={r.id} className="glass glass-hover p-4">
-                <p className="font-semibold text-ink">{r.target_type} — {r.reason}</p>
-                <p className="text-xs text-muted">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {ACTIONS.map((a) => (
-                    <Button key={a} variant="outline" disabled={busyId === r.id} onClick={() => resolveReport(r.id, a)}>
-                      {a.replaceAll("_", " ")}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-            ))}
+            {data.reports.map((r) => {
+              const isSelected = targetId && r.id === targetId;
+              return (
+                <Card
+                  key={r.id}
+                  id={`report-${r.id}`}
+                  className={`glass glass-hover p-4 transition-all duration-300 ${
+                    isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-ink">{r.target_type} — {r.reason}</p>
+                    {isSelected && (
+                      <Badge tone="accent" className="animate-pulse">
+                        Selected from notification
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {ACTIONS.map((a) => (
+                      <Button key={a} variant="outline" disabled={busyId === r.id} onClick={() => resolveReport(r.id, a)}>
+                        {a.replaceAll("_", " ")}
+                      </Button>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -277,67 +556,412 @@ function ReportsTab() {
   );
 }
 
+const USER_CATEGORY_FILTERS = [
+  { value: "", label: "All roles" },
+  { value: "student", label: "Users (students)" },
+  { value: "merchant", label: "Merchants" },
+  { value: "organizer", label: "Event Organizers" },
+];
+
+const USER_STATUS_FILTERS = [
+  { value: "", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "suspended", label: "Deactivated" },
+];
+
 function UsersTab() {
   const [q, setQ] = useState("");
+  const [role, setRole] = useState("");
+  const [status, setStatus] = useState("");
   const [users, setUsers] = useState(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [detailId, setDetailId] = useState(null);
 
   async function load() {
-    const { data } = await client.get("/admin/users", { params: { q: q || undefined } });
-    setUsers(data.users);
+    setError("");
+    try {
+      const { data } = await client.get("/admin/users", { params: { q: q.trim() || undefined, role: role || undefined } });
+      setUsers(data.users || []);
+    } catch (err) {
+      setError(errMsg(err, "Could not load users"));
+      setUsers([]);
+    }
   }
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [role]);
 
-  async function update(id, patch) {
-    setError("");
-    try {
-      await client.patch(`/admin/users/${id}`, patch);
-      load();
-    } catch (err) {
-      setError(errMsg(err, "Could not update user"));
-    }
-  }
+  const filtered = (users || []).filter((u) => {
+    if (status === "active") return !u.suspended;
+    if (status === "suspended") return !!u.suspended;
+    return true;
+  });
 
   return (
     <div>
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onClose={() => setError("")} />
+      <SuccessBanner message={success} onClose={() => setSuccess("")} />
+
       <form
-        className="mb-4 flex gap-2"
+        className="mb-4 flex flex-wrap items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           load();
         }}
       >
-        <Input placeholder="Search by name or email" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
+        <Input
+          aria-label="Search users"
+          placeholder="Search name or email…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="max-w-xs"
+        />
+        <Select aria-label="Filter by role" value={role} onChange={(e) => setRole(e.target.value)} className="max-w-[200px]">
+          {USER_CATEGORY_FILTERS.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </Select>
+        <Select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-[180px]">
+          {USER_STATUS_FILTERS.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </Select>
         <Button type="submit">Search</Button>
       </form>
+
       {!users ? (
         <Spinner />
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted">No users match this filter.</p>
       ) : (
         <div className="space-y-2">
-          {users.map((u) => (
+          {filtered.map((u) => (
             <Card key={u.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold text-ink">{u.name} <span className="text-xs text-muted">({u.email})</span></p>
-                <div className="mt-1 flex gap-1">
-                  <Badge tone="accent">{u.role}</Badge>
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">
+                  {u.name} <span className="text-xs text-muted">({u.email})</span>
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <Badge tone={u.role === "merchant" ? "accent" : u.role === "organizer" ? "info" : u.role === "admin" ? "warn" : "slate"}>
+                    {u.role === "admin" ? "campus admin" : u.role}
+                  </Badge>
                   <Badge tone={u.verified ? "ok" : "warn"}>{u.verified ? "verified" : "unverified"}</Badge>
-                  {u.suspended && <Badge tone="danger">suspended</Badge>}
+                  {u.suspended && <Badge tone="danger">deactivated</Badge>}
                 </div>
               </div>
-              <div className="flex gap-2">
-                {!u.verified && <Button variant="outline" onClick={() => update(u.id, { verified: true })}>Verify</Button>}
-                <Button variant={u.suspended ? "outline" : "danger"} onClick={() => update(u.id, { suspended: !u.suspended })}>
-                  {u.suspended ? "Unsuspend" : "Suspend"}
-                </Button>
-              </div>
+              <Button size="sm" variant="outline" onClick={() => setDetailId(u.id)}>
+                Manage
+              </Button>
             </Card>
           ))}
         </div>
       )}
+      <p className="mt-3 text-xs text-muted">
+        Showing up to 100 results. Merchant and organizer accounts keep their order, ticket and payment history
+        even after deactivation.
+      </p>
+
+      <UserManageModal
+        open={!!detailId}
+        userId={detailId}
+        onClose={() => setDetailId(null)}
+        onChanged={() => {
+          load();
+          setSuccess("Account updated.");
+        }}
+      />
+    </div>
+  );
+}
+
+// Detail + moderation for one campus user (Phase 8–14). Deactivation always
+// goes through the dedicated endpoint with an optional reason; physical
+// deletion is only offered when the backend reports zero historical
+// dependencies (then a typed-email confirmation is required).
+function UserManageModal({ open, userId, onClose, onChanged }) {
+  const confirm = useConfirm();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateReason, setDeactivateReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+
+  async function load() {
+    if (!userId) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { data: res } = await client.get(`/admin/users/${userId}`);
+      setData(res);
+    } catch (err) {
+      setError(errMsg(err, "Could not load the user"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (open && userId) {
+      setDeactivating(false);
+      setDeleting(false);
+      setDeactivateReason("");
+      setDeleteReason("");
+      setDeleteConfirmEmail("");
+      load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
+
+  function close() {
+    if (busy) return;
+    setData(null);
+    setError("");
+    onClose?.();
+  }
+
+  async function patch(body) {
+    setBusy(true);
+    setError("");
+    try {
+      await client.patch(`/admin/users/${userId}`, body);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(errMsg(err, "Could not update the user"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deactivate() {
+    setBusy(true);
+    setError("");
+    try {
+      await client.post(`/admin/users/${userId}/deactivate`, {
+        reason: deactivateReason.trim() || undefined,
+      });
+      setDeactivating(false);
+      setDeactivateReason("");
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(errMsg(err, "Could not deactivate the account"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function checkDependencies() {
+    setError("");
+    try {
+      const { data } = await client.get(`/admin/users/${userId}/dependencies`);
+      setData((d) => ({ ...d, dependencies: data }));
+      return data;
+    } catch (err) {
+      setError(errMsg(err, "Could not check the account's records"));
+      return null;
+    }
+  }
+
+  async function openDeleteFlow() {
+    const deps = data?.dependencies || (await checkDependencies());
+    if (!deps) return;
+    if (!deps.canDelete) return; // delete button is hidden anyway
+    setDeleting(true);
+  }
+
+  async function performDelete() {
+    setBusy(true);
+    setError("");
+    try {
+      await client.delete(`/admin/users/${userId}`, { data: { reason: deleteReason.trim() || undefined } });
+      setDeleting(false);
+      onChanged?.();
+      onClose?.();
+      setData(null);
+    } catch (err) {
+      setError(errMsg(err, "Could not delete the account"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const u = data?.user;
+  const deps = data?.dependencies;
+  const manageable = u && u.role !== "admin" && u.role !== "super_admin";
+  const depSummary = deps
+    ? Object.entries(deps.counts || {})
+        .filter(([, n]) => n > 0)
+        .map(([k, n]) => `${n} ${k.replace(/([A-Z])/g, " $1").toLowerCase()}`)
+        .join(", ")
+    : "";
+
+  return (
+    <Modal open={open} onClose={close} title={u?.name || "User"} size="lg">
+      {loading && !data ? (
+        <div className="flex justify-center py-12">
+          <Spinner />
+        </div>
+      ) : !u ? (
+        <ErrorBanner message={error || "User not found"} onClose={() => setError("")} />
+      ) : (
+        <div className="space-y-5">
+          <ErrorBanner message={error} onClose={() => setError("")} />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={u.role === "merchant" ? "accent" : u.role === "organizer" ? "info" : u.role === "admin" ? "warn" : "slate"}>
+              {u.role === "admin" ? "campus admin" : u.role}
+            </Badge>
+            {u.verified ? <Badge tone="ok">Verified</Badge> : <Badge tone="warn">Unverified</Badge>}
+            {u.suspended ? <Badge tone="danger">Deactivated</Badge> : <Badge tone="ok">Active</Badge>}
+          </div>
+
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Info label="Email" value={u.email} />
+            <Info label="Phone" value={u.phone || "—"} />
+            <Info label="Campus" value={u.university_name || "—"} />
+            <Info label="Joined" value={new Date(u.created_at).toLocaleDateString()} />
+            <Info label="Orders placed" value={String(data.activity?.ordersCount ?? 0)} />
+            {data.store ? <Info label="Store" value={`${data.store.name} (${data.store.status})`} /> : null}
+            {data.clubs?.length ? <Info label="Clubs led" value={data.clubs.map((c) => c.name).join(", ")} /> : null}
+          </dl>
+
+          {u.role === "super_admin" || u.role === "admin" ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              {u.role === "super_admin"
+                ? "Super Administrator accounts cannot be modified from this screen."
+                : "Campus administrator accounts are managed exclusively by the Super Administrator."}
+            </p>
+          ) : deleting ? (
+            <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 p-4">
+              <p className="text-sm font-semibold text-ink">Delete this account permanently?</p>
+              <p className="text-sm text-muted">
+                {u.name} ({u.email}) — {u.role}. The backend confirmed this account has no historical
+                orders, payments, tickets, reviews or events, so the row can be removed safely. Related
+                tokens, notifications and favorites are cleaned up automatically.
+              </p>
+              <TextArea
+                label="Reason (optional)"
+                rows={2}
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+              />
+              <Input
+                label="Type the account email to confirm"
+                placeholder={u.email}
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="danger"
+                  disabled={busy || deleteConfirmEmail.trim().toLowerCase() !== u.email.toLowerCase()}
+                  onClick={performDelete}
+                >
+                  {busy ? "Deleting…" : "Permanently delete"}
+                </Button>
+                <Button variant="ghost" disabled={busy} onClick={() => setDeleting(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : deactivating ? (
+            <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 p-4">
+              <p className="text-sm font-semibold text-ink">
+                Deactivate {u.role === "merchant" ? "Merchant" : u.role === "organizer" ? "Organizer" : "User"}?
+              </p>
+              <p className="text-sm text-muted">
+                {u.name} ({u.email}) will lose access to CampusHub immediately —
+                {u.role === "merchant"
+                  ? " they cannot create new listings or receive new orders."
+                  : u.role === "organizer"
+                    ? " they cannot create new events or sell new tickets."
+                    : " they cannot sign in."}{" "}
+                Existing orders, payments, reviews and transaction history will be preserved.
+              </p>
+              <TextArea
+                label="Reason for deactivation (optional)"
+                rows={3}
+                placeholder="e.g. Violation of campus marketplace policy"
+                value={deactivateReason}
+                onChange={(e) => setDeactivateReason(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="danger" disabled={busy} onClick={deactivate}>
+                  {busy ? "Saving…" : "Deactivate account"}
+                </Button>
+                <Button variant="ghost" disabled={busy} onClick={() => setDeactivating(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-xl border border-slate-200/80 bg-slate-50/60 p-4">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={u.verified ? "outline" : "success"}
+                  disabled={busy}
+                  onClick={() => patch({ verified: !u.verified })}
+                >
+                  {u.verified ? "Revoke verification" : "Mark verified"}
+                </Button>
+                {u.suspended ? (
+                  <Button
+                    variant="success"
+                    disabled={busy}
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: "Reactivate this account?",
+                        message: `${u.name} will regain access immediately.`,
+                        confirmLabel: "Reactivate",
+                        variant: "primary",
+                      });
+                      if (ok) patch({ suspended: false });
+                    }}
+                  >
+                    Reactivate account
+                  </Button>
+                ) : (
+                  <Button variant="danger" disabled={busy} onClick={() => setDeactivating(true)}>
+                    Deactivate
+                  </Button>
+                )}
+                {!u.suspended && (
+                  <Button variant="outline" disabled={busy} onClick={openDeleteFlow}>
+                    Delete…
+                  </Button>
+                )}
+              </div>
+              {deps && !deps.canDelete && (
+                <p className="rounded-lg border border-slate-200 bg-white/70 p-3 text-xs text-slate-600">
+                  This account has historical records ({depSummary}). Deactivation preserves them; permanent
+                  deletion is not available.
+                </p>
+              )}
+              {manageable && !deps && (
+                <button type="button" className="text-xs text-accent-dark underline" onClick={checkDependencies}>
+                  Check historical records before deactivating
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function Info({ label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-200/70 bg-white/60 px-3 py-2">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className="mt-0.5 break-words text-sm text-ink">{value}</dd>
     </div>
   );
 }
@@ -417,7 +1041,7 @@ const VERIF_DOC_LABELS = {
 };
 const VERIF_STATUS_TONES = { pending: "warn", approved: "ok", rejected: "danger" };
 
-function VerificationsTab() {
+function VerificationsTab({ targetId }) {
   const [items, setItems] = useState(null);
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState("pending");
@@ -443,6 +1067,20 @@ function VerificationsTab() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  useEffect(() => {
+    if (!items || !targetId) return;
+    const found = items.find((r) => r.id === targetId);
+    if (found) {
+      open(found);
+      setTimeout(() => {
+        const el = document.getElementById(`verif-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    } else if (status !== "all") {
+      setStatus("all");
+    }
+  }, [items, targetId, status]);
 
   async function open(r) {
     setError("");
@@ -520,33 +1158,44 @@ function VerificationsTab() {
         </p>
       ) : (
         <div className="space-y-2">
-          {items.map((r) => (
-            <Card
-              key={r.id}
-              className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 ${
-                selected?.id === r.id ? "border-white/30 bg-white/8" : ""
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-ink">
-                  {r.studentName} <span className="text-xs font-normal text-muted">({r.studentEmail})</span>
-                </p>
-                <p className="text-xs text-muted">
-                  {VERIF_DOC_LABELS[r.documentType] || r.documentType} · {r.universityName} · submitted{" "}
-                  {new Date(r.createdAt).toLocaleString()}
-                </p>
-                {r.status === "rejected" && r.rejectionReason && (
-                  <p className="text-xs text-danger">Rejected: {r.rejectionReason}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone={VERIF_STATUS_TONES[r.status] || "slate"}>{r.status}</Badge>
-                <Button variant="outline" onClick={() => open(r)}>
-                  Review
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {items.map((r) => {
+            const isSelected = targetId && r.id === targetId;
+            return (
+              <Card
+                key={r.id}
+                id={`verif-${r.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                } ${
+                  selected?.id === r.id ? "border-white/30 bg-white/8" : ""
+                }`}
+              >
+                <div>
+                  <p className="font-semibold text-ink">
+                    {r.studentName} <span className="text-xs font-normal text-muted">({r.studentEmail})</span>
+                  </p>
+                  <p className="text-xs text-muted">
+                    {VERIF_DOC_LABELS[r.documentType] || r.documentType} · {r.universityName} · submitted{" "}
+                    {new Date(r.createdAt).toLocaleString()}
+                  </p>
+                  {r.status === "rejected" && r.rejectionReason && (
+                    <p className="text-xs text-danger">Rejected: {r.rejectionReason}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSelected && (
+                    <Badge tone="accent" className="animate-pulse">
+                      Selected from notification
+                    </Badge>
+                  )}
+                  <Badge tone={VERIF_STATUS_TONES[r.status] || "slate"}>{r.status}</Badge>
+                  <Button variant="outline" onClick={() => open(r)}>
+                    Review
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -727,7 +1376,7 @@ function AuditLogTab() {
   );
 }
 
-function EventPaymentsTab() {
+function EventPaymentsTab({ targetId }) {
   const [items, setItems] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -750,6 +1399,18 @@ function EventPaymentsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!items || !targetId) return;
+    const found = items.find((t) => t.id === targetId || t.payment_id === targetId);
+    if (found) {
+      setOpenImgId(found.payment_id);
+      setTimeout(() => {
+        const el = document.getElementById(`event-pay-${found.id}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [items, targetId]);
 
   async function decide(paymentId, action, body) {
     setError("");
@@ -787,11 +1448,26 @@ function EventPaymentsTab() {
         <p className="text-sm text-slate">No ticket payments pending review.</p>
       ) : (
         <div className="space-y-3">
-          {items.map((t) => (
-            <Card key={t.id} className="glass glass-hover p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-ink">{t.event_title}</p>
+          {items.map((t) => {
+            const isSelected = targetId && (t.id === targetId || t.payment_id === targetId);
+            return (
+              <Card
+                key={t.id}
+                id={`event-pay-${t.id}`}
+                className={`glass glass-hover p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-ink">{t.event_title}</p>
+                      {isSelected && (
+                        <Badge tone="accent" className="animate-pulse">
+                          Selected from notification
+                        </Badge>
+                      )}
+                    </div>
                   <p className="text-xs text-muted">
                     Buyer: {t.student_name} ({t.student_email}) · {t.quantity}x {t.ticket_type_name}
                   </p>
@@ -868,7 +1544,8 @@ function EventPaymentsTab() {
                 </div>
               )}
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>
@@ -1087,7 +1764,7 @@ function CommissionProofImage({ paymentId }) {
   );
 }
 
-function CommissionPaymentsTab() {
+function CommissionPaymentsTab({ targetId }) {
   const [payments, setPayments] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -1109,6 +1786,18 @@ function CommissionPaymentsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!payments || !targetId) return;
+    const found = payments.find((p) => p.id === targetId);
+    if (found) {
+      setOpenImgId(targetId);
+      setTimeout(() => {
+        const el = document.getElementById(`comm-pay-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [payments, targetId]);
 
   async function verify(id) {
     const ok = await confirm({
@@ -1169,11 +1858,26 @@ function CommissionPaymentsTab() {
         <p className="text-sm text-slate">No merchant commission payments submitted.</p>
       ) : (
         <div className="space-y-3">
-          {payments.map((p) => (
-            <Card key={p.id} className="glass glass-hover p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-ink">{p.merchant_name} <span className="text-xs text-muted">({p.merchant_email})</span></p>
+          {payments.map((p) => {
+            const isSelected = targetId && p.id === targetId;
+            return (
+              <Card
+                key={p.id}
+                id={`comm-pay-${p.id}`}
+                className={`glass glass-hover p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-ink">{p.merchant_name} <span className="text-xs text-muted">({p.merchant_email})</span></p>
+                      {isSelected && (
+                        <Badge tone="accent" className="animate-pulse">
+                          Selected from notification
+                        </Badge>
+                      )}
+                    </div>
                   <p className="text-xs text-muted">
                     Submitted: {new Date(p.created_at).toLocaleString()}
                   </p>
@@ -1229,7 +1933,8 @@ function CommissionPaymentsTab() {
                 </div>
               )}
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import ImageUploader from "../components/ImageUploader";
@@ -17,9 +17,26 @@ const ORDER_STATUS_TONE = {
 };
 
 export default function Merchant() {
+  const [searchParams] = useSearchParams();
+  const paramTab = searchParams.get("tab");
+  const targetOrderId = searchParams.get("orderId");
   const [store, setStore] = useState(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("Products");
+  const [tab, setTab] = useState(
+    paramTab && TABS.includes(paramTab)
+      ? paramTab
+      : targetOrderId
+      ? "Orders"
+      : "Products"
+  );
+
+  useEffect(() => {
+    if (paramTab && TABS.includes(paramTab)) {
+      setTab(paramTab);
+    } else if (targetOrderId && !paramTab) {
+      setTab("Orders");
+    }
+  }, [paramTab, targetOrderId]);
 
   async function loadStore() {
     try {
@@ -41,7 +58,7 @@ export default function Merchant() {
       <PageHeader title={store.name} subtitle="Merchant dashboard — products, orders, and store settings." />
       <Tabs items={TABS.map((t) => ({ key: t, label: t }))} value={tab} onChange={setTab} className="mb-6" />
       {tab === "Products" && <ProductsTab storeId={store.id} />}
-      {tab === "Orders" && <OrdersTab />}
+      {tab === "Orders" && <OrdersTab targetOrderId={targetOrderId} />}
       {tab === "Store" && <StoreTab store={store} onSaved={setStore} />}
       {tab === "Analytics" && <AnalyticsTab storeId={store.id} />}
     </div>
@@ -285,9 +302,10 @@ function ProductForm({ product, onCancel, onSaved, onError }) {
 
 const NEXT_STATUS = { confirmed: "ready", ready: "completed" };
 
-function OrdersTab() {
+function OrdersTab({ targetOrderId }) {
   const [orders, setOrders] = useState(null);
   const [error, setError] = useState("");
+  const [notFoundNotice, setNotFoundNotice] = useState("");
 
   async function load() {
     const { data } = await client.get("/orders");
@@ -296,6 +314,21 @@ function OrdersTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!orders || !targetOrderId) return;
+    const found = orders.some((o) => o.id === targetOrderId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`merchant-order-${targetOrderId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    } else {
+      setNotFoundNotice(`Order #${targetOrderId.slice(0, 8)} was not found in your active store orders.`);
+    }
+  }, [orders, targetOrderId]);
 
   async function advance(order) {
     const next = NEXT_STATUS[order.status];
@@ -312,24 +345,54 @@ function OrdersTab() {
   return (
     <div>
       <ErrorBanner message={error} />
+      {notFoundNotice && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-xs text-amber-800 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Icon name="info" className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>{notFoundNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotFoundNotice("")}
+            className="text-amber-700 hover:text-amber-900 font-bold ml-2 text-sm leading-none"
+            aria-label="Dismiss notice"
+          >
+            &times;
+          </button>
+        </div>
+      )}
       {orders.length === 0 ? (
         <EmptyState title="No orders yet" subtitle="Orders from buyers will appear here once you start selling." />
       ) : (
         <div className="space-y-2">
-          {orders.map((o) => (
-            <Card key={o.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold text-ink">Order #{o.id.slice(0, 8)} — {o.buyer_name}</p>
-                <p className="text-xs text-muted">{Number(o.total_amount).toFixed(2)} ETB · {new Date(o.created_at).toLocaleString()}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone={ORDER_STATUS_TONE[o.status] || "slate"}>{o.status.replaceAll("_", " ")}</Badge>
+          {orders.map((o) => {
+            const isTarget = targetOrderId === o.id;
+            return (
+              <Card
+                key={o.id}
+                id={`merchant-order-${o.id}`}
+                className={`flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isTarget
+                    ? "border-blue-500/90 bg-white shadow-xl ring-2 ring-blue-500/30 scale-[1.01]"
+                    : "border-white/80"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-ink">Order #{o.id.slice(0, 8)} — {o.buyer_name}</p>
+                    {isTarget && <Badge tone="accent">Selected from notification</Badge>}
+                  </div>
+                  <p className="text-xs text-muted">{Number(o.total_amount).toFixed(2)} ETB · {new Date(o.created_at).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tone={ORDER_STATUS_TONE[o.status] || "slate"}>{o.status.replaceAll("_", " ")}</Badge>
                 {NEXT_STATUS[o.status] && (
                   <Button variant="outline" onClick={() => advance(o)}>Mark {NEXT_STATUS[o.status]}</Button>
                 )}
               </div>
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>

@@ -95,11 +95,17 @@ router.post(
            VALUES ($1, $2, $3, $4, $5, 'active', $6) RETURNING *`,
           [ticketId, event.id, tt.id, req.user.id, signature, ticketNumber]
         );
-        await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'ticket_update',$2,$3)", [
-          req.user.id,
-          "Your ticket is ready",
-          `${event.title} — view your QR code in My Tickets.`,
-        ]);
+        await client.query(
+          "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'ticket_update',$2,$3,$4,$5,$6)",
+          [
+            req.user.id,
+            "Your ticket is ready",
+            `${event.title} — view your QR code in My Tickets.`,
+            `/tickets?ticketId=${ticketId}`,
+            "ticket",
+            ticketId,
+          ]
+        );
         return { ticket: rows[0], isFree: true, payment: null };
       }
 

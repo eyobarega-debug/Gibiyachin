@@ -232,7 +232,19 @@ router.post(
     const admins = req.user.university_id
       ? await db.query("SELECT id FROM users WHERE role='admin' AND university_id = $1", [req.user.university_id])
       : { rows: [] };
-    await Promise.all(admins.rows.map((a) => notify(a.id, "event_review", "New event pending review", event.title)));
+    await Promise.all(
+      admins.rows.map((a) =>
+        notify(
+          a.id,
+          "event_review",
+          "New event pending review",
+          event.title,
+          `/admin?tab=Events&eventId=${event.id}`,
+          "event",
+          event.id
+        )
+      )
+    );
     res.json({ event: updated[0] });
   })
 );
@@ -355,7 +367,10 @@ router.patch(
           t.holder_id,
           "ticket_update",
           cancelling ? `Event "${event.title}" was cancelled` : `Event "${event.title}" was postponed`,
-          cancelling ? "Your ticket will be refunded." : "New date to be announced."
+          cancelling ? "Your ticket will be refunded." : "New date to be announced.",
+          `/tickets?ticketId=${t.id}`,
+          "ticket",
+          t.id
         );
       }
       if (cancelling) {
@@ -391,7 +406,10 @@ router.patch(
       event.lead_user_id,
       "event_review",
       req.body.decision === "approve" ? `"${event.title}" was approved — you can publish it now` : `"${event.title}" needs changes`,
-      req.body.reason
+      req.body.reason,
+      `/organizer/${event.id}`,
+      "event",
+      event.id
     );
     await audit(req.user.id, "event.decision", "event", event.id, { decision: req.body.decision, reason: req.body.reason });
     res.json({ event: updated[0] });

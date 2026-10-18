@@ -18,10 +18,24 @@ const CATEGORY_BY_TYPE = {
 // instead of actually sending it. See backend README for exactly where a
 // real provider (e.g., a local telco SMS gateway) would plug in — the
 // `sendSms()` function below is the single call site to replace.
-async function notify(userId, type, title, body) {
+async function notify(userId, type, title, body, targetRouteOrOptions = null, targetEntityType = null, targetEntityId = null) {
+  let targetRoute = null;
+  let entityType = null;
+  let entityId = null;
+
+  if (targetRouteOrOptions && typeof targetRouteOrOptions === "object") {
+    targetRoute = targetRouteOrOptions.targetRoute || targetRouteOrOptions.route || null;
+    entityType = targetRouteOrOptions.targetEntityType || targetRouteOrOptions.entityType || null;
+    entityId = targetRouteOrOptions.targetEntityId || targetRouteOrOptions.entityId || null;
+  } else if (typeof targetRouteOrOptions === "string") {
+    targetRoute = targetRouteOrOptions;
+    entityType = targetEntityType || null;
+    entityId = targetEntityId || null;
+  }
+
   await db.query(
-    "INSERT INTO notifications (user_id, type, title, body) VALUES ($1,$2,$3,$4)",
-    [userId, type, title, body]
+    "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+    [userId, type, title, body, targetRoute, entityType, entityId ? String(entityId) : null]
   );
 
   const category = CATEGORY_BY_TYPE[type];

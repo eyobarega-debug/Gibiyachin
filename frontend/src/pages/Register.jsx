@@ -93,7 +93,7 @@ export default function Register() {
           label="Full name"
           required
           autoComplete="name"
-          placeholder="e.g. Sara Bekele"
+          placeholder="e.g. Abebe Bekele"
           value={form.name}
           error={fieldErrors.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -103,7 +103,7 @@ export default function Register() {
           type="email"
           required
           autoComplete="email"
-          placeholder="you@aastu.edu.et"
+          placeholder="you@campus.edu.et"
           value={form.email}
           error={fieldErrors.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}

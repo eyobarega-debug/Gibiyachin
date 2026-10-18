@@ -52,6 +52,8 @@ app.get("/health", (req, res) => res.json({ ok: true, service: "campushub-api", 
 app.use("/api/auth", require("./modules/auth/routes"));
 app.use("/api/users", require("./modules/auth/users.routes"));
 app.use("/api/merchants", tenant, require("./modules/merchants/routes"));
+app.use("/api/organizers", tenant, require("./modules/organizers/routes"));
+app.use("/api/onboarding", tenant, require("./modules/onboarding/routes"));
 app.use("/api/products", tenant, require("./modules/products/routes"));
 app.use("/api/sellers", tenant, require("./modules/sellers/routes"));
 app.use("/api/orders", tenant, require("./modules/orders/routes"));
