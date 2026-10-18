@@ -19,8 +19,8 @@ export default function ProtectedRoute({ role, children }) {
     if (!roles.includes(user.role)) {
       return (
         <div className="mx-auto max-w-lg py-16 text-center">
-          <p className="text-lg font-semibold text-navy">Not available for your role</p>
-          <p className="mt-1 text-sm text-slate">This page requires: {roles.join(" or ")}.</p>
+          <p className="text-lg font-semibold text-ink">Not available for your role</p>
+          <p className="mt-1 text-sm text-muted">This page requires: {roles.join(" or ")}.</p>
         </div>
       );
     }

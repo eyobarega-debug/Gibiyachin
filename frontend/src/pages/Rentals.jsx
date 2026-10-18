@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import { Button, Card, EmptyState, Input, Select, Spinner } from "../components/ui";
+import { Badge, Button, EmptyState, Input, LoadingState, PageHeader, Select } from "../components/ui";
+import { RentalCard } from "../components/cards";
+import Icon from "../components/Icon";
 
 export default function Rentals() {
   const { user } = useAuth();
@@ -26,51 +28,59 @@ export default function Rentals() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-navy">Borrow &amp; Rent</h1>
-          <p className="mt-1 text-sm text-slate">
-            Books, calculators, projectors, and more — borrowed from fellow students.
-            {user?.university_name && (
-              <span className="block mt-0.5 text-xs font-medium text-accent-dark">
-                📍 Viewing rental items at {user.university_name}
-              </span>
-            )}
-          </p>
+      <PageHeader
+        title="Borrow & Rent"
+        subtitle="Books, calculators, projectors, and more — borrowed from fellow students."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              aria-label="Filter by category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-36"
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+            <Input
+              aria-label="Search rentals"
+              placeholder="Search rentals…"
+              className="w-full sm:w-56"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {user?.role === "student" && <Button as={Link} to="/rentals/new">List an item</Button>}
+            {user && <Button as={Link} to="/rentals/mine" variant="outline">My bookings</Button>}
+          </div>
+        }
+      />
+
+      {user?.university_name && (
+        <div className="mb-4">
+          <Badge tone="slate">Campus: {user.university_name}</Badge>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-36">
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
-          <Input placeholder="Search rentals..." className="w-56" value={q} onChange={(e) => setQ(e.target.value)} />
-          {user?.role === "student" && <Button as={Link} to="/rentals/new" variant="accent">+ List an item</Button>}
-          {user && <Button as={Link} to="/rentals/mine" variant="outline">My bookings</Button>}
-        </div>
-      </div>
+      )}
 
       {!items ? (
-        <div className="flex justify-center py-16"><Spinner /></div>
+        <LoadingState label="Loading rentals…" />
       ) : items.length === 0 ? (
-        <EmptyState title="No rental items yet" />
+        <EmptyState
+          title="No rental items yet"
+          subtitle="Try a different search term or category."
+          action={
+            (q || category) && (
+              <Button variant="outline" onClick={() => { setQ(""); setCategory(""); }}>
+                Clear filters
+              </Button>
+            )
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
-            <Link key={it.id} to={`/rentals/${it.id}`}>
-              <Card className="h-full p-4 transition hover:shadow-md">
-                <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-paper text-3xl">
-                  {it.images?.[0] ? <img src={it.images[0]} alt="" className="h-full w-full rounded-lg object-cover" /> : "🎒"}
-                </div>
-                <p className="font-medium text-navy line-clamp-1">{it.title}</p>
-                <p className="text-xs text-slate">by {it.owner_name}</p>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-accent-dark">{Number(it.price_per_day).toFixed(2)} birr/day</span>
-                  <span className="text-slate">deposit {Number(it.deposit).toFixed(0)}</span>
-                </div>
-              </Card>
-            </Link>
+            <RentalCard key={it.id} rental={it} />
           ))}
         </div>
       )}

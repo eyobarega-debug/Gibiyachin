@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button, Input } from "./ui";
+import Icon from "./Icon";
 
 // Camera scanning needs a real device/browser permission prompt, which isn't
 // testable inside this build environment — so a manual paste field is always
@@ -48,10 +49,13 @@ export default function QrScanner({ onScan }) {
 
   return (
     <div className="space-y-3">
-      <div id={regionId} className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-black/5" />
+      <div id={regionId} className="mx-auto w-full max-w-xs overflow-hidden rounded-xl border border-white/10 bg-black/40 [&_video]:rounded-xl" />
       {cameraError && <p className="text-xs text-danger">{cameraError}</p>}
       {!running ? (
-        <Button variant="accent" onClick={startCamera} className="w-full">📷 Start camera scan</Button>
+        <Button variant="accent" onClick={startCamera} className="w-full">
+          <Icon name="camera" className="h-4 w-4" />
+          Start camera scan
+        </Button>
       ) : (
         <Button variant="outline" onClick={stopCamera} className="w-full">Stop camera</Button>
       )}

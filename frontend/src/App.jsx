@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import Navbar from "./components/Navbar";
+import { ToastProvider } from "./components/Toast";
+import { ConfirmProvider } from "./components/ConfirmProvider";
+import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
@@ -43,21 +45,14 @@ import Commissions from "./pages/Commissions";
 import AdminCommissions from "./pages/AdminCommissions";
 import { ADMIN_ROLES } from "./config/roles";
 
-function Layout({ children }) {
-  return (
-    <div className="min-h-full">
-      <Navbar />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Layout>
-          <Routes>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AppLayout>
+              <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -109,7 +104,9 @@ export default function App() {
 
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Layout>
+            </AppLayout>
+          </ConfirmProvider>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

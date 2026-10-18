@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
 import VerificationDocument from "../components/VerificationDocument";
 import ProofImage from "../components/ProofImage";
+import Icon from "../components/Icon";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
   "Merchants",
@@ -33,16 +35,18 @@ export default function Admin() {
           subtitle="Super Administrator System Oversight"
         />
         <Card className="p-8 text-center space-y-4">
-          <div className="text-4xl">🌐</div>
-          <h2 className="text-xl font-bold text-navy">Platform Superadmin Overview</h2>
-          <p className="text-sm text-slate max-w-md mx-auto">
+          <div className="flex justify-center text-accent-dark">
+            <Icon name="university" className="h-10 w-10" />
+          </div>
+          <h2 className="text-xl font-bold text-ink">Platform Superadmin Overview</h2>
+          <p className="text-sm text-muted max-w-md mx-auto">
             You are logged in as a platform-level Super Administrator. Campus-specific administrative consoles (merchants, events, clubs, verifications, and disputes) are scoped to individual universities and require a campus administrator account.
           </p>
-          <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate max-w-md mx-auto space-y-1 text-left">
-            <p className="font-semibold text-navy">Platform Superadmin Controls:</p>
-            <p>• Multi-campus university management via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/universities</code></p>
-            <p>• Global platform metrics via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/stats</code></p>
-            <p>• Platform-wide audit trails via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/audit-logs</code></p>
+          <div className="rounded-xl border border-slate-200/80 bg-white/70 p-4 text-xs text-slate-600 max-w-md mx-auto space-y-1 text-left shadow-xs">
+            <p className="font-semibold text-slate-900">Platform Superadmin Controls:</p>
+            <p>• Multi-campus university management via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/universities</code></p>
+            <p>• Global platform metrics via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/stats</code></p>
+            <p>• Platform-wide audit trails via <code className="glass-soft px-1 py-0.5 rounded border border-slate-200 text-slate-800">/api/super/audit-logs</code></p>
           </div>
           <div className="pt-2">
             <Button as={Link} to="/marketplace" variant="primary">
@@ -61,12 +65,12 @@ export default function Admin() {
   return (
     <div>
       <PageHeader title="University Administration" subtitle={campusSubtitle} />
-      <div className="mb-6 flex flex-wrap gap-1 border-b border-slate/15">
+      <div className="mb-6 flex flex-wrap gap-1 border-b border-slate-200/80">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium ${tab === t ? "border-b-2 border-navy text-navy" : "text-slate hover:text-navy"}`}
+            className={`px-4 py-2 text-sm font-semibold transition ${tab === t ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-500 hover:text-slate-900"}`}
           >
             {t}
           </button>
@@ -115,14 +119,14 @@ function MerchantsTab() {
     <div>
       <ErrorBanner message={error} />
       {apps.length === 0 ? (
-        <p className="text-sm text-slate">No pending merchant applications.</p>
+        <p className="text-sm text-muted">No pending merchant applications.</p>
       ) : (
         <div className="space-y-2">
           {apps.map((a) => (
-            <Card key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <Card key={a.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-medium text-navy">{a.business_name}</p>
-                <p className="text-xs text-slate">{a.applicant_name} · {a.applicant_email} · {a.category || "No category"}</p>
+                <p className="font-semibold text-ink">{a.business_name}</p>
+                <p className="text-xs text-muted">{a.applicant_name} · {a.applicant_email} · {a.category || "No category"}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="accent" onClick={() => decide(a.id, "approve")}>Approve</Button>
@@ -163,14 +167,14 @@ function EventsTab() {
     <div>
       <ErrorBanner message={error} />
       {events.length === 0 ? (
-        <p className="text-sm text-slate">No events pending review.</p>
+        <p className="text-sm text-muted">No events pending review.</p>
       ) : (
         <div className="space-y-2">
           {events.map((e) => (
-            <Card key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <Card key={e.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-medium text-navy">{e.title}</p>
-                <p className="text-xs text-slate">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
+                <p className="font-semibold text-ink">{e.title}</p>
+                <p className="text-xs text-muted">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="accent" onClick={() => decide(e.id, "approve")}>Approve</Button>
@@ -230,15 +234,15 @@ function ReportsTab() {
     <div className="space-y-8">
       <ErrorBanner message={error} />
       <div>
-        <h2 className="mb-3 font-semibold text-navy">Open reports ({data.reports.length})</h2>
+        <h2 className="mb-3 font-semibold text-ink">Open reports ({data.reports.length})</h2>
         {data.reports.length === 0 ? (
-          <p className="text-sm text-slate">No open reports.</p>
+          <p className="text-sm text-muted">No open reports.</p>
         ) : (
           <div className="space-y-2">
             {data.reports.map((r) => (
-              <Card key={r.id} className="p-4">
-                <p className="font-medium text-navy">{r.target_type} — {r.reason}</p>
-                <p className="text-xs text-slate">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
+              <Card key={r.id} className="glass glass-hover p-4">
+                <p className="font-semibold text-ink">{r.target_type} — {r.reason}</p>
+                <p className="text-xs text-muted">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {ACTIONS.map((a) => (
                     <Button key={a} variant="outline" disabled={busyId === r.id} onClick={() => resolveReport(r.id, a)}>
@@ -252,15 +256,15 @@ function ReportsTab() {
         )}
       </div>
       <div>
-        <h2 className="mb-3 font-semibold text-navy">Open rental disputes ({data.disputes.length})</h2>
+        <h2 className="mb-3 font-semibold text-ink">Open rental disputes ({data.disputes.length})</h2>
         {data.disputes.length === 0 ? (
-          <p className="text-sm text-slate">No open disputes.</p>
+          <p className="text-sm text-muted">No open disputes.</p>
         ) : (
           <div className="space-y-2">
             {data.disputes.map((d) => (
-              <Card key={d.id} className="p-4">
-                <p className="font-medium text-navy">{d.title}</p>
-                <p className="text-xs text-slate">Raised by {d.raised_by_name}: {d.reason}</p>
+              <Card key={d.id} className="glass glass-hover p-4">
+                <p className="font-semibold text-ink">{d.title}</p>
+                <p className="text-xs text-muted">Raised by {d.raised_by_name}: {d.reason}</p>
                 <Button className="mt-3" variant="outline" disabled={busyId === d.id} onClick={() => resolveDispute(d.id)}>
                   Mark resolved
                 </Button>
@@ -315,11 +319,11 @@ function UsersTab() {
       ) : (
         <div className="space-y-2">
           {users.map((u) => (
-            <Card key={u.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <Card key={u.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-medium text-navy">{u.name} <span className="text-xs text-slate">({u.email})</span></p>
+                <p className="font-semibold text-ink">{u.name} <span className="text-xs text-muted">({u.email})</span></p>
                 <div className="mt-1 flex gap-1">
-                  <Badge tone="navy">{u.role}</Badge>
+                  <Badge tone="accent">{u.role}</Badge>
                   <Badge tone={u.verified ? "ok" : "warn"}>{u.verified ? "verified" : "unverified"}</Badge>
                   {u.suspended && <Badge tone="danger">suspended</Badge>}
                 </div>
@@ -373,8 +377,8 @@ function ClubsTab() {
 
   return (
     <div>
-      <Card className="mb-6 max-w-lg p-5">
-        <h2 className="mb-3 font-semibold text-navy">Register a new club</h2>
+      <Card className="glass-panel mb-6 max-w-lg p-5">
+        <h2 className="mb-3 font-semibold text-ink">Register a new club</h2>
         <form onSubmit={submit} className="space-y-3">
           <ErrorBanner message={error} />
           <SuccessBanner message={success} />
@@ -394,9 +398,9 @@ function ClubsTab() {
       ) : (
         <div className="space-y-2">
           {clubs.map((c) => (
-            <Card key={c.id} className="p-4">
-              <p className="font-medium text-navy">{c.name}</p>
-              <p className="text-xs text-slate">Led by {c.lead_name} · {c.status}</p>
+            <Card key={c.id} className="glass glass-hover p-4">
+              <p className="font-semibold text-ink">{c.name}</p>
+              <p className="text-xs text-muted">Led by {c.lead_name} · {c.status}</p>
             </Card>
           ))}
         </div>
@@ -519,15 +523,15 @@ function VerificationsTab() {
           {items.map((r) => (
             <Card
               key={r.id}
-              className={`flex flex-wrap items-center justify-between gap-3 p-4 ${
-                selected?.id === r.id ? "border-navy/40" : ""
+              className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 ${
+                selected?.id === r.id ? "border-white/30 bg-white/8" : ""
               }`}
             >
               <div>
-                <p className="font-medium text-navy">
-                  {r.studentName} <span className="text-xs font-normal text-slate">({r.studentEmail})</span>
+                <p className="font-semibold text-ink">
+                  {r.studentName} <span className="text-xs font-normal text-muted">({r.studentEmail})</span>
                 </p>
-                <p className="text-xs text-slate">
+                <p className="text-xs text-muted">
                   {VERIF_DOC_LABELS[r.documentType] || r.documentType} · {r.universityName} · submitted{" "}
                   {new Date(r.createdAt).toLocaleString()}
                 </p>
@@ -547,15 +551,15 @@ function VerificationsTab() {
       )}
 
       {selected && (
-        <Card className="p-5">
+        <Card className="glass-panel p-5">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-navy">Review request</h3>
-              <p className="text-sm text-slate">
+              <h3 className="font-semibold text-ink">Review request</h3>
+              <p className="text-sm text-muted">
                 {selected.studentName} · {selected.studentEmail}
                 {selected.studentPhone ? ` · ${selected.studentPhone}` : ""}
               </p>
-              <p className="text-xs text-slate">
+              <p className="text-xs text-muted">
                 {selected.universityName} · {VERIF_DOC_LABELS[selected.documentType] || selected.documentType} ·
                 submitted {new Date(selected.createdAt).toLocaleString()}
               </p>
@@ -567,23 +571,23 @@ function VerificationsTab() {
           </div>
 
           {selected.studentNote && (
-            <div className="mb-3 rounded-lg bg-slate/5 px-3 py-2 text-sm text-slate">
-              <span className="font-medium text-navy">Student note:</span> {selected.studentNote}
+            <div className="mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted">
+              <span className="font-medium text-ink">Student note:</span> {selected.studentNote}
             </div>
           )}
           {selected.status === "rejected" && selected.rejectionReason && (
-            <div className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            <div className="mb-3 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
               <span className="font-medium">Rejection reason:</span> {selected.rejectionReason}
             </div>
           )}
           {selected.status === "approved" && selected.reviewerName && (
-            <p className="mb-3 text-xs text-slate">
+            <p className="mb-3 text-xs text-muted">
               Approved by {selected.reviewerName} on {new Date(selected.reviewedAt).toLocaleString()}
             </p>
           )}
 
           <div className="mb-4">
-            <p className="mb-2 text-sm font-medium text-navy">Submitted document</p>
+            <p className="mb-2 text-sm font-medium text-ink">Submitted document</p>
             <VerificationDocument url={`/admin/verifications/requests/${selected.id}/document`} />
           </div>
 
@@ -648,9 +652,18 @@ function AnalyticsTab() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => downloadCsv("orders")}>⬇ Export orders CSV</Button>
-        <Button variant="outline" onClick={() => downloadCsv("transactions")}>⬇ Export transactions CSV</Button>
-        <Button variant="outline" onClick={() => downloadCsv("users")}>⬇ Export users CSV</Button>
+        <Button variant="outline" onClick={() => downloadCsv("orders")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export orders CSV
+        </Button>
+        <Button variant="outline" onClick={() => downloadCsv("transactions")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export transactions CSV
+        </Button>
+        <Button variant="outline" onClick={() => downloadCsv("users")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export users CSV
+        </Button>
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Students" value={stats.usersByRole.student || 0} />
@@ -658,7 +671,7 @@ function AnalyticsTab() {
         <StatCard label="Organizers" value={stats.usersByRole.organizer || 0} />
         <StatCard label="Stores" value={stats.storeCount} />
         <StatCard label="Orders" value={stats.orders.count} />
-        <StatCard label="Completed revenue" value={`${stats.orders.completedRevenue.toFixed(0)} birr`} />
+        <StatCard label="Completed revenue" value={`${stats.orders.completedRevenue.toFixed(0)} ETB`} />
         <StatCard label="Active tickets" value={stats.activeTickets} />
         <StatCard label="Active rentals" value={stats.activeBookings} />
         <StatCard label="Active P2P listings" value={stats.activeListings} />
@@ -669,9 +682,9 @@ function AnalyticsTab() {
 
 function StatCard({ label, value }) {
   return (
-    <Card className="p-4 text-center">
-      <p className="text-2xl font-bold text-navy">{value}</p>
-      <p className="text-xs text-slate">{label}</p>
+    <Card className="glass glass-hover p-4 text-center">
+      <p className="text-2xl font-bold text-ink">{value}</p>
+      <p className="text-xs text-muted">{label}</p>
     </Card>
   );
 }
@@ -685,18 +698,23 @@ function AuditLogTab() {
   if (!logs) return <Spinner />;
   return (
     <div>
-      <p className="mb-3 text-sm text-slate">
+      <p className="mb-3 text-sm text-muted">
         Append-only record of sensitive actions (SRS Section 15) — approvals, moderation, refunds, and ticket scans.
       </p>
       {logs.length === 0 ? (
-        <p className="text-sm text-slate">No audit entries yet.</p>
+        <p className="text-sm text-muted">No audit entries yet.</p>
       ) : (
         <div className="space-y-1">
           {logs.map((l) => (
-            <Card key={l.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+            <Card key={l.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
               <div>
                 <span className="font-mono text-xs text-accent-dark">{l.action}</span>{" "}
-                {l.target_type && <span className="text-slate">→ {l.target_type} {l.target_id?.slice(0, 8)}</span>}
+                {l.target_type && (
+                  <span className="inline-flex items-center gap-1 text-slate">
+                    <Icon name="arrowRight" className="h-3 w-3" />
+                    {l.target_type} {l.target_id?.slice(0, 8)}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-slate">
                 {l.actor_name || "system"} · {new Date(l.created_at).toLocaleString()}
@@ -718,6 +736,7 @@ function EventPaymentsTab() {
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [cancelPayment, setCancelPayment] = useState(false);
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -753,8 +772,8 @@ function EventPaymentsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate">
-        <p className="font-semibold text-navy">Admin Event Ticket Approval Queue</p>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-muted">
+        <p className="font-semibold text-ink">Admin Event Ticket Approval Queue</p>
         <p>
           Students pay ግቢያችን's receiving account for event tickets. Verify the transaction reference in your bank/Telebirr account before approving.
           Approving issues the active ticket QR code, retains the 2.5% platform commission, and attributes 97.5% net payable to the event organizer.
@@ -769,22 +788,22 @@ function EventPaymentsTab() {
       ) : (
         <div className="space-y-3">
           {items.map((t) => (
-            <Card key={t.id} className="p-4">
+            <Card key={t.id} className="glass glass-hover p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-navy">{t.event_title}</p>
-                  <p className="text-xs text-slate">
+                  <p className="font-semibold text-ink">{t.event_title}</p>
+                  <p className="text-xs text-muted">
                     Buyer: {t.student_name} ({t.student_email}) · {t.quantity}x {t.ticket_type_name}
                   </p>
-                  <p className="text-xs text-slate mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Submitted: {new Date(t.created_at).toLocaleString()}
                   </p>
-                  <p className="text-sm font-mono text-navy mt-1">
+                  <p className="text-sm font-mono text-ink mt-1">
                     Ref: <strong>{t.reference_number || "None"}</strong>
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-accent-dark">{Number(t.amount).toFixed(2)} birr</p>
+                  <p className="text-lg font-bold text-accent-dark">{Number(t.amount).toFixed(2)} ETB</p>
                   <Badge tone="warn">Awaiting Admin Approval</Badge>
                 </div>
               </div>
@@ -795,8 +814,17 @@ function EventPaymentsTab() {
                 </Button>
                 <Button
                   variant="accent"
+                  loading={busyId === t.payment_id}
                   disabled={busyId === t.payment_id}
-                  onClick={() => window.confirm(`Confirm receipt of ${Number(t.amount).toFixed(2)} birr from ${t.student_name}?`) && decide(t.payment_id, "approve")}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Confirm payment receipt",
+                      message: `Confirm receipt of ${Number(t.amount).toFixed(2)} ETB from ${t.student_name}?`,
+                      confirmLabel: "Approve ticket",
+                      variant: "accent",
+                    });
+                    if (ok) decide(t.payment_id, "approve");
+                  }}
                 >
                   Approve Ticket
                 </Button>
@@ -816,7 +844,7 @@ function EventPaymentsTab() {
               )}
 
               {rejectId === t.payment_id && (
-                <div className="mt-3 space-y-2 rounded-lg bg-paper p-3">
+                <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/5 p-3.5">
                   <Input
                     label="Rejection Reason"
                     placeholder="e.g. Reference number not found or amount incorrect"
@@ -884,7 +912,7 @@ function OrganizerPayoutsTab() {
         referenceNumber: payoutForm.referenceNumber.trim(),
         notes: payoutForm.notes.trim() || undefined,
       });
-      setSuccess(`Payout of ${Number(payoutForm.amount).toFixed(2)} birr recorded for ${payingOrg.organizer_name}.`);
+      setSuccess(`Payout of ${Number(payoutForm.amount).toFixed(2)} ETB recorded for ${payingOrg.organizer_name}.`);
       setPayingOrg(null);
       setPayoutForm({ amount: "", referenceNumber: "", notes: "" });
       load();
@@ -899,8 +927,8 @@ function OrganizerPayoutsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate">
-        <p className="font-semibold text-navy">Organizer Payout Settlements (SRS Section 8)</p>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-muted">
+        <p className="font-semibold text-ink">Organizer Payout Settlements (SRS Section 8)</p>
         <p>
           ግቢያችን retains a 2.5% platform commission on event ticket sales. The remaining 97.5% net payable is held by ግቢያችን
           until paid out to the organizer's verified payout account. Record external bank/Telebirr transfers here.
@@ -911,19 +939,19 @@ function OrganizerPayoutsTab() {
       <SuccessBanner message={success} />
 
       {payingOrg && (
-        <Card className="p-5 border-navy/30 bg-paper">
-          <h3 className="font-semibold text-navy">Record Payout to {payingOrg.organizer_name}</h3>
-          <p className="text-xs text-slate mb-3">
-            Available net balance: <strong>{Number(payingOrg.current_balance).toFixed(2)} birr</strong> · Email: {payingOrg.organizer_email}
+        <Card className="glass-panel p-5 border-white/10">
+          <h3 className="font-semibold text-ink">Record Payout to {payingOrg.organizer_name}</h3>
+          <p className="text-xs text-muted mb-3">
+            Available net balance: <strong>{Number(payingOrg.current_balance).toFixed(2)} ETB</strong> · Email: {payingOrg.organizer_email}
           </p>
 
           {payingOrg.payout_accounts && payingOrg.payout_accounts.length > 0 && (
             <div className="mb-4 space-y-1">
-              <p className="text-xs font-semibold text-navy">Organizer's Registered Payout Accounts:</p>
+              <p className="text-xs font-semibold text-ink">Organizer's Registered Payout Accounts:</p>
               {payingOrg.payout_accounts.map((acc) => (
-                <div key={acc.id} className="text-xs bg-white rounded border border-slate/20 p-2">
-                  <span className="font-semibold">{acc.account_name}</span> ({acc.method}) · <span className="font-mono">{acc.account_number}</span>
-                  {acc.instructions && <span className="text-slate ml-2">— {acc.instructions}</span>}
+                <div key={acc.id} className="text-xs rounded-xl border border-white/10 bg-white/5 p-2.5">
+                  <span className="font-semibold text-ink">{acc.account_name}</span> ({acc.method}) · <span className="font-mono text-muted">{acc.account_number}</span>
+                  {acc.instructions && <span className="text-muted ml-2">— {acc.instructions}</span>}
                 </div>
               ))}
             </div>
@@ -972,20 +1000,20 @@ function OrganizerPayoutsTab() {
       ) : (
         <div className="space-y-3">
           {organizers.map((o) => (
-            <Card key={o.organizer_id} className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <Card key={o.organizer_id} className="glass glass-hover p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-semibold text-navy">{o.organizer_name}</p>
-                <p className="text-xs text-slate">{o.organizer_email}</p>
+                <p className="font-semibold text-ink">{o.organizer_name}</p>
+                <p className="text-xs text-muted">{o.organizer_email}</p>
                 <div className="mt-2 flex flex-wrap gap-4 text-xs">
-                  <span>Gross Sales: <strong>{Number(o.total_sales).toFixed(2)} birr</strong></span>
-                  <span>Platform 2.5%: <strong className="text-accent-dark">{Number(o.platform_commission).toFixed(2)} birr</strong></span>
-                  <span>Net Payable: <strong>{Number(o.net_payable).toFixed(2)} birr</strong></span>
-                  <span>Paid Out: <strong className="text-ok">{Number(o.paid_out).toFixed(2)} birr</strong></span>
+                  <span>Gross Sales: <strong>{Number(o.total_sales).toFixed(2)} ETB</strong></span>
+                  <span>Platform 2.5%: <strong className="text-accent-dark">{Number(o.platform_commission).toFixed(2)} ETB</strong></span>
+                  <span>Net Payable: <strong>{Number(o.net_payable).toFixed(2)} ETB</strong></span>
+                  <span>Paid Out: <strong className="text-ok">{Number(o.paid_out).toFixed(2)} ETB</strong></span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate">Current Balance Due</p>
-                <p className="text-xl font-bold text-warn">{Number(o.current_balance).toFixed(2)} birr</p>
+                <p className="text-xs text-muted">Current Balance Due</p>
+                <p className="text-xl font-bold text-warn">{Number(o.current_balance).toFixed(2)} ETB</p>
                 {Number(o.current_balance) > 0 && (
                   <Button
                     variant="accent"
@@ -1006,17 +1034,17 @@ function OrganizerPayoutsTab() {
 
       {history.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-semibold text-navy mb-3">Recent Payout History</h3>
+          <h3 className="font-semibold text-ink mb-3">Recent Payout History</h3>
           <div className="space-y-2">
             {history.map((h) => (
-              <Card key={h.id} className="p-3 text-xs flex flex-wrap justify-between items-center gap-2">
+              <Card key={h.id} className="glass glass-hover p-3 text-xs flex flex-wrap justify-between items-center gap-2">
                 <div>
-                  <span className="font-semibold text-navy">{h.organizer_name}</span> · Ref: <span className="font-mono">{h.reference_number}</span>
-                  {h.notes && <p className="text-slate mt-0.5">{h.notes}</p>}
+                  <span className="font-semibold text-ink">{h.organizer_name}</span> · Ref: <span className="font-mono">{h.reference_number}</span>
+                  {h.notes && <p className="text-muted mt-0.5">{h.notes}</p>}
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-ok">{Number(h.amount).toFixed(2)} birr</span>
-                  <p className="text-slate">{new Date(h.created_at).toLocaleDateString()} by {h.recorded_by_name}</p>
+                  <span className="font-bold text-ok">{Number(h.amount).toFixed(2)} ETB</span>
+                  <p className="text-muted">{new Date(h.created_at).toLocaleDateString()} by {h.recorded_by_name}</p>
                 </div>
               </Card>
             ))}
@@ -1067,6 +1095,7 @@ function CommissionPaymentsTab() {
   const [openImgId, setOpenImgId] = useState(null);
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -1082,13 +1111,19 @@ function CommissionPaymentsTab() {
   }, []);
 
   async function verify(id) {
-    if (!window.confirm("Verify that this commission payment has been received in ግቢያችን's receiving account?")) return;
+    const ok = await confirm({
+      title: "Verify commission payment",
+      message: "Verify that this commission payment has been received in ግቢያችን's receiving account?",
+      confirmLabel: "Verify payment",
+      variant: "accent",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     setBusyId(id);
     try {
       const { data } = await client.post(`/commissions/admin/payments/${id}/verify`, {});
-      setSuccess(`Commission payment verified! Settled ${data.settledCount} due commission entries totalling ${Number(data.amount).toFixed(2)} birr.`);
+      setSuccess(`Commission payment verified! Settled ${data.settledCount} due commission entries totalling ${Number(data.amount).toFixed(2)} ETB.`);
       load();
     } catch (err) {
       setError(errMsg(err, "Could not verify payment"));
@@ -1119,8 +1154,8 @@ function CommissionPaymentsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate">
-        <p className="font-semibold text-navy">Merchant Commission Settle Verification (SRS Section 8)</p>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-muted">
+        <p className="font-semibold text-ink">Merchant Commission Settle Verification (SRS Section 8)</p>
         <p>
           Merchants pay 5% commission on material sales to ግቢያችን's receiving account and submit evidence here.
           Verifying automatically settles the merchant's due commission records up to the verified amount.
@@ -1135,20 +1170,20 @@ function CommissionPaymentsTab() {
       ) : (
         <div className="space-y-3">
           {payments.map((p) => (
-            <Card key={p.id} className="p-4">
+            <Card key={p.id} className="glass glass-hover p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-navy">{p.merchant_name} <span className="text-xs text-slate">({p.merchant_email})</span></p>
-                  <p className="text-xs text-slate">
+                  <p className="font-semibold text-ink">{p.merchant_name} <span className="text-xs text-muted">({p.merchant_email})</span></p>
+                  <p className="text-xs text-muted">
                     Submitted: {new Date(p.created_at).toLocaleString()}
                   </p>
-                  <p className="text-xs text-slate mt-0.5">
-                    Ref: <span className="font-mono font-medium text-navy">{p.reference_number}</span>
+                  <p className="text-xs text-muted mt-0.5">
+                    Ref: <span className="font-mono font-medium text-ink">{p.reference_number}</span>
                     {p.notes && <span className="ml-2">— {p.notes}</span>}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-accent-dark">{Number(p.amount).toFixed(2)} birr</p>
+                  <p className="text-lg font-bold text-accent-dark">{Number(p.amount).toFixed(2)} ETB</p>
                   <Badge tone={p.status === "verified" ? "ok" : p.status === "rejected" ? "danger" : "warn"}>
                     {p.status}
                   </Badge>
@@ -1178,7 +1213,7 @@ function CommissionPaymentsTab() {
               )}
 
               {rejectId === p.id && (
-                <div className="mt-3 space-y-2 rounded-lg bg-paper p-3">
+                <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/5 p-3.5">
                   <Input
                     label="Rejection Reason (required)"
                     placeholder="e.g. Reference not found in Telebirr statement"
@@ -1213,6 +1248,7 @@ function ReceivingAccountsTab() {
     instructions: "",
     isDefault: false,
   });
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -1245,7 +1281,13 @@ function ReceivingAccountsTab() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Deactivate this receiving account?")) return;
+    const ok = await confirm({
+      title: "Deactivate account?",
+      message: "Deactivate this receiving account? Buyers will no longer see it.",
+      confirmLabel: "Deactivate",
+      variant: "danger",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     try {
@@ -1261,8 +1303,8 @@ function ReceivingAccountsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate">
-        <p className="font-semibold text-navy">ግቢያችን University Receiving Accounts</p>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-muted">
+        <p className="font-semibold text-ink">ግቢያችን University Receiving Accounts</p>
         <p>
           Configure the official Telebirr, CBE Birr, or Bank accounts that students and merchants transfer to
           for event ticket payments and platform commissions. Students pay these accounts directly.
@@ -1272,8 +1314,8 @@ function ReceivingAccountsTab() {
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
 
-      <Card className="p-5 border-navy/30 bg-paper max-w-xl">
-        <h3 className="font-semibold text-navy mb-3">Add Official Receiving Account</h3>
+      <Card className="glass-panel p-5 border-white/10 max-w-xl">
+        <h3 className="font-semibold text-ink mb-3">Add Official Receiving Account</h3>
         <form onSubmit={handleAdd} className="space-y-3">
           <Select
             label="Method"
@@ -1304,36 +1346,33 @@ function ReceivingAccountsTab() {
             value={form.instructions}
             onChange={(e) => setForm({ ...form, instructions: e.target.value })}
           />
-          <label className="flex items-center gap-2 text-sm text-slate">
-            <input
-              type="checkbox"
-              checked={form.isDefault}
-              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-            />
-            Make this the primary default account for this campus
-          </label>
-          <Button type="submit" variant="accent" disabled={busy}>
-            {busy ? "Saving..." : "Add Receiving Account"}
+          <Checkbox
+            label="Make this the primary default account for this campus"
+            checked={form.isDefault}
+            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+          />
+          <Button type="submit" loading={busy} disabled={busy}>
+            {busy ? "Saving…" : "Add Receiving Account"}
           </Button>
         </form>
       </Card>
 
       <div>
-        <h3 className="font-semibold text-navy mb-3">Active Receiving Accounts ({accounts.length})</h3>
+        <h3 className="font-semibold text-ink mb-3">Active Receiving Accounts ({accounts.length})</h3>
         {accounts.length === 0 ? (
-          <p className="text-sm text-slate">No receiving accounts configured yet.</p>
+          <p className="text-sm text-muted">No receiving accounts configured yet.</p>
         ) : (
           <div className="space-y-2">
             {accounts.map((a) => (
-              <Card key={a.id} className="p-4 flex flex-wrap items-center justify-between gap-3">
+              <Card key={a.id} className="glass glass-hover p-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-navy">{a.account_name}</p>
-                    <Badge tone="navy">{a.method}</Badge>
+                    <p className="font-semibold text-ink">{a.account_name}</p>
+                    <Badge tone="accent">{a.method}</Badge>
                     {a.is_default && <Badge tone="ok">Default</Badge>}
                   </div>
-                  <p className="font-mono text-sm text-slate mt-1">{a.account_number}</p>
-                  {a.instructions && <p className="text-xs text-slate mt-0.5">{a.instructions}</p>}
+                  <p className="font-mono text-sm text-muted mt-1">{a.account_number}</p>
+                  {a.instructions && <p className="text-xs text-muted mt-0.5">{a.instructions}</p>}
                 </div>
                 <div>
                   <Button variant="danger" onClick={() => handleDelete(a.id)}>Deactivate</Button>

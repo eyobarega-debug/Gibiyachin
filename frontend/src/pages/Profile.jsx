@@ -2,12 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { client } from "../api/client";
-import { Button, Card, Spinner } from "../components/ui";
+import { Button, Card, Spinner, Tabs } from "../components/ui";
 import ProfileHeader from "../components/profile/ProfileHeader";
 import ProfileStats from "../components/profile/ProfileStats";
 import ProfileActivity from "../components/profile/ProfileActivity";
 import ProfileSettings from "../components/profile/ProfileSettings";
 import EditProfileModal from "../components/profile/EditProfileModal";
+import Icon from "../components/Icon";
 
 export default function Profile() {
   const { user, reload } = useAuth();
@@ -63,48 +64,15 @@ export default function Profile() {
       />
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate/20">
-        <button
-          type="button"
-          onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "overview"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          📊 Overview & Stats
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("activity")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "activity"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          ⏱️ Activity Feed
-          {activities.length > 0 && (
-            <span className="rounded-full bg-slate/10 px-2 py-0.5 text-xs text-slate">
-              {activities.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("settings")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "settings"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          ⚙️ Account Settings
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { key: "overview", label: "Overview & Stats" },
+          { key: "activity", label: "Activity Feed", count: activities.length || undefined },
+          { key: "settings", label: "Account Settings" },
+        ]}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* Tab Contents */}
       {loadingData ? (
@@ -117,7 +85,7 @@ export default function Profile() {
             <div className="space-y-6">
               {/* Role-Specific Metrics */}
               <div>
-                <h3 className="mb-3 text-base font-bold text-navy">Platform Statistics</h3>
+                <h3 className="mb-3 text-base font-bold text-ink">Platform Statistics</h3>
                 <ProfileStats stats={stats} role={role} />
               </div>
 
@@ -125,8 +93,11 @@ export default function Profile() {
               {role === "student" && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🛍️ Orders & Resale</p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="marketplace" className="h-4 w-4 text-ink" />
+                      Orders &amp; Resale
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
                       Browse your active purchases and peer-to-peer listings on campus.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -140,8 +111,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🔄 Rentals & Borrowing</p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="rentals" className="h-4 w-4 text-ink" />
+                      Rentals &amp; Borrowing
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
                       Track your equipment, book rentals, and return due dates.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -155,8 +129,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🎟️ Campus Events</p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="events" className="h-4 w-4 text-ink" />
+                      Campus Events
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
                       View your registered event tickets, club workshops, and QR passes.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -174,8 +151,11 @@ export default function Profile() {
               {role === "merchant" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card className="p-5">
-                    <h4 className="font-bold text-navy">🏪 Merchant Storefront</h4>
-                    <p className="mt-1 text-xs text-slate">
+                    <h4 className="flex items-center gap-2 font-bold text-ink">
+                      <Icon name="store" className="h-4 w-4 text-ink" />
+                      Merchant Storefront
+                    </h4>
+                    <p className="mt-1 text-xs text-muted">
                       Manage your campus store catalog, upload new products, and configure store policies.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -189,8 +169,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-5">
-                    <h4 className="font-bold text-navy">💳 Payouts & Commissions</h4>
-                    <p className="mt-1 text-xs text-slate">
+                    <h4 className="flex items-center gap-2 font-bold text-ink">
+                      <Icon name="wallet" className="h-4 w-4 text-ink" />
+                      Payouts &amp; Commissions
+                    </h4>
+                    <p className="mt-1 text-xs text-muted">
                       Track your earnings, commission rates, and linked bank or mobile money payout accounts.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -207,8 +190,11 @@ export default function Profile() {
 
               {role === "organizer" && (
                 <Card className="p-5">
-                  <h4 className="font-bold text-navy">📅 Event Organizer Center</h4>
-                  <p className="mt-1 text-xs text-slate">
+                  <h4 className="flex items-center gap-2 font-bold text-ink">
+                    <Icon name="calendar" className="h-4 w-4 text-ink" />
+                    Event Organizer Center
+                  </h4>
+                  <p className="mt-1 text-xs text-muted">
                     Create new student events, manage ticket capacities, and validate attendee entry via QR check-in.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -224,8 +210,11 @@ export default function Profile() {
 
               {(role === "admin" || role === "super_admin") && (
                 <Card className="p-5">
-                  <h4 className="font-bold text-navy">🛡️ University Administration</h4>
-                  <p className="mt-1 text-xs text-slate">
+                  <h4 className="flex items-center gap-2 font-bold text-ink">
+                    <Icon name="shield" className="h-4 w-4 text-ink" />
+                    University Administration
+                  </h4>
+                  <p className="mt-1 text-xs text-muted">
                     Review verification requests, manage student dispute cases, and monitor platform activity.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">

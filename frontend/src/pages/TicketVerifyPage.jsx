@@ -4,16 +4,17 @@ import { client } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
 import QrScanner from "../components/QrScanner";
+import Icon from "../components/Icon";
 
 const RESULT_STYLE = {
-  ADMIT: { tone: "ok", label: "✅ ADMITTED — ENTRY GRANTED" },
-  VALID: { tone: "ok", label: "🟢 VALID TICKET — READY FOR ENTRY" },
-  ALREADY_USED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET ALREADY USED" },
-  PAYMENT_NOT_APPROVED: { tone: "warn", label: "⚠️ ENTRY DENIED — PAYMENT NOT VERIFIED" },
-  CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET CANCELLED" },
-  EVENT_CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — EVENT CANCELLED" },
-  INVALID: { tone: "danger", label: "⛔ ENTRY DENIED — INVALID TICKET" },
-  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", label: "⛔ CROSS-CAMPUS TICKET NOT ADMITTED" },
+  ADMIT: { tone: "ok", icon: "checkCircle", label: "ADMITTED — ENTRY GRANTED" },
+  VALID: { tone: "ok", icon: "checkCircle", label: "VALID TICKET — READY FOR ENTRY" },
+  ALREADY_USED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET ALREADY USED" },
+  PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
+  CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
+  EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
+  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
 
 export default function TicketVerifyPage() {
@@ -114,8 +115,8 @@ export default function TicketVerifyPage() {
 
       {!isAuthorized ? (
         <Card className="p-6 text-center">
-          <p className="font-semibold text-navy">Staff Authorization Required</p>
-          <p className="mt-1 text-sm text-slate">
+          <p className="font-semibold text-ink">Staff Authorization Required</p>
+          <p className="mt-1 text-sm text-muted">
             You must be logged in as an event organizer or university administrator to admit attendees.
           </p>
           <Button as={Link} to="/login" variant="accent" className="mt-4">
@@ -126,7 +127,7 @@ export default function TicketVerifyPage() {
         <div className="space-y-5">
           {!token && (
             <Card className="p-5">
-              <h2 className="mb-3 font-semibold text-navy">Scan Ticket QR Code</h2>
+              <h2 className="mb-3 font-semibold text-ink">Scan Ticket QR Code</h2>
               <QrScanner onScan={inspectToken} />
             </Card>
           )}
@@ -157,39 +158,42 @@ export default function TicketVerifyPage() {
                       : "danger"
                   }
                 >
+                  {RESULT_STYLE[scanResult.result]?.icon && (
+                    <Icon name={RESULT_STYLE[scanResult.result].icon} className="h-3.5 w-3.5" />
+                  )}
                   {RESULT_STYLE[scanResult.result]?.label || scanResult.result}
                 </Badge>
 
-                <h2 className="mt-3 text-xl font-bold text-navy">
+                <h2 className="mt-3 text-xl font-bold text-ink">
                   {scanResult.eventTitle || scanResult.ticket?.event_title || "Campus Event"}
                 </h2>
               </div>
 
               {/* Attendee Details Card */}
               {(scanResult.ticket || scanResult.attendeeName) && (
-                <div className="mt-4 rounded-xl border border-slate/15 bg-white p-4 shadow-xs">
+                <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/80 p-4 shadow-xs">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Attendee</span>
-                      <p className="font-bold text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Attendee</span>
+                      <p className="font-bold text-ink">
                         {scanResult.attendeeName || scanResult.ticket?.holder_name}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Ticket Number</span>
-                      <p className="font-mono font-bold text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Ticket Number</span>
+                      <p className="font-mono font-bold text-ink">
                         {scanResult.ticketNumber || scanResult.ticket?.ticket_number || scanResult.ticket?.id?.slice(0, 8)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Ticket Tier</span>
-                      <p className="font-medium text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Ticket Tier</span>
+                      <p className="font-medium text-ink">
                         {scanResult.ticketType || scanResult.ticket?.ticket_type}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Campus</span>
-                      <p className="font-medium text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Campus</span>
+                      <p className="font-medium text-ink">
                         {scanResult.ticket?.university_name || "Campus Community"}
                       </p>
                     </div>
@@ -198,13 +202,13 @@ export default function TicketVerifyPage() {
               )}
 
               {scanResult.reason && (
-                <p className="mt-3 text-center text-xs text-slate">{scanResult.reason}</p>
+                <p className="mt-3 text-center text-xs text-muted">{scanResult.reason}</p>
               )}
 
               {scanResult.previousScanAt && (
-                <div className="mt-3 rounded-lg bg-danger/10 p-2.5 text-center text-xs text-danger font-medium">
-                  ⚠️ This ticket was already admitted on:{" "}
-                  {new Date(scanResult.previousScanAt).toLocaleString()}
+                <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-danger/10 p-2.5 text-center text-xs font-medium text-danger">
+                  <Icon name="alert" className="h-3.5 w-3.5 shrink-0" />
+                  This ticket was already admitted on: {new Date(scanResult.previousScanAt).toLocaleString()}
                 </div>
               )}
 
@@ -212,7 +216,8 @@ export default function TicketVerifyPage() {
               <div className="mt-5 space-y-2">
                 {scanResult.result === "VALID" && (
                   <Button variant="accent" onClick={handleAdmit} className="w-full text-base font-bold">
-                    ✓ Confirm & Admit Attendee
+                    <Icon name="checkCircle" className="h-4 w-4" />
+                    Confirm & Admit Attendee
                   </Button>
                 )}
 
@@ -221,15 +226,23 @@ export default function TicketVerifyPage() {
                     variant="outline"
                     onClick={handleReverse}
                     disabled={reversing}
-                    className="w-full text-xs text-slate hover:text-danger"
+                    className="w-full text-xs text-muted hover:text-danger"
                   >
-                    {reversing ? "Reversing..." : "↺ Reverse Check-In (Admin Reset)"}
+                    {reversing ? (
+                      "Reversing..."
+                    ) : (
+                      <>
+                        <Icon name="refresh" className="h-3.5 w-3.5" />
+                        Reverse Check-In (Admin Reset)
+                      </>
+                    )}
                   </Button>
                 )}
 
                 {token && (
                   <Button as={Link} to="/tickets/verify" variant="ghost" className="w-full text-xs">
-                    ← Scan Another Ticket
+                    <Icon name="arrowLeft" className="h-3.5 w-3.5" />
+                    Scan Another Ticket
                   </Button>
                 )}
               </div>

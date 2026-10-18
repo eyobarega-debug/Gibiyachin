@@ -53,13 +53,13 @@ export default function RentalCreate() {
           <TextArea label="Description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Price per day (birr)"
+              label="Price per day (ETB)"
               type="number" min="0" required
               value={form.pricePerDay}
               onChange={(e) => setForm({ ...form, pricePerDay: e.target.value })}
             />
             <Input
-              label="Refundable deposit"
+              label="Refundable deposit (ETB)"
               type="number" min="0"
               value={form.deposit}
               onChange={(e) => setForm({ ...form, deposit: e.target.value })}
@@ -70,7 +70,7 @@ export default function RentalCreate() {
             <Input label="Available to" type="date" value={form.availableTo} onChange={(e) => setForm({ ...form, availableTo: e.target.value })} />
           </div>
           <div>
-            <p className="mb-1 text-sm font-medium text-navy">Photos</p>
+            <p className="mb-1 text-sm font-medium text-ink">Photos</p>
             <ImageUploader value={form.images} onChange={(images) => setForm({ ...form, images })} />
           </div>
           <Button type="submit" variant="accent" className="w-full" disabled={busy}>

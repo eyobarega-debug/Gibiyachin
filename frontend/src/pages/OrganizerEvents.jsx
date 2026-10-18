@@ -5,6 +5,7 @@ import { errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, ErrorBanner, Input, PageHeader, Select, SuccessBanner, TextArea } from "../components/ui";
 import ImageUploader from "../components/ImageUploader";
 import TicketCard from "../components/TicketCard";
+import Icon from "../components/Icon";
 
 const STATUS_TONE = {
   draft: "slate",
@@ -198,7 +199,17 @@ export default function OrganizerEvents() {
               setSuccess("");
             }}
           >
-            {showForm ? "✕ Close Form" : "+ Create New Event"}
+            {showForm ? (
+              <>
+                <Icon name="close" className="h-4 w-4" />
+                Close Form
+              </>
+            ) : (
+              <>
+                <Icon name="plus" className="h-4 w-4" />
+                Create New Event
+              </>
+            )}
           </Button>
         }
       />
@@ -208,11 +219,11 @@ export default function OrganizerEvents() {
 
       {/* Event Creation & Customization Card */}
       {showForm && (
-        <Card className="mb-8 p-6 shadow-md border-navy/20">
-          <div className="mb-4 flex items-center justify-between border-b border-slate/15 pb-3">
+        <Card className="glass-panel mb-8 p-6 shadow-2xl border-white/90">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-200/80 pb-3">
             <div>
-              <h2 className="text-lg font-bold text-navy">New Campus Event</h2>
-              <p className="text-xs text-slate">
+              <h2 className="text-lg font-bold text-ink">New Campus Event</h2>
+              <p className="text-xs text-muted">
                 Fill in the details below. Upload an event poster to automatically style attendees' personalized ticket passes.
               </p>
             </div>
@@ -222,7 +233,8 @@ export default function OrganizerEvents() {
               onClick={() => setPreviewOpen(true)}
               className="text-xs"
             >
-              👁️ Preview Ticket Design
+              <Icon name="tickets" className="h-4 w-4" />
+              Preview Ticket Design
             </Button>
           </div>
 
@@ -230,7 +242,7 @@ export default function OrganizerEvents() {
             {/* Poster Upload & Category */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-navy mb-1.5">
+                <label className="block text-sm font-medium text-ink mb-1.5">
                   Event Poster / Banner Image
                 </label>
                 <div className="space-y-2">
@@ -307,8 +319,8 @@ export default function OrganizerEvents() {
             />
 
             {/* Schedule & Venue */}
-            <div className="rounded-xl bg-paper p-4">
-              <h3 className="mb-3 text-sm font-semibold text-navy">Schedule & Venue</h3>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-4 shadow-xs">
+              <h3 className="mb-3 text-sm font-semibold text-ink">Schedule & Venue</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input
                   label="Start Date & Time"
@@ -345,11 +357,11 @@ export default function OrganizerEvents() {
             </div>
 
             {/* Ticket Types Configuration */}
-            <div className="rounded-xl border border-slate/20 p-4">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-4 shadow-xs">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-navy">Ticket Types & Pricing</h3>
-                  <p className="text-xs text-slate">
+                  <h3 className="text-sm font-semibold text-ink">Ticket Types & Pricing</h3>
+                  <p className="text-xs text-muted">
                     Offer multiple ticket tiers (e.g. General, VIP, Student Free Pass) with separate quotas.
                   </p>
                 </div>
@@ -360,7 +372,7 @@ export default function OrganizerEvents() {
 
               <div className="space-y-3">
                 {form.ticketTypes.map((tt, i) => (
-                  <div key={i} className="rounded-lg border border-slate/15 bg-white p-3 shadow-xs">
+                  <div key={i} className="rounded-xl border border-slate-200/70 bg-white/80 p-3 shadow-xs">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
                       <Input
                         label="Tier Name"
@@ -420,7 +432,8 @@ export default function OrganizerEvents() {
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>
-                👁️ Preview Ticket
+                <Icon name="tickets" className="h-4 w-4" />
+                Preview Ticket
               </Button>
               <Button type="submit" variant="accent">
                 Save Event as Draft
@@ -432,16 +445,16 @@ export default function OrganizerEvents() {
 
       {/* Ticket Preview Modal */}
       {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-paper p-5 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between border-b border-slate/15 pb-2">
-              <h3 className="font-bold text-navy">Live Attendee Ticket Preview</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl glass-panel border border-white/90 bg-white/95 p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-200/80 pb-3">
+              <h3 className="font-bold text-slate-900">Live Attendee Ticket Preview</h3>
               <button
                 type="button"
                 onClick={() => setPreviewOpen(false)}
-                className="rounded-full p-1 text-slate hover:bg-slate/10 hover:text-navy"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
               >
-                ✕
+                <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
             <TicketCard ticket={sampleTicket} isPreview={true} showActions={false} />
@@ -457,41 +470,48 @@ export default function OrganizerEvents() {
       {/* Existing Events List */}
       <div className="space-y-4">
         {events.length === 0 ? (
-          <Card className="p-8 text-center text-slate">
-            <p className="font-medium text-navy">You have not created any events yet.</p>
+          <Card className="glass p-8 text-center text-muted">
+            <p className="font-medium text-ink">You have not created any events yet.</p>
             <p className="mt-1 text-sm">Click "+ Create New Event" above to get started.</p>
           </Card>
         ) : (
           events.map((ev) => (
-            <Card key={ev.id} className="p-5 transition hover:shadow-md">
+            <Card key={ev.id} className="glass glass-hover p-5 transition">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex gap-4">
                   {ev.poster_url ? (
                     <img
                       src={ev.poster_url}
                       alt={ev.title}
-                      className="h-20 w-20 flex-shrink-0 rounded-lg object-cover border border-slate/15"
+                      className="h-20 w-20 flex-shrink-0 rounded-2xl object-cover border border-slate-200/80 shadow-xs"
                     />
                   ) : (
-                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-navy/10 text-xl font-bold text-navy">
+                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/80 text-xl font-bold text-ink shadow-xs">
                       ግቢያችን
                     </div>
                   )}
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-navy text-lg">{ev.title}</h3>
+                      <h3 className="font-bold text-ink text-lg">{ev.title}</h3>
                       {ev.category && (
-                        <span className="rounded-full bg-slate/10 px-2 py-0.5 text-[11px] font-medium text-slate">
+                        <span className="rounded-full border border-slate-200/70 bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
                           {ev.category}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate mt-1">
-                      📅 {new Date(ev.date_time).toLocaleString()} · 📍 {ev.venue_name || ev.location}
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="calendar" className="h-3.5 w-3.5" />
+                        {new Date(ev.date_time).toLocaleString()}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="mapPin" className="h-3.5 w-3.5" />
+                        {ev.venue_name || ev.location}
+                      </span>
                     </p>
                     {ev.organizer_name && (
-                      <p className="text-xs text-slate">Organizer: {ev.organizer_name}</p>
+                      <p className="text-xs text-muted">Organizer: {ev.organizer_name}</p>
                     )}
                     {ev.reject_reason && (
                       <p className="mt-1.5 rounded-md bg-danger/10 px-2 py-1 text-xs text-danger">
@@ -536,7 +556,9 @@ export default function OrganizerEvents() {
                 </div>
 
                 <Button as={Link} to={`/organizer/${ev.id}`} variant="primary" className="text-xs">
-                  🎟️ Attendees, Check-in & Scanner →
+                  <Icon name="tickets" className="h-4 w-4" />
+                  Attendees, Check-in &amp; Scanner
+                  <Icon name="arrowRight" className="h-4 w-4" />
                 </Button>
               </div>
             </Card>

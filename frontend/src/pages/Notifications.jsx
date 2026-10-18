@@ -36,12 +36,12 @@ export default function Notifications() {
       ) : (
         <div className="space-y-2">
           {items.map((n) => (
-            <Card key={n.id} className={`p-4 ${!n.read_at ? "border-navy/30 bg-navy/5" : ""}`}>
+            <Card key={n.id} className={`p-4 glass glass-hover border border-white/80 ${!n.read_at ? "bg-white/95 border-slate-300/90 shadow-sm" : "bg-white/70"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-navy">{n.title}</p>
-                  {n.body && <p className="text-sm text-slate">{n.body}</p>}
-                  <p className="mt-1 text-xs text-slate">{new Date(n.created_at).toLocaleString()}</p>
+                  <p className="font-semibold text-ink">{n.title}</p>
+                  {n.body && <p className="text-sm text-muted">{n.body}</p>}
+                  <p className="mt-1 text-xs text-muted">{new Date(n.created_at).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {!n.read_at && <Badge tone="accent">new</Badge>}

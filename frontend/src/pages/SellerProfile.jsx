@@ -4,15 +4,17 @@ import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import ImageUploader from "../components/ImageUploader";
 import ReviewsPanel from "../components/ReviewsPanel";
+import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Spinner, SuccessBanner, TextArea } from "../components/ui";
 
 const VERIFY_TONE = { verified: "ok", pending: "warn", unverified: "slate", suspended: "danger" };
 
 function Stat({ label, value }) {
   return (
-    <Card className="p-4 text-center">
-      <p className="text-2xl font-bold text-navy">{value}</p>
-      <p className="mt-1 text-xs text-slate">{label}</p>
+    <Card className="glass glass-hover p-4 text-center">
+      <p className="text-2xl font-bold text-ink">{value}</p>
+      <p className="mt-1 text-xs text-muted">{label}</p>
     </Card>
   );
 }
@@ -80,23 +82,23 @@ export default function SellerProfile() {
       <ErrorBanner message={error} />
       <SuccessBanner message={notice} />
 
-      <Card className="overflow-hidden">
-        <div className="h-40 w-full bg-gradient-to-r from-navy to-accent">
+      <Card className="overflow-hidden border border-white/90 bg-white/80 shadow-md">
+        <div className="h-40 w-full bg-gradient-to-r from-slate-200 via-slate-100 to-slate-300">
           {seller.coverImageUrl && <img src={seller.coverImageUrl} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="relative px-6 pb-6">
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-3">
             <div className="flex items-end gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border-4 border-white bg-paper text-3xl shadow">
-                {seller.logoUrl ? <img src={seller.logoUrl} alt="" className="h-full w-full object-cover" /> : "🏬"}
+              <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white/95 bg-white shadow-md">
+                <MediaImage src={seller.logoUrl} alt={seller.name} icon="store" />
               </div>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold text-navy">{seller.name}</h1>
+                  <h1 className="text-2xl font-bold text-ink">{seller.name}</h1>
                   <Badge tone={VERIFY_TONE[v.status] || "slate"}>{v.label}</Badge>
                   {v.campusVerified && <Badge tone="ok">campus verified</Badge>}
                 </div>
-                <p className="mt-1 text-sm text-slate">
+                <p className="mt-1 text-sm text-muted">
                   {seller.category && <span>{seller.category} · </span>}
                   {seller.university?.name && <span>{seller.university.name} · </span>}
                   Member since {new Date(seller.memberSince).toLocaleDateString()}
@@ -111,12 +113,12 @@ export default function SellerProfile() {
             </div>
           </div>
 
-          {seller.description && <p className="mt-4 whitespace-pre-line text-sm text-slate">{seller.description}</p>}
+          {seller.description && <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-muted">{seller.description}</p>}
 
           {(seller.publicEmail || seller.publicPhone) && (
             <div className="mt-3 flex flex-wrap gap-4 text-sm">
-              {seller.publicEmail && <a className="text-navy underline" href={`mailto:${seller.publicEmail}`}>{seller.publicEmail}</a>}
-              {seller.publicPhone && <a className="text-navy underline" href={`tel:${seller.publicPhone}`}>{seller.publicPhone}</a>}
+              {seller.publicEmail && <a className="text-ink underline decoration-slate-300" href={`mailto:${seller.publicEmail}`}>{seller.publicEmail}</a>}
+              {seller.publicPhone && <a className="text-ink underline decoration-slate-300" href={`tel:${seller.publicPhone}`}>{seller.publicPhone}</a>}
             </div>
           )}
         </div>
@@ -130,38 +132,47 @@ export default function SellerProfile() {
         <Stat label="Active listings" value={seller.stats.activeListings} />
         <Stat label="Completed sales" value={seller.stats.completedSales} />
         <Stat label="Reviews" value={seller.stats.reviewCount} />
-        <Stat label="Avg rating" value={seller.stats.reviewCount ? `⭐ ${seller.stats.avgRating.toFixed(1)}` : "—"} />
+        <Stat label="Avg rating" value={seller.stats.reviewCount ? seller.stats.avgRating.toFixed(1) : "—"} />
       </div>
 
       <div className="mt-8">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-navy">Active listings</h2>
+          <h2 className="text-lg font-semibold text-ink">Active listings</h2>
           {listingsTotal > listings.length && (
-            <Link to={`/marketplace?store=${seller.id}`} className="text-sm text-navy underline">
-              View all {listingsTotal} listings →
+            <Link to={`/marketplace?store=${seller.id}`} className="inline-flex items-center gap-1 text-sm text-ink underline decoration-slate-300">
+              View all {listingsTotal} listings
+              <Icon name="arrowRight" className="h-3.5 w-3.5" />
             </Link>
           )}
         </div>
         {listings.length === 0 ? (
-          <p className="text-sm text-slate">No active listings right now.</p>
+          <p className="text-sm text-muted">No active listings right now.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((p) => (
               <Link key={p.id} to={`/marketplace/${p.id}`}>
-                <Card className="h-full p-4 transition hover:shadow-md">
-                  <div className="relative mb-3 flex h-32 items-center justify-center rounded-lg bg-paper text-3xl">
-                    {p.images?.[0] ? <img src={p.images[0]} alt="" className="h-full w-full rounded-lg object-cover" /> : "🛍️"}
+                <Card className="h-full p-4 transition hover:shadow-md border border-white/80 bg-white/70">
+                  <div className="relative mb-3 h-32 overflow-hidden rounded-xl border border-slate-200/70 bg-white">
+                    <MediaImage src={p.images?.[0]} alt={p.title} icon="marketplace" />
                     {p.is_featured && (
-                      <span className="absolute left-2 top-2"><Badge tone="accent">⭐ Featured</Badge></span>
+                      <span className="absolute left-2 top-2">
+                        <Badge tone="accent">
+                          <Icon name="star" className="h-3 w-3" />
+                          Featured
+                        </Badge>
+                      </span>
                     )}
                   </div>
-                  <p className="font-medium text-navy line-clamp-1">{p.title}</p>
+                  <p className="font-semibold text-ink line-clamp-1">{p.title}</p>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="font-semibold text-accent-dark">{Number(p.price).toFixed(2)} birr</span>
+                    <span className="font-bold text-ink">{Number(p.price).toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span></span>
                     <Badge tone="ok">{p.stock} in stock</Badge>
                   </div>
                   {Number(p.review_count) > 0 && (
-                    <p className="mt-1 text-xs text-slate">⭐ {Number(p.avg_rating).toFixed(1)} ({p.review_count})</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted">
+                      <Icon name="star" className="h-3 w-3 text-warn" />
+                      {Number(p.avg_rating).toFixed(1)} ({p.review_count})
+                    </p>
                   )}
                 </Card>
               </Link>
@@ -205,8 +216,8 @@ function EditProfile({ seller, onSaved, onError }) {
   }
 
   return (
-    <Card className="mt-6 p-5">
-      <h2 className="mb-3 text-lg font-semibold text-navy">Edit public profile</h2>
+    <Card className="glass-panel mt-6 p-5">
+      <h2 className="mb-3 text-lg font-semibold text-ink">Edit public profile</h2>
       <form onSubmit={submit} className="space-y-4">
         <Input label="Store name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <TextArea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -216,11 +227,11 @@ function EditProfile({ seller, onSaved, onError }) {
           <Input label="Public phone" value={form.publicPhone} onChange={(e) => setForm({ ...form, publicPhone: e.target.value })} />
         </div>
         <div>
-          <p className="mb-1 text-sm font-medium text-navy">Cover image</p>
+          <p className="mb-1 text-sm font-medium text-ink">Cover image</p>
           <ImageUploader value={cover} onChange={setCover} max={1} />
         </div>
         <div>
-          <p className="mb-1 text-sm font-medium text-navy">Logo</p>
+          <p className="mb-1 text-sm font-medium text-ink">Logo</p>
           <ImageUploader value={logo} onChange={setLogo} max={1} />
         </div>
         <Button type="submit" variant="accent" disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>

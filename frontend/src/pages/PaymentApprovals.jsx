@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
+import { Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Input, PageHeader, Spinner, SuccessBanner, Tabs } from "../components/ui";
 import ProofImage from "../components/ProofImage";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
   { id: "review", label: "To review", url: "/payments/manual/incoming?status=under_review" },
@@ -21,6 +22,7 @@ function ReviewRow({ p, user, onDone, setError }) {
   const [reason, setReason] = useState("");
   const [cancelPayment, setCancelPayment] = useState(false);
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
   const isTicket = p.transactionType === "ticket";
@@ -38,16 +40,26 @@ function ReviewRow({ p, user, onDone, setError }) {
     }
   }
 
+  async function approve() {
+    const ok = await confirm({
+      title: "Approve payment?",
+      message: `Confirm you received ${p.amount.toFixed(2)} ETB from ${p.payerName}?`,
+      confirmLabel: "Approve payment",
+      variant: "primary",
+    });
+    if (ok) await act("approve");
+  }
+
   if (isTicket && !isAdmin) {
     return (
-      <div className="mt-3 border-t border-slate/15 pt-3">
-        <div className="rounded-lg bg-navy/5 p-3 text-xs text-navy space-y-1">
-          <p className="font-semibold">Event Ticket Payment — ግቢያችን Admin Approval Required</p>
-          <p>
+      <div className="mt-3 border-t border-slate-200/80 pt-3">
+        <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3.5 text-xs text-ink space-y-1.5 shadow-xs">
+          <p className="font-semibold text-ink">Event Ticket Payment — ግቢያችን Admin Approval Required</p>
+          <p className="text-muted">
             Event ticket payments are received directly by ግቢያችን's designated admin account.
             Only authorized administrators can verify and approve ticket payments. Once verified, the attendee receives their active ticket and QR code, and 97.5% net revenue is allocated to your organizer payout balance.
           </p>
-          <p className="font-mono text-slate">Reference: {p.proof?.referenceNumber || "None submitted"}</p>
+          <p className="font-mono text-muted">Reference: {p.proof?.referenceNumber || "None submitted"}</p>
         </div>
         <div className="mt-2 flex gap-2">
           <Button variant="outline" onClick={() => setShowImg((v) => !v)}>{showImg ? "Hide screenshot" : "View screenshot"}</Button>
@@ -58,17 +70,17 @@ function ReviewRow({ p, user, onDone, setError }) {
   }
 
   return (
-    <div className="mt-3 border-t border-slate/15 pt-3">
-     <p className="text-sm text-slate">
-        Reference <span className="font-mono text-navy">{p.proof?.referenceNumber}</span>. Check that{" "}
-        <strong>{p.amount.toFixed(2)} birr</strong> actually arrived in your account before approving.
+    <div className="mt-3 border-t border-slate-200/80 pt-3">
+     <p className="text-sm text-muted">
+        Reference <span className="font-mono text-ink">{p.proof?.referenceNumber}</span>. Check that{" "}
+        <strong className="text-ink">{p.amount.toFixed(2)} ETB</strong> actually arrived in your account before approving.
         {isTicket && (
-          <span className="block text-xs text-accent-dark font-medium mt-0.5">
+          <span className="block text-xs text-ink font-medium mt-0.5">
             Admin verification: Approving issues the ticket QR code, retains 2.5% platform commission, and attributes 97.5% net payable to the event organizer.
           </span>
         )}
         {!isTicket && p.commissionRate != null && p.commissionRate > 0 && (
-          <span className="block text-xs mt-0.5">
+          <span className="block text-xs mt-0.5 text-muted">
             Approving adds a {Math.round(p.commissionRate * 100)}% platform commission to your account
             {p.transactionType === "booking" ? " (on the rental fee, deposit excluded)" : ""}.
           </span>
@@ -79,27 +91,29 @@ function ReviewRow({ p, user, onDone, setError }) {
           </span>
         )}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setShowImg((v) => !v)}>{showImg ? "Hide screenshot" : "View screenshot"}</Button>
-        <Button variant="accent" disabled={busy} onClick={() => window.confirm(`Confirm you received ${p.amount.toFixed(2)} birr from ${p.payerName}?`) && act("approve")}>
+        <Button variant="accent" loading={busy} disabled={busy} onClick={approve}>
           Approve
         </Button>
         <Button variant="danger" disabled={busy} onClick={() => setRejecting((v) => !v)}>Reject</Button>
       </div>
       {showImg && <div className="mt-3"><ProofImage paymentId={p.id} /></div>}
       {rejecting && (
-        <div className="mt-3 space-y-2 rounded-lg bg-paper p-3">
-          <input
-            className="w-full rounded-lg border border-slate/25 px-3 py-2 text-sm"
-            placeholder="Reason, e.g. amount doesn't match"
+        <div className="mt-3 space-y-3 rounded-xl border border-slate-200/80 bg-white/70 p-4 shadow-xs">
+          <Input
+            label="Rejection reason"
+            required
+            placeholder="e.g. amount doesn't match"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <label className="flex items-center gap-2 text-sm text-slate">
-            <input type="checkbox" checked={cancelPayment} onChange={(e) => setCancelPayment(e.target.checked)} />
-            Cancel the whole purchase (otherwise the buyer can upload a corrected proof)
-          </label>
-          <Button variant="danger" disabled={busy || reason.trim().length < 3} onClick={() => act("reject", { reason: reason.trim(), cancelPayment })}>
+          <Checkbox
+            label="Cancel the whole purchase (otherwise the buyer can upload a corrected proof)"
+            checked={cancelPayment}
+            onChange={(e) => setCancelPayment(e.target.checked)}
+          />
+          <Button variant="danger" loading={busy} disabled={busy || reason.trim().length < 3} onClick={() => act("reject", { reason: reason.trim(), cancelPayment })}>
             Send rejection
           </Button>
         </div>
@@ -161,17 +175,20 @@ export default function PaymentApprovals() {
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
 
-      <div className="my-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setSuccess(""); setError(""); }}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === t.id ? "bg-navy text-white" : "bg-white text-slate border border-slate/20 hover:bg-slate/10"}`}
-          >
-            {t.label}{t.id === "review" && counts.review ? ` (${counts.review})` : ""}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="my-4"
+        value={tab}
+        onChange={(key) => {
+          setTab(key);
+          setSuccess("");
+          setError("");
+        }}
+        items={TABS.map((t) => ({
+          key: t.id,
+          label: t.label,
+          count: t.id === "review" && counts.review ? counts.review : undefined,
+        }))}
+      />
 
       {!items ? (
         <div className="flex justify-center py-12"><Spinner /></div>
@@ -183,8 +200,8 @@ export default function PaymentApprovals() {
             <Card key={p.id} className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium text-navy">{p.description || `${p.transactionType} payment`}</p>
-                  <p className="text-xs text-slate">
+                  <p className="font-semibold text-ink">{p.description || `${p.transactionType} payment`}</p>
+                  <p className="text-xs text-muted">
                     {tab === "mine" ? `To ${p.payeeName}` : `From ${p.payerName}`} · {new Date(p.createdAt).toLocaleString()}
                   </p>
                   {p.proof?.status === "rejected" && p.status !== "under_review" && (
@@ -192,7 +209,7 @@ export default function PaymentApprovals() {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-accent-dark">{p.amount.toFixed(2)} birr</p>
+                  <p className="font-bold text-ink">{p.amount.toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span></p>
                   <Badge tone={STATUS_TONE[p.status]}>{STATUS_TEXT[p.status] || p.status}</Badge>
                 </div>
               </div>
@@ -205,7 +222,7 @@ export default function PaymentApprovals() {
               )}
               {tab !== "mine" && p.status === "under_review" && <ReviewRow p={p} user={user} onDone={done} setError={setError} />}
               {tab !== "mine" && p.status === "confirmed" && p.proof && (
-                <p className="mt-2 text-xs text-slate">Reference <span className="font-mono">{p.proof.referenceNumber}</span></p>
+                <p className="mt-2 text-xs text-muted">Reference <span className="font-mono text-ink">{p.proof.referenceNumber}</span></p>
               )}
             </Card>
           ))}

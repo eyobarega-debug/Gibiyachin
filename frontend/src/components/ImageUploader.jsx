@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { client } from "../api/client";
+import Icon from "./Icon";
 
 export default function ImageUploader({ value = [], onChange, max = 4 }) {
   const [uploading, setUploading] = useState(false);
@@ -39,14 +40,15 @@ export default function ImageUploader({ value = [], onChange, max = 4 }) {
             <button
               type="button"
               onClick={() => remove(url)}
-              className="absolute right-0.5 top-0.5 rounded-full bg-black/60 px-1.5 text-xs text-white"
+              className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white transition hover:bg-black/80"
+              aria-label="Remove image"
             >
-              ✕
+              <Icon name="close" className="h-3 w-3" />
             </button>
           </div>
         ))}
         {value.length < max && (
-          <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate/30 text-xs text-slate hover:border-navy hover:text-navy">
+          <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 text-xs text-muted hover:border-white/40 hover:text-ink">
             {uploading ? "..." : "+ Add"}
             <input
               type="file"

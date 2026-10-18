@@ -1,7 +1,10 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Badge, Button } from "../ui";
+import Icon from "../Icon";
 import { client } from "../../api/client";
+import { useConfirm } from "../ConfirmProvider";
+import { useToast } from "../Toast";
 
 const ROLE_COLORS = {
   student: "navy",
@@ -30,6 +33,8 @@ export default function ProfileHeader({
   const [copied, setCopied] = useState(false);
   const coverInputRef = useRef(null);
   const avatarInputRef = useRef(null);
+  const confirm = useConfirm();
+  const toast = useToast();
 
   if (!user) return null;
 
@@ -37,7 +42,7 @@ export default function ProfileHeader({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("Cover image must be under 5MB");
+      toast.error("Cover image must be under 5MB");
       return;
     }
     setUploadingCover(true);
@@ -48,7 +53,7 @@ export default function ProfileHeader({
       await client.patch("/users/me", { coverImageUrl: uploadRes.url });
       if (onProfileUpdated) await onProfileUpdated();
     } catch (err) {
-      alert(err?.response?.data?.error?.message || "Failed to upload cover");
+      toast.error(err?.response?.data?.error?.message || "Failed to upload cover");
     } finally {
       setUploadingCover(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
@@ -56,13 +61,19 @@ export default function ProfileHeader({
   }
 
   async function handleRemoveCover() {
-    if (!confirm("Are you sure you want to remove your cover photo?")) return;
+    const ok = await confirm({
+      title: "Remove cover photo?",
+      message: "Are you sure you want to remove your cover photo?",
+      confirmLabel: "Remove cover",
+      variant: "danger",
+    });
+    if (!ok) return;
     setUploadingCover(true);
     try {
       await client.patch("/users/me", { coverImageUrl: null });
       if (onProfileUpdated) await onProfileUpdated();
     } catch (err) {
-      alert(err?.response?.data?.error?.message || "Failed to remove cover");
+      toast.error(err?.response?.data?.error?.message || "Failed to remove cover");
     } finally {
       setUploadingCover(false);
     }
@@ -72,7 +83,7 @@ export default function ProfileHeader({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("Avatar image must be under 5MB");
+      toast.error("Avatar image must be under 5MB");
       return;
     }
     setUploadingAvatar(true);
@@ -83,7 +94,7 @@ export default function ProfileHeader({
       await client.patch("/users/me", { avatarUrl: uploadRes.url });
       if (onProfileUpdated) await onProfileUpdated();
     } catch (err) {
-      alert(err?.response?.data?.error?.message || "Failed to update profile photo");
+      toast.error(err?.response?.data?.error?.message || "Failed to update profile photo");
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -110,9 +121,9 @@ export default function ProfileHeader({
     : null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate/15 bg-white shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-white/12 glass shadow-sm">
       {/* Cover / Wallpaper Banner */}
-      <div className="relative h-44 sm:h-56 w-full overflow-hidden bg-gradient-to-r from-navy via-navy/90 to-accent/80">
+      <div className="relative h-44 sm:h-56 w-full overflow-hidden bg-gradient-to-r from-[#1c2128] via-[#12161c] to-[#0b0e12]">
         {user.cover_image_url ? (
           <img
             src={user.cover_image_url}
@@ -120,8 +131,8 @@ export default function ProfileHeader({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center opacity-30">
-            <span className="text-4xl font-black tracking-widest text-white">GIBIYACHIN</span>
+          <div className="flex h-full w-full items-center justify-center opacity-20">
+            <span className="text-mirror text-4xl font-black tracking-widest">GIBIYACHIN</span>
           </div>
         )}
 
@@ -141,7 +152,8 @@ export default function ProfileHeader({
               disabled={uploadingCover}
               className="inline-flex items-center gap-1.5 rounded-lg bg-black/50 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-50"
             >
-              📷 {uploadingCover ? "Uploading..." : "Change Cover"}
+              <Icon name="camera" className="h-3.5 w-3.5" />
+              {uploadingCover ? "Uploading..." : "Change Cover"}
             </button>
             {user.cover_image_url && (
               <button
@@ -151,7 +163,7 @@ export default function ProfileHeader({
                 className="inline-flex items-center rounded-lg bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-50"
                 title="Remove cover photo"
               >
-                ✕
+                <Icon name="close" className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -171,7 +183,7 @@ export default function ProfileHeader({
                 onChange={handleAvatarUpload}
                 className="hidden"
               />
-              <div className="relative h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-full border-4 border-white bg-slate/10 shadow-md">
+              <div className="relative h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-xl">
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
@@ -179,7 +191,7 @@ export default function ProfileHeader({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-navy text-3xl sm:text-4xl font-bold text-white">
+                  <div className="flex h-full w-full items-center justify-center bg-[#1c222c] text-3xl sm:text-4xl font-bold text-white">
                     {user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}
@@ -198,7 +210,7 @@ export default function ProfileHeader({
               {/* Campus Verification Badge */}
               {user.verified && (
                 <div
-                  className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-ok text-white shadow-md ring-2 ring-white"
+                  className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-ok text-white shadow-md ring-2 ring-[#15181d]"
                   title="Campus Verified Account"
                 >
                   <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -214,15 +226,17 @@ export default function ProfileHeader({
 
             <div className="mb-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-navy">{user.name}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-ink">{user.name}</h1>
                 <Badge tone={roleTone}>{roleLabel}</Badge>
                 {user.verified ? (
-                  <Badge tone="ok">✓ Verified</Badge>
+                  <Badge tone="ok">
+                    <Icon name="check" className="h-3 w-3" /> Verified
+                  </Badge>
                 ) : (
                   <Badge tone="warn">Unverified</Badge>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-slate">
+              <p className="mt-0.5 text-xs text-muted">
                 {user.university_name || "ግቢያችን Community"}
                 {joinedDate && ` · Joined ${joinedDate}`}
               </p>
@@ -245,12 +259,14 @@ export default function ProfileHeader({
                   Public View
                 </Button>
                 <Button onClick={handleShare} variant="ghost" title="Copy public profile link">
-                  {copied ? "✓ Copied!" : "🔗 Share"}
+                  <Icon name={copied ? "check" : "link"} className="h-4 w-4" />
+                  {copied ? "Copied!" : "Share"}
                 </Button>
               </>
             ) : (
               <Button onClick={handleShare} variant="outline">
-                {copied ? "✓ Copied link!" : "🔗 Share"}
+                <Icon name={copied ? "check" : "link"} className="h-4 w-4" />
+                {copied ? "Copied link!" : "Share"}
               </Button>
             )}
           </div>
@@ -259,35 +275,39 @@ export default function ProfileHeader({
         {/* Bio & Academic Details */}
         <div className="mt-5 space-y-3">
           {user.bio ? (
-            <p className="max-w-3xl text-sm leading-relaxed text-navy/90">{user.bio}</p>
+            <p className="max-w-3xl text-sm leading-relaxed text-ink/90">{user.bio}</p>
           ) : (
             isOwner && (
-              <p className="text-sm italic text-slate">
+              <p className="text-sm italic text-muted">
                 No bio added yet. Click &quot;Edit Profile&quot; to introduce yourself to your campus.
               </p>
             )
           )}
 
           {/* Metadata Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate">
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted">
             {user.department && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-navy">
-                🏛️ {user.department}
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-ink">
+                <Icon name="university" className="h-3.5 w-3.5 text-muted" />
+                {user.department}
               </span>
             )}
             {user.year && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-navy">
-                🎓 {user.year}
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-ink">
+                <Icon name="graduation" className="h-3.5 w-3.5 text-muted" />
+                {user.year}
               </span>
             )}
             {user.email && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-slate">
-                ✉️ {user.email}
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-muted">
+                <Icon name="mail" className="h-3.5 w-3.5 text-muted" />
+                {user.email}
               </span>
             )}
             {user.phone && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-slate">
-                📞 {user.phone}
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-muted">
+                <Icon name="phone" className="h-3.5 w-3.5 text-muted" />
+                {user.phone}
               </span>
             )}
             {user.email_verified !== undefined && (
@@ -296,12 +316,14 @@ export default function ProfileHeader({
                   user.email_verified ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"
                 }`}
               >
-                {user.email_verified ? "✓ Email Confirmed" : "⚠️ Email Unconfirmed"}
+                <Icon name={user.email_verified ? "check" : "alert"} className="h-3.5 w-3.5" />
+                {user.email_verified ? "Email Confirmed" : "Email Unconfirmed"}
               </span>
             )}
             {user.suspended && (
               <span className="inline-flex items-center gap-1 rounded-md bg-danger/10 px-2.5 py-1 font-medium text-danger">
-                🚫 Account Suspended
+                <Icon name="ban" className="h-3.5 w-3.5" />
+                Account Suspended
               </span>
             )}
           </div>

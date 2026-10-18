@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { client, errMsg } from "../api/client";
-import { Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
+import { Button, ErrorBanner, Input, SuccessBanner } from "../components/ui";
+import AuthCard from "../components/AuthCard";
 
 const PENDING_KEY = "ch_pending_verify_email";
 const DEFAULT_TTL_SECONDS = 600; // 10 minutes — matches OTP_TTL_MINUTES
@@ -79,71 +80,80 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <PageHeader title="Verify your email" subtitle="Enter the 6-digit code sent to your email." />
-      <Card className="p-6">
-        <form onSubmit={onVerify} className="space-y-4">
-          <ErrorBanner message={error} />
-          <SuccessBanner message={success} />
+    <AuthCard
+      title="Verify your email"
+      subtitle="Enter the 6-digit code we sent to your inbox to activate your account."
+      footer={
+        <Link to="/register" className="font-medium text-primary underline">
+          Back to sign up
+        </Link>
+      }
+    >
+      <form onSubmit={onVerify} className="space-y-4" noValidate>
+        <ErrorBanner message={error} />
+        <SuccessBanner message={success} />
 
-          {emailManually ? (
-            <Input
-              label="Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@aastu.edu.et"
-            />
-          ) : (
-            <p className="text-sm text-slate">
-              We sent a code to <span className="font-medium text-navy">{email}</span>.{" "}
-              <button
-                type="button"
-                onClick={() => setEmailManually(true)}
-                className="underline"
-              >
-                Not you?
-              </button>
-            </p>
-          )}
-
+        {emailManually ? (
           <Input
-            label="Verification code"
+            label="Email"
+            type="email"
             required
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="123456"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            className="text-center text-2xl tracking-[0.5em]"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@aastu.edu.et"
           />
-
-          <p className="text-center text-xs text-slate">
-            {expiresIn > 0 ? (
-              <>Code expires in <span className="font-medium text-navy">{fmt(expiresIn)}</span></>
-            ) : (
-              <span className="font-medium text-danger">This code has expired — request a new one.</span>
-            )}
+        ) : (
+          <p className="rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-slate">
+            We sent a code to <span className="font-semibold text-ink">{email}</span>.{" "}
+            <button
+              type="button"
+              onClick={() => setEmailManually(true)}
+              className="font-medium text-primary underline"
+            >
+              Not you?
+            </button>
           </p>
+        )}
 
-          <Button type="submit" className="w-full" disabled={verifying || email.length === 0 || otp.length !== 6}>
-            {verifying ? "Verifying..." : "Verify OTP"}
-          </Button>
-        </form>
+        <Input
+          label="Verification code"
+          required
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="123456"
+          hint="6 digits"
+          value={otp}
+          onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          className="text-center text-2xl tracking-[0.5em]"
+        />
 
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-slate">Didn't get the code?</span>
-          <Button variant="ghost" onClick={onResend} disabled={resending || cooldown > 0}>
-            {resending ? "Sending..." : cooldown > 0 ? `Resend in ${fmt(cooldown)}` : "Resend OTP"}
-          </Button>
-        </div>
-
-        <p className="mt-4 text-center text-sm text-slate">
-          <Link to="/register" className="underline">Back to sign up</Link>
+        <p className="text-center text-xs text-slate">
+          {expiresIn > 0 ? (
+            <>
+              Code expires in <span className="font-semibold text-ink">{fmt(expiresIn)}</span>
+            </>
+          ) : (
+            <span className="font-semibold text-danger">This code has expired — request a new one.</span>
+          )}
         </p>
-      </Card>
-    </div>
+
+        <Button
+          type="submit"
+          className="w-full"
+          loading={verifying}
+          disabled={verifying || email.length === 0 || otp.length !== 6}
+        >
+          {verifying ? "Verifying…" : "Verify OTP"}
+        </Button>
+      </form>
+
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <span className="text-slate">Didn't get the code?</span>
+        <Button variant="ghost" onClick={onResend} disabled={resending || cooldown > 0}>
+          {resending ? "Sending…" : cooldown > 0 ? `Resend in ${fmt(cooldown)}` : "Resend OTP"}
+        </Button>
+      </div>
+    </AuthCard>
   );
 }

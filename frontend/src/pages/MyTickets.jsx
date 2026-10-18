@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner, Tabs } from "../components/ui";
 import TicketCard from "../components/TicketCard";
+import { useConfirm } from "../components/ConfirmProvider";
 
 export default function MyTickets() {
   const [tickets, setTickets] = useState(null);
@@ -11,6 +12,7 @@ export default function MyTickets() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filter, setFilter] = useState("all");
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -30,9 +32,13 @@ export default function MyTickets() {
   }, []);
 
   async function cancelActiveTicket(ticketId) {
-    if (!window.confirm("Are you sure you want to cancel this ticket? If you paid, a refund will be processed.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Cancel ticket?",
+      message: "Are you sure you want to cancel this ticket? If you paid, a refund will be processed.",
+      confirmLabel: "Cancel ticket",
+      variant: "danger",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     try {
@@ -45,7 +51,13 @@ export default function MyTickets() {
   }
 
   async function cancelUnpaidReservation(t) {
-    if (!window.confirm("Cancel this ticket reservation?")) return;
+    const ok = await confirm({
+      title: "Cancel reservation?",
+      message: "Cancel this unpaid ticket reservation? Your seat will be released back to the event.",
+      confirmLabel: "Cancel reservation",
+      variant: "danger",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     try {
@@ -86,27 +98,22 @@ export default function MyTickets() {
 
       {/* Filter Tabs */}
       {tickets.length > 0 && (
-        <div className="no-print mb-6 flex flex-wrap gap-2">
-          {[
-            { id: "all", label: `All (${tickets.length})` },
-            { id: "active", label: `Valid & Ready (${tickets.filter((t) => t.status === "active").length})` },
-            { id: "reserved", label: `Pending Payment (${tickets.filter((t) => t.status === "reserved").length})` },
-            { id: "used", label: `Used (${tickets.filter((t) => t.status === "used").length})` },
-            { id: "cancelled", label: `Cancelled (${tickets.filter((t) => t.status === "cancelled" || t.status === "expired").length})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                filter === tab.id
-                  ? "bg-navy text-white shadow-sm"
-                  : "bg-white text-slate hover:bg-slate/10"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          className="no-print mb-6"
+          value={filter}
+          onChange={setFilter}
+          items={[
+            { key: "all", label: "All", count: tickets.length },
+            { key: "active", label: "Valid & Ready", count: tickets.filter((t) => t.status === "active").length },
+            { key: "reserved", label: "Pending Payment", count: tickets.filter((t) => t.status === "reserved").length },
+            { key: "used", label: "Used", count: tickets.filter((t) => t.status === "used").length },
+            {
+              key: "cancelled",
+              label: "Cancelled",
+              count: tickets.filter((t) => t.status === "cancelled" || t.status === "expired").length,
+            },
+          ]}
+        />
       )}
 
       {tickets.length === 0 ? (
@@ -139,18 +146,18 @@ export default function MyTickets() {
 
       {waitlist && waitlist.length > 0 && (
         <div className="no-print mt-10">
-          <h2 className="mb-3 font-semibold text-navy">My Waitlist Status</h2>
+          <h2 className="mb-3 font-semibold text-ink">My Waitlist Status</h2>
           <div className="space-y-2">
             {waitlist.map((w) => (
-              <Card key={w.id} className="flex items-center justify-between p-4">
+              <Card key={w.id} className="glass glass-hover flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium text-navy">{w.event_title}</p>
-                  <p className="text-xs text-slate">
+                  <p className="font-semibold text-ink">{w.event_title}</p>
+                  <p className="text-xs text-muted">
                     {w.ticket_type} · {new Date(w.date_time).toLocaleString()}
                   </p>
                 </div>
                 <Badge tone={w.status === "notified" ? "accent" : "slate"}>
-                  {w.status === "notified" ? "⭐ Spot available!" : "Waiting in queue"}
+                  {w.status === "notified" ? "Spot available!" : "Waiting in queue"}
                 </Badge>
               </Card>
             ))}

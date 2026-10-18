@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Badge, Button } from "./ui";
+import Icon from "./Icon";
 import ManualPaymentStatus from "./ManualPaymentStatus";
 
 const STATUS_CONFIG = {
@@ -63,11 +64,11 @@ export default function TicketCard({
 
   return (
     <div
-      className={`ticket-pass relative overflow-hidden rounded-2xl border border-slate/20 bg-white shadow-md transition hover:shadow-lg ${className}`}
+      className={`ticket-pass glass-panel relative overflow-hidden rounded-[26px] border border-white/90 bg-white/85 shadow-xl transition hover:border-slate-300 ${className}`}
       id={`ticket-pass-${ticket.id || "preview"}`}
     >
       {/* Visual Header / Poster Banner */}
-      <div className="relative h-44 w-full overflow-hidden bg-gradient-to-r from-navy via-slate to-navy">
+      <div className="relative h-44 w-full overflow-hidden bg-gradient-to-r from-[#1c2128] via-[#12161c] to-[#0a0d11]">
         {ticket.poster_url ? (
           <img
             src={ticket.poster_url}
@@ -86,7 +87,7 @@ export default function TicketCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
         <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 backdrop-blur-sm">
-          <span className="text-xs font-bold tracking-wider text-accent">ግቢያችን</span>
+          <span className="text-xs font-bold tracking-wider text-ink">ግቢያችን</span>
           <span className="text-[10px] text-white/80">· Gibiyachin Pass</span>
         </div>
 
@@ -97,7 +98,7 @@ export default function TicketCard({
         )}
 
         <div className="absolute right-4 bottom-3 left-4 text-white">
-          <p className="text-xs font-medium tracking-wide text-accent-light uppercase">
+          <p className="text-xs font-medium tracking-wide text-white/70 uppercase">
             {organizerDisplay}
           </p>
           <h3 className="line-clamp-1 text-lg font-bold text-white drop-shadow-sm">
@@ -108,18 +109,24 @@ export default function TicketCard({
 
       {/* Ticket Body: Details & QR */}
       <div className="p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate/15 pb-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate uppercase">Ticket No:</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Ticket No:</span>
             <button
               type="button"
               onClick={copyTicketNumber}
               title="Click to copy ticket number"
-              className="group flex items-center gap-1 font-mono text-sm font-bold text-navy hover:text-accent"
+              className="group flex items-center gap-1 font-mono text-sm font-bold text-slate-900 hover:text-slate-700"
             >
               <span>{ticketNumber}</span>
-              <span className="text-[10px] text-slate group-hover:text-accent">
-                {copied ? "✓ copied" : "📋"}
+              <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 group-hover:text-slate-800">
+                {copied ? (
+                  <>
+                    <Icon name="check" className="h-3 w-3 text-emerald-600" /> copied
+                  </>
+                ) : (
+                  <Icon name="file" className="h-3 w-3" />
+                )}
               </span>
             </button>
           </div>
@@ -127,55 +134,55 @@ export default function TicketCard({
         </div>
 
         {/* Event Schedule & Venue */}
-        <div className="mb-5 grid grid-cols-1 gap-3 rounded-xl bg-paper p-3.5 sm:grid-cols-2">
+        <div className="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 sm:grid-cols-2">
           <div>
-            <span className="block text-[11px] font-semibold tracking-wider text-slate uppercase">Date & Time</span>
-            <p className="mt-0.5 text-sm font-semibold text-navy">{startFormatted}</p>
+            <span className="block text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Date & Time</span>
+            <p className="mt-0.5 text-sm font-semibold text-slate-900">{startFormatted}</p>
             {endFormatted && (
-              <p className="text-xs text-slate">Until {endFormatted}</p>
+              <p className="text-xs text-slate-500">Until {endFormatted}</p>
             )}
           </div>
           <div>
-            <span className="block text-[11px] font-semibold tracking-wider text-slate uppercase">Venue & Location</span>
-            <p className="mt-0.5 text-sm font-semibold text-navy">{venueDisplay}</p>
+            <span className="block text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Venue & Location</span>
+            <p className="mt-0.5 text-sm font-semibold text-slate-900">{venueDisplay}</p>
             {addressDisplay && (
-              <p className="text-xs text-slate">{addressDisplay}</p>
+              <p className="text-xs text-slate-500">{addressDisplay}</p>
             )}
           </div>
         </div>
 
         {/* Attendee & Ticket Type Info */}
-        <div className="mb-5 grid grid-cols-2 gap-3 border-b border-slate/15 pb-4 sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-3 border-b border-slate-200/80 pb-4 sm:grid-cols-4">
           <div>
-            <span className="block text-[10px] font-semibold tracking-wider text-slate uppercase">Attendee</span>
-            <p className="mt-0.5 text-sm font-medium text-navy">{ticket.holder_name || "Student"}</p>
+            <span className="block text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Attendee</span>
+            <p className="mt-0.5 text-sm font-semibold text-slate-900">{ticket.holder_name || "Student"}</p>
           </div>
           <div>
-            <span className="block text-[10px] font-semibold tracking-wider text-slate uppercase">Campus</span>
-            <p className="mt-0.5 text-sm font-medium text-navy">{ticket.university_name || "Campus Community"}</p>
+            <span className="block text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Campus</span>
+            <p className="mt-0.5 text-sm font-semibold text-slate-900">{ticket.university_name || "Campus Community"}</p>
           </div>
           <div>
-            <span className="block text-[10px] font-semibold tracking-wider text-slate uppercase">Tier / Type</span>
-            <p className="mt-0.5 text-sm font-medium text-navy">{ticket.ticket_type || "General"}</p>
+            <span className="block text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Tier / Type</span>
+            <p className="mt-0.5 text-sm font-semibold text-slate-900">{ticket.ticket_type || "General"}</p>
           </div>
           <div>
-            <span className="block text-[10px] font-semibold tracking-wider text-slate uppercase">Price</span>
-            <p className="mt-0.5 text-sm font-semibold text-navy">{priceDisplay}</p>
+            <span className="block text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Price</span>
+            <p className="mt-0.5 text-sm font-bold text-slate-900">{priceDisplay}</p>
           </div>
         </div>
 
         {/* QR Code Presentation */}
         {(status === "active" || status === "used") && (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate/30 bg-paper/60 p-5 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/60 p-5 text-center">
             {ticket.qrDataUrl ? (
-              <div className="relative rounded-xl border-2 border-navy/20 bg-white p-3 shadow-sm">
+              <div className="relative rounded-xl border border-slate-200 bg-white p-3 shadow-md">
                 <img
                   src={ticket.qrDataUrl}
                   alt={`QR code for ticket ${ticketNumber}`}
                   className="h-44 w-44 object-contain"
                 />
                 {status === "used" && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/65 backdrop-blur-[1px]">
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/65 backdrop-blur-[1px]">
                     <span className="rotate-[-12deg] rounded-md border-2 border-danger bg-danger/90 px-3 py-1 font-mono text-sm font-extrabold tracking-wider text-white">
                       ADMITTED
                     </span>
@@ -183,17 +190,17 @@ export default function TicketCard({
                 )}
               </div>
             ) : isPreview ? (
-              <div className="flex h-44 w-44 items-center justify-center rounded-xl border-2 border-dashed border-slate/30 bg-white text-xs text-slate">
+              <div className="flex h-44 w-44 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 glass-soft text-xs text-slate-500">
                 Live QR generated upon purchase
               </div>
             ) : (
-              <div className="text-xs text-slate">QR code will appear when active</div>
+              <div className="text-xs text-slate-500">QR code will appear when active</div>
             )}
 
-            <p className="mt-3 font-mono text-xs font-semibold tracking-wider text-navy">
+            <p className="mt-3 font-mono text-xs font-semibold tracking-wider text-slate-900">
               {ticketNumber}
             </p>
-            <p className="mt-1 text-xs text-slate">
+            <p className="mt-1 text-xs text-slate-500">
               {status === "active"
                 ? "Present this QR pass at the entrance. Scanned once, then invalidated."
                 : "This ticket has already been verified and admitted at the entrance."}
@@ -225,9 +232,9 @@ export default function TicketCard({
         )}
 
         {/* Branding & Anti-Counterfeit Verification Footer */}
-        <div className="mt-5 flex items-center justify-between border-t border-slate/15 pt-3 text-[11px] text-slate">
+        <div className="mt-5 flex items-center justify-between border-t border-slate-200/80 pt-3 text-[11px] text-slate-500">
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-navy">ግቢያችን Gibiyachin</span>
+            <span className="font-semibold text-slate-800">ግቢያችን Gibiyachin</span>
             <span>· Campus Marketplace</span>
           </div>
           <span className="italic">Cryptographically Verified</span>
@@ -235,10 +242,11 @@ export default function TicketCard({
 
         {/* Actions Bar (Screen Only) */}
         {showActions && !isPreview && (
-          <div className="no-print mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate/15 pt-3">
+          <div className="no-print mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 pt-3">
             {(status === "active" || status === "used") && (
               <Button variant="outline" onClick={handlePrint} className="text-xs">
-                🖨️ Print / Save Pass
+                <Icon name="printer" className="h-3.5 w-3.5" />
+                Print / Save Pass
               </Button>
             )}
             {status === "active" && onCancel && (

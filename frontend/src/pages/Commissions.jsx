@@ -12,7 +12,7 @@ const FILTERS = [
   { id: "settled", label: "Paid" },
 ];
 
-const birr = (n) => `${Number(n).toFixed(2)} birr`;
+const birr = (n) => `${Number(n).toFixed(2)} ETB`;
 
 export function SummaryCards({ summary }) {
   const items = [
@@ -25,8 +25,8 @@ export function SummaryCards({ summary }) {
     <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
       {items.map((i) => (
         <Card key={i.label} className="p-4">
-          <p className="text-xs text-slate">{i.label}</p>
-          <p className={`text-xl font-bold ${i.tone || "text-navy"}`}>{i.value}</p>
+          <p className="text-xs text-muted">{i.label}</p>
+          <p className={`text-xl font-bold ${i.tone || "text-ink"}`}>{i.value}</p>
         </Card>
       ))}
     </div>
@@ -70,19 +70,19 @@ function SubmitCommissionModal({ defaultAmount, accounts, onDone, onCancel }) {
   }
 
   return (
-    <Card className="mb-6 p-5 border-navy/30 bg-paper">
-      <h3 className="font-semibold text-navy text-lg mb-2">Pay Commission to ግቢያችን</h3>
-      <p className="text-xs text-slate mb-4">
+    <Card className="glass-panel mb-6 p-5 border-white/10">
+      <h3 className="font-semibold text-ink text-lg mb-2">Pay Commission to ግቢያችን</h3>
+      <p className="text-xs text-muted mb-4">
         Transfer the commission amount to one of the university's official receiving accounts below, then upload your transaction reference and screenshot.
       </p>
 
       {accounts && accounts.length > 0 && (
         <div className="mb-4 space-y-2">
-          <p className="text-xs font-semibold text-navy uppercase tracking-wider">Official Receiving Accounts</p>
+          <p className="text-xs font-semibold text-ink uppercase tracking-wider">Official Receiving Accounts</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {accounts.map((acc) => (
-              <div key={acc.id} className="rounded-lg bg-white border border-slate/20 p-2.5 text-xs">
-                <p className="font-semibold text-navy">{acc.account_name} ({acc.method})</p>
+              <div key={acc.id} className="rounded-lg glass-soft border border-slate/20 p-2.5 text-xs">
+                <p className="font-semibold text-ink">{acc.account_name} ({acc.method})</p>
                 <p className="font-mono text-slate font-medium text-sm">{acc.account_number}</p>
                 {acc.instructions && <p className="text-slate text-[11px] mt-0.5">{acc.instructions}</p>}
               </div>
@@ -112,13 +112,13 @@ function SubmitCommissionModal({ defaultAmount, accounts, onDone, onCancel }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-navy mb-1">Receipt Screenshot (Image)</label>
+          <label className="block text-sm font-medium text-ink mb-1">Receipt Screenshot (Image)</label>
           <input
             type="file"
             accept="image/*"
             required
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="text-xs text-slate file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-navy file:text-white hover:file:bg-navy-dark"
+              className="text-xs text-slate file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary file:text-[#0b0d11] hover:file:bg-primary-dark"
           />
         </div>
         <TextArea
@@ -162,7 +162,7 @@ export function LedgerTable({ entries, action }) {
             <tr key={e.id} className="border-t border-slate/15 align-top">
               <td className="py-2 pr-3 text-xs text-slate">{new Date(e.createdAt).toLocaleDateString()}</td>
               <td className="py-2 pr-3">
-                <p className="font-medium text-navy">{e.description || TYPE_LABEL[e.transactionType]}</p>
+                <p className="font-medium text-ink">{e.description || TYPE_LABEL[e.transactionType]}</p>
                 <p className="text-xs text-slate">{TYPE_LABEL[e.transactionType] || e.transactionType}</p>
               </td>
               <td className="py-2 pr-3 text-right">
@@ -172,7 +172,7 @@ export function LedgerTable({ entries, action }) {
                 )}
               </td>
               <td className="py-2 pr-3 text-right">{(e.rate * 100).toFixed(0)}%</td>
-              <td className="py-2 pr-3 text-right font-semibold text-navy">{birr(e.commission)}</td>
+              <td className="py-2 pr-3 text-right font-semibold text-ink">{birr(e.commission)}</td>
               <td className="py-2 pr-3">
                 <Badge tone={STATUS_TONE[e.status]}>{STATUS_TEXT[e.status] || e.status}</Badge>
                 {e.settleNote && <p className="mt-1 text-xs text-slate">{e.settleNote}</p>}
@@ -288,7 +288,7 @@ export default function Commissions() {
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${filter === f.id ? "bg-navy text-white" : "border border-slate/20 bg-white text-slate hover:bg-slate/10"}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${filter === f.id ? "bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11]" : "border border-slate/20 glass-soft text-slate hover:bg-slate/10"}`}
               >
                 {f.label}
               </button>
@@ -303,12 +303,12 @@ export default function Commissions() {
 
           {submittedPayments.length > 0 && (
             <div className="mt-8">
-              <h3 className="font-semibold text-navy mb-3">Submitted Commission Payments</h3>
+              <h3 className="font-semibold text-ink mb-3">Submitted Commission Payments</h3>
               <div className="space-y-2">
                 {submittedPayments.map((p) => (
-                  <Card key={p.id} className="p-4 flex flex-wrap items-center justify-between gap-2">
+                  <Card key={p.id} className="glass glass-hover p-4 flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium text-navy">{birr(p.amount)}</p>
+                      <p className="font-medium text-ink">{birr(p.amount)}</p>
                       <p className="text-xs text-slate">
                         Ref: <span className="font-mono">{p.reference_number}</span> · Submitted {new Date(p.created_at).toLocaleDateString()}
                       </p>

@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { client } from "../api/client";
-import { Badge, Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
+import { Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
 import QrScanner from "../components/QrScanner";
+import Icon from "../components/Icon";
 
 const RESULT_STYLE = {
-  ADMIT: { tone: "ok", label: "✅ ADMITTED — ENTRY GRANTED" },
-  VALID: { tone: "ok", label: "🟢 VALID TICKET — READY FOR ENTRY" },
-  ALREADY_USED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET ALREADY USED" },
-  PAYMENT_NOT_APPROVED: { tone: "warn", label: "⚠️ ENTRY DENIED — PAYMENT NOT VERIFIED" },
-  CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET CANCELLED" },
-  EVENT_CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — EVENT CANCELLED" },
-  INVALID: { tone: "danger", label: "⛔ ENTRY DENIED — INVALID TICKET" },
-  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", label: "⛔ CROSS-CAMPUS TICKET NOT ADMITTED" },
+  ADMIT: { tone: "ok", icon: "checkCircle", label: "ADMITTED — ENTRY GRANTED" },
+  VALID: { tone: "ok", icon: "checkCircle", label: "VALID TICKET — READY FOR ENTRY" },
+  ALREADY_USED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET ALREADY USED" },
+  PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
+  CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
+  EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
+  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
 
 export default function OrganizerEventDetail() {
@@ -214,7 +215,10 @@ export default function OrganizerEventDetail() {
         online ? "bg-ok/10 text-ok border border-ok/20" : "bg-warn/10 text-warn border border-warn/20"
       }`}>
         <div className="flex items-center gap-2">
-          <span>{online ? "🟢 Online Mode" : "🟠 Offline Queue Mode"}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name={online ? "checkCircle" : "clock"} className="h-4 w-4" />
+            {online ? "Online Mode" : "Offline Queue Mode"}
+          </span>
           <span className="text-xs text-slate">· Gibiyachin Gate Auth</span>
         </div>
         {queue.length > 0 && (
@@ -229,15 +233,15 @@ export default function OrganizerEventDetail() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Scanner Panel */}
-        <Card className="p-5">
-          <div className="mb-3 flex items-center justify-between border-b border-slate/15 pb-2">
-            <h2 className="font-bold text-navy">Entrance Scanner</h2>
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate">
+        <Card className="glass-panel p-5">
+          <div className="mb-3 flex items-center justify-between border-b border-slate-200/80 pb-2">
+            <h2 className="font-bold text-ink">Entrance Scanner</h2>
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted">
               <input
                 type="checkbox"
                 checked={autoCheckIn}
                 onChange={(e) => setAutoCheckIn(e.target.checked)}
-                className="rounded text-navy focus:ring-navy"
+                className="rounded text-ink focus:ring-white/40"
               />
               <span>Auto-Admit on scan</span>
             </label>
@@ -250,51 +254,58 @@ export default function OrganizerEventDetail() {
             <div
               className={`mt-4 rounded-xl border p-4 text-center transition ${
                 scanResult.result === "ADMIT" || scanResult.result === "VALID"
-                  ? "border-ok/30 bg-ok/10"
+                  ? "border-emerald-400/30 bg-emerald-400/10"
                   : scanResult.result === "QUEUED"
-                  ? "border-warn/30 bg-warn/10"
+                  ? "border-amber-400/30 bg-amber-400/10"
                   : scanResult.result === "PAYMENT_NOT_APPROVED"
-                  ? "border-warn/40 bg-warn/10"
-                  : "border-danger/30 bg-danger/10"
+                  ? "border-amber-400/40 bg-amber-400/10"
+                  : "border-rose-400/30 bg-rose-400/10"
               }`}
             >
               <p
-                className={`text-base font-extrabold tracking-wide ${
+                className={`inline-flex items-center justify-center gap-1.5 text-base font-extrabold tracking-wide ${
                   scanResult.result === "ADMIT" || scanResult.result === "VALID"
-                    ? "text-ok"
+                    ? "text-emerald-400"
                     : scanResult.result === "QUEUED" || scanResult.result === "PAYMENT_NOT_APPROVED"
-                    ? "text-warn"
-                    : "text-danger"
+                    ? "text-amber-400"
+                    : "text-rose-400"
                 }`}
               >
+                <Icon
+                  name={
+                    RESULT_STYLE[scanResult.result]?.icon ||
+                    (scanResult.result === "QUEUED" ? "clock" : "alert")
+                  }
+                  className="h-4 w-4 shrink-0"
+                />
                 {RESULT_STYLE[scanResult.result]?.label || scanResult.result}
               </p>
 
               {/* Attendee & Ticket Info */}
               {(scanResult.ticket || scanResult.attendeeName) && (
-                <div className="mt-3 rounded-lg bg-white/80 p-3 text-left shadow-xs">
+                <div className="mt-3 rounded-lg border border-slate-200/80 bg-white/80 p-3 text-left">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-slate uppercase text-[10px] font-semibold">Attendee</span>
-                      <p className="font-bold text-navy">
+                      <span className="text-muted uppercase text-[10px] font-semibold">Attendee</span>
+                      <p className="font-bold text-ink">
                         {scanResult.attendeeName || scanResult.ticket?.holder_name || "Unknown"}
                       </p>
                     </div>
                     <div>
-                      <span className="text-slate uppercase text-[10px] font-semibold">Ticket Tier</span>
-                      <p className="font-medium text-navy">
+                      <span className="text-muted uppercase text-[10px] font-semibold">Ticket Tier</span>
+                      <p className="font-medium text-ink">
                         {scanResult.ticketType || scanResult.ticket?.ticket_type || "General"}
                       </p>
                     </div>
                     <div>
-                      <span className="text-slate uppercase text-[10px] font-semibold">Ticket #</span>
-                      <p className="font-mono font-bold text-navy">
+                      <span className="text-muted uppercase text-[10px] font-semibold">Ticket #</span>
+                      <p className="font-mono font-bold text-ink">
                         {scanResult.ticketNumber || scanResult.ticket?.ticket_number || scanResult.ticket?.id?.slice(0, 8)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-slate uppercase text-[10px] font-semibold">Status</span>
-                      <p className="font-semibold text-navy capitalize">
+                      <span className="text-muted uppercase text-[10px] font-semibold">Status</span>
+                      <p className="font-semibold text-ink capitalize">
                         {scanResult.ticket?.status || scanResult.result}
                       </p>
                     </div>
@@ -303,13 +314,14 @@ export default function OrganizerEventDetail() {
               )}
 
               {scanResult.reason && (
-                <p className="mt-2 text-xs font-medium text-slate">{scanResult.reason}</p>
+                <p className="mt-2 text-xs font-medium text-muted">{scanResult.reason}</p>
               )}
 
               {/* Previous check-in details if ALREADY USED */}
               {scanResult.previousScanAt && (
-                <div className="mt-2 rounded-md bg-danger/10 p-2 text-xs text-danger">
-                  ⚠️ First admitted at: {new Date(scanResult.previousScanAt).toLocaleString()}
+                <div className="mt-2 flex items-center justify-center gap-1.5 rounded-md bg-danger/10 p-2 text-xs text-danger">
+                  <Icon name="alert" className="h-3.5 w-3.5 shrink-0" />
+                  First admitted at: {new Date(scanResult.previousScanAt).toLocaleString()}
                 </div>
               )}
 
@@ -317,7 +329,8 @@ export default function OrganizerEventDetail() {
               {scanResult.result === "VALID" && (
                 <div className="mt-3">
                   <Button variant="accent" onClick={admitInspected} className="w-full font-bold">
-                    ✓ Confirm & Admit Attendee
+                    <Icon name="checkCircle" className="h-4 w-4" />
+                    Confirm & Admit Attendee
                   </Button>
                 </div>
               )}
@@ -328,17 +341,21 @@ export default function OrganizerEventDetail() {
                   <Button
                     variant="outline"
                     onClick={() => reverseCheckIn(scanResult.ticket.id)}
-                    className="w-full text-xs text-slate hover:text-navy"
+                    className="w-full text-xs text-muted hover:text-ink"
                   >
-                    ↺ Reverse Check-In (Admin Reset)
+                    <Icon name="refresh" className="h-3.5 w-3.5" />
+                    Reverse Check-In (Admin Reset)
                   </Button>
                 </div>
               )}
             </div>
           )}
 
-          <div className="mt-4 rounded-lg bg-paper p-3 text-xs text-slate">
-            <span className="font-semibold text-navy">💡 Quick Tips:</span>
+          <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 text-xs text-muted shadow-xs">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+              <Icon name="sparkles" className="h-3.5 w-3.5" />
+              Quick Tips:
+            </span>
             <ul className="mt-1 list-inside list-disc space-y-0.5">
               <li>Turn on "Auto-Admit" for fast line processing at the door.</li>
               <li>Turn off "Auto-Admit" to inspect attendee name and tier before admitting.</li>
@@ -350,13 +367,13 @@ export default function OrganizerEventDetail() {
         {/* Sales & Real-time Check-In Audit Log */}
         <div className="space-y-4">
           {/* Ticket Sales Summary */}
-          <Card className="p-4">
-            <h2 className="mb-2 font-semibold text-navy">Ticket Tier Sales</h2>
+          <Card className="glass-panel p-4">
+            <h2 className="mb-2 font-semibold text-ink">Ticket Tier Sales</h2>
             <div className="space-y-2">
               {data.sales.map((s) => (
-                <div key={s.name} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-xs">
-                  <span className="font-medium text-navy">{s.name}</span>
-                  <span className="text-slate">
+                <div key={s.name} className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-xs shadow-xs">
+                  <span className="font-medium text-ink">{s.name}</span>
+                  <span className="text-muted">
                     {s.quantity_sold} / {s.quantity_total} sold
                   </span>
                 </div>
@@ -365,37 +382,39 @@ export default function OrganizerEventDetail() {
           </Card>
 
           {/* Recent Check-Ins Audit Log */}
-          <Card className="p-4">
+          <Card className="glass-panel p-4">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-semibold text-navy">Live Gate Admissions ({checkins.length})</h2>
+              <h2 className="font-semibold text-ink">Live Gate Admissions ({checkins.length})</h2>
               <Button variant="ghost" onClick={load} className="text-xs">
-                ↻ Refresh
+                <Icon name="refresh" className="h-3.5 w-3.5" />
+                Refresh
               </Button>
             </div>
 
             {checkins.length === 0 ? (
-              <p className="py-4 text-center text-xs text-slate">No attendees admitted yet for this event.</p>
+              <p className="py-4 text-center text-xs text-muted">No attendees admitted yet for this event.</p>
             ) : (
               <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                 {checkins.map((chk) => (
                   <div
                     key={chk.id}
-                    className={`flex items-center justify-between rounded-lg border p-2.5 text-xs ${
-                      chk.is_reversal ? "border-warn/30 bg-warn/5" : "border-slate/15 bg-white"
+                    className={`flex items-center justify-between rounded-xl border p-2.5 text-xs ${
+                      chk.is_reversal ? "border-amber-300 bg-amber-50/70" : "border-slate-200/80 bg-white/75 shadow-xs"
                     }`}
                   >
                     <div>
-                      <p className="font-semibold text-navy">
+                      <p className="font-semibold text-ink">
                         {chk.holder_name}{" "}
-                        <span className="font-mono text-[10px] text-slate">({chk.ticket_number})</span>
+                        <span className="font-mono text-[10px] text-muted">({chk.ticket_number})</span>
                       </p>
-                      <p className="text-[11px] text-slate">
+                      <p className="text-[11px] text-muted">
                         {chk.ticket_type} · {new Date(chk.checked_in_at).toLocaleTimeString()}
                         {chk.staff_name && ` by ${chk.staff_name}`}
                       </p>
                       {chk.is_reversal && (
-                        <p className="text-[10px] text-warn">
-                          ↺ Reversed: {chk.notes || "Check-in reversed"}
+                        <p className="flex items-center gap-1 text-[10px] text-amber-400">
+                          <Icon name="refresh" className="h-3 w-3 shrink-0" />
+                          Reversed: {chk.notes || "Check-in reversed"}
                         </p>
                       )}
                     </div>
@@ -405,7 +424,7 @@ export default function OrganizerEventDetail() {
                         variant="ghost"
                         onClick={() => reverseCheckIn(chk.ticket_id)}
                         disabled={reversingId === chk.ticket_id}
-                        className="text-[11px] text-slate hover:text-danger"
+                        className="text-[11px] text-muted hover:text-rose-400"
                       >
                         {reversingId === chk.ticket_id ? "..." : "Reverse"}
                       </Button>
@@ -417,9 +436,9 @@ export default function OrganizerEventDetail() {
           </Card>
 
           {/* Recurring Event Generator */}
-          <Card className="p-4">
-            <h2 className="mb-1 font-semibold text-navy">Make this a recurring event</h2>
-            <p className="mb-3 text-xs text-slate">
+          <Card className="glass-panel p-4">
+            <h2 className="mb-1 font-semibold text-ink">Make this a recurring event</h2>
+            <p className="mb-3 text-xs text-muted">
               Generates future occurrences automatically published under the same club series.
             </p>
             <div className="flex items-center gap-2">
@@ -431,7 +450,7 @@ export default function OrganizerEventDetail() {
                 onChange={(e) => setOccCount(e.target.value)}
                 className="w-20"
               />
-              <span className="text-xs text-slate">weekly occurrences</span>
+              <span className="text-xs text-muted">weekly occurrences</span>
               <Button variant="outline" disabled={generating} onClick={generateOccurrences} className="text-xs">
                 {generating ? "Generating..." : "Generate"}
               </Button>

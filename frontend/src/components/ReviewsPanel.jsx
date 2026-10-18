@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Button, Card, ErrorBanner, TextArea } from "./ui";
+import Icon from "./Icon";
 
 const PAGE_SIZE = 10;
 
@@ -53,16 +54,24 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
 
   return (
     <div className={className}>
-      <h2 className="mb-3 text-lg font-semibold text-navy">
-        Reviews {count > 0 && <span className="text-sm font-normal text-slate">· ⭐ {avgRating.toFixed(1)} ({count})</span>}
+      <h2 className="mb-3 text-lg font-semibold text-ink">
+        Reviews {count > 0 && (
+          <span className="inline-flex items-center gap-1 align-middle text-sm font-normal text-muted">
+            ·<Icon name="star" className="h-3.5 w-3.5" />
+            {avgRating.toFixed(1)} ({count})
+          </span>
+        )}
       </h2>
 
       {count > 0 && breakdown.length > 0 && (
-        <Card className="mb-4 p-4">
+        <Card className="glass-panel mb-4 p-4">
           <div className="space-y-1">
             {breakdown.map((b) => (
-              <div key={b.rating} className="flex items-center gap-2 text-xs text-slate">
-                <span className="w-6">{b.rating}★</span>
+              <div key={b.rating} className="flex items-center gap-2 text-xs text-muted">
+                <span className="flex w-6 items-center gap-0.5">
+                  {b.rating}
+                  <Icon name="star" className="h-3 w-3" />
+                </span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate/10">
                   <div className="h-full rounded-full bg-accent" style={{ width: `${(b.count / totalBars) * 100}%` }} />
                 </div>
@@ -74,41 +83,50 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
       )}
 
       {user?.role === "student" && (
-        <Card className="mb-4 p-4">
+        <Card className="glass-panel mb-4 p-4">
           <ErrorBanner message={error} />
           <form onSubmit={submit} className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate">Rating:</span>
+              <span className="text-sm text-muted">Rating:</span>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   type="button"
                   key={n}
                   onClick={() => setRating(n)}
-                  className={n <= rating ? "text-accent" : "text-slate/30"}
+                  className={n <= rating ? "text-amber-500 fill-current" : "text-slate-300"}
+                  aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
                 >
-                  ★
+                  <Icon name="star" className="h-5 w-5" />
                 </button>
               ))}
             </div>
             <TextArea placeholder="Optional comment..." rows={2} value={comment} onChange={(e) => setComment(e.target.value)} />
             <Button type="submit" disabled={busy}>{busy ? "Submitting..." : "Submit review"}</Button>
-            <p className="text-xs text-slate">Only available after a completed transaction with this item (FR-047).</p>
+            <p className="text-xs text-muted">Only available after a completed transaction with this item (FR-047).</p>
           </form>
         </Card>
       )}
 
       {reviews.length === 0 ? (
-        <p className="text-sm text-slate">No reviews yet.</p>
+        <p className="text-sm text-muted">No reviews yet.</p>
       ) : (
         <div className="space-y-3">
           {reviews.map((r) => (
-            <Card key={r.id} className="p-3">
+            <Card key={r.id} className="glass glass-hover p-4 border border-white/90 bg-white/75">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-navy">{r.author_name}</span>
-                <span className="text-accent">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span>
+                <span className="text-sm font-semibold text-slate-800">{r.author_name}</span>
+                <span className="flex items-center gap-0.5 text-amber-500" aria-label={`${r.rating} out of 5 stars`}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Icon
+                      key={i}
+                      name="star"
+                      className={`h-3.5 w-3.5 ${i < r.rating ? "text-amber-500 fill-current" : "text-slate-300"}`}
+                    />
+                  ))}
+                </span>
               </div>
-              {r.comment && <p className="mt-1 text-sm text-slate">{r.comment}</p>}
-              {r.created_at && <p className="mt-1 text-xs text-slate/70">{new Date(r.created_at).toLocaleDateString()}</p>}
+              {r.comment && <p className="mt-1 text-sm text-slate-600">{r.comment}</p>}
+              {r.created_at && <p className="mt-1 text-xs text-slate-400">{new Date(r.created_at).toLocaleDateString()}</p>}
             </Card>
           ))}
         </div>

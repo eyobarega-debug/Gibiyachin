@@ -29,7 +29,7 @@ export default function MerchantApply() {
   return (
     <div className="mx-auto max-w-md py-8">
       <PageHeader title="Apply to sell on ግቢያችን" subtitle="Once approved, you'll get a store dashboard to add products and manage orders." />
-      <Card className="p-6">
+      <Card className="glass-panel p-6">
         <form onSubmit={onSubmit} className="space-y-4">
           <ErrorBanner message={error} />
           <SuccessBanner message={success} />
