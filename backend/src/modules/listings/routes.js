@@ -164,7 +164,15 @@ router.post(
       "INSERT INTO p2p_requests (listing_id, buyer_id, message) VALUES ($1,$2,$3) RETURNING *",
       [listing.id, req.user.id, req.body.message || null]
     );
-    await notify(listing.seller_id, "p2p_request", `New interest in "${listing.title}"`, req.body.message || "A student wants to buy this item.");
+    await notify(
+      listing.seller_id,
+      "p2p_request",
+      `New interest in "${listing.title}"`,
+      req.body.message || "A student wants to buy this item.",
+      `/listings/${listing.id}`,
+      "listing",
+      listing.id
+    );
     res.status(201).json({ request: rows[0] });
   })
 );
@@ -240,7 +248,10 @@ router.patch(
       `Your request on "${request.title}" was ${req.body.status}`,
       req.body.status === "accepted"
         ? "You can now pay in-app, or coordinate a handover with the seller directly."
-        : undefined
+        : undefined,
+      `/listings/${request.listing_id}`,
+      "listing",
+      request.listing_id
     );
     res.json({ success: true, order });
   })
@@ -302,11 +313,17 @@ payments.registerFinalizer("p2p_order", {
     const order = rows[0];
     await client.query("UPDATE p2p_listings SET status='sold' WHERE id=$1", [order.listing_id]);
     const listing = await client.query("SELECT title FROM p2p_listings WHERE id = $1", [order.listing_id]);
-    await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'p2p_request',$2,$3)", [
-      order.seller_id,
-      "Payment received",
-      `"${listing.rows[0].title}" was paid for in-app. Arrange handover with the buyer.`,
-    ]);
+    await client.query(
+      "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'p2p_request',$2,$3,$4,$5,$6)",
+      [
+        order.seller_id,
+        "Payment received",
+        `"${listing.rows[0].title}" was paid for in-app. Arrange handover with the buyer.`,
+        `/listings/${order.listing_id}`,
+        "listing",
+        order.listing_id,
+      ]
+    );
   },
   onFailed: async () => {
     // Left in 'pending_payment' deliberately — a failed attempt shouldn't

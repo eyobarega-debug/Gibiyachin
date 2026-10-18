@@ -145,7 +145,10 @@ router.patch(
         request.user_id,
         "verification_approved",
         "Your campus account has been verified",
-        "Your campus verification request has been approved."
+        "Your campus verification request has been approved.",
+        "/verify",
+        "verification_request",
+        request.id
       );
       await audit(req.user.id, "verification.approve", "verification_request", request.id, { userId: request.user_id });
       return { requestId: request.id, status: "approved" };
@@ -172,7 +175,15 @@ router.patch(
         [req.user.id, rejectionReason, request.id]
       );
 
-      await notify(request.user_id, "verification_rejected", "Your campus verification request was rejected", rejectionReason);
+      await notify(
+        request.user_id,
+        "verification_rejected",
+        "Your campus verification request was rejected",
+        rejectionReason,
+        "/verify",
+        "verification_request",
+        request.id
+      );
       await audit(req.user.id, "verification.reject", "verification_request", request.id, {
         userId: request.user_id,
         rejectionReason,

@@ -27,7 +27,19 @@ router.post(
     const admins = req.user.university_id
       ? await db.query("SELECT id FROM users WHERE role = 'admin' AND university_id = $1", [req.user.university_id])
       : { rows: [] };
-    await Promise.all(admins.rows.map((a) => notify(a.id, "report", "New report filed", `${req.body.targetType}: ${req.body.reason}`)));
+    await Promise.all(
+      admins.rows.map((a) =>
+        notify(
+          a.id,
+          "report",
+          "New report filed",
+          `${req.body.targetType}: ${req.body.reason}`,
+          `/admin?tab=Reports&reportId=${rows[0].id}`,
+          "report",
+          rows[0].id
+        )
+      )
+    );
     res.status(201).json({ report: rows[0] });
   })
 );

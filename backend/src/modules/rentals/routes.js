@@ -266,7 +266,15 @@ router.post(
       "UPDATE rental_bookings SET status='active', picked_up_at=now(), renter_confirmed_at=now() WHERE id=$1 RETURNING *",
       [booking.id]
     );
-    await notify(booking.borrower_id, "rental_update", `Pickup confirmed for "${booking.title}"`, `Due back ${booking.end_date}`);
+    await notify(
+      booking.borrower_id,
+      "rental_update",
+      `Pickup confirmed for "${booking.title}"`,
+      `Due back ${booking.end_date}`,
+      `/rentals/mine?bookingId=${booking.id}`,
+      "rental_booking",
+      booking.id
+    );
     res.json({ booking: rows[0] });
   })
 );
@@ -308,7 +316,10 @@ router.post(
       `Return confirmed for "${booking.title}"`,
       lateFee > 0
         ? `A late fee of ${lateFee} was deducted from your deposit. ${depositReleased} released.`
-        : `Your full deposit of ${booking.deposit} has been released.`
+        : `Your full deposit of ${booking.deposit} has been released.`,
+      `/rentals/mine?bookingId=${booking.id}`,
+      "rental_booking",
+      booking.id
     );
     res.json({ booking: rows[0], daysLate, lateFee, depositReleased });
   })
@@ -363,16 +374,28 @@ payments.registerFinalizer("booking", {
     );
     const booking = rows[0];
     const item = await client.query("SELECT owner_id, title FROM rental_items WHERE id = $1", [booking.rental_item_id]);
-    await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'rental_update',$2,$3)", [
-      item.rows[0].owner_id,
-      "New rental booking",
-      `"${item.rows[0].title}" booked for ${booking.start_date} to ${booking.end_date}`,
-    ]);
-    await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'rental_update',$2,$3)", [
-      booking.borrower_id,
-      "Booking confirmed",
-      `Arrange pickup for "${item.rows[0].title}"`,
-    ]);
+    await client.query(
+      "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'rental_update',$2,$3,$4,$5,$6)",
+      [
+        item.rows[0].owner_id,
+        "New rental booking",
+        `"${item.rows[0].title}" booked for ${booking.start_date} to ${booking.end_date}`,
+        `/rentals/mine?tab=lent&bookingId=${booking.id}`,
+        "rental_booking",
+        booking.id,
+      ]
+    );
+    await client.query(
+      "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'rental_update',$2,$3,$4,$5,$6)",
+      [
+        booking.borrower_id,
+        "Booking confirmed",
+        `Arrange pickup for "${item.rows[0].title}"`,
+        `/rentals/mine?bookingId=${booking.id}`,
+        "rental_booking",
+        booking.id,
+      ]
+    );
   },
   onFailed: async (bookingId, client) => {
     await client.query("UPDATE rental_bookings SET status='cancelled' WHERE id=$1", [bookingId]);
@@ -387,17 +410,29 @@ payments.registerFinalizer("booking", {
       const item = itemRows[0];
       const title = item?.title || "Rental item";
       if (item?.owner_id) {
-        await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'rental_update',$2,$3)", [
-          item.owner_id,
-          "Booking refunded",
-          `The booking for "${title}" (${booking.start_date} to ${booking.end_date}) was refunded and dates have been released.`,
-        ]);
+        await client.query(
+          "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'rental_update',$2,$3,$4,$5,$6)",
+          [
+            item.owner_id,
+            "Booking refunded",
+            `The booking for "${title}" (${booking.start_date} to ${booking.end_date}) was refunded and dates have been released.`,
+            `/rentals/mine?tab=lent&bookingId=${booking.id}`,
+            "rental_booking",
+            booking.id,
+          ]
+        );
       }
-      await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'rental_update',$2,$3)", [
-        booking.borrower_id,
-        "Booking refunded",
-        `Your booking for "${title}" (${booking.start_date} to ${booking.end_date}) was refunded and cancelled.`,
-      ]);
+      await client.query(
+        "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'rental_update',$2,$3,$4,$5,$6)",
+        [
+          booking.borrower_id,
+          "Booking refunded",
+          `Your booking for "${title}" (${booking.start_date} to ${booking.end_date}) was refunded and cancelled.`,
+          `/rentals/mine?bookingId=${booking.id}`,
+          "rental_booking",
+          booking.id,
+        ]
+      );
     }
   },
 });

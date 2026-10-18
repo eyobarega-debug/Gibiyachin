@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Input, PageHeader, Spinner, SuccessBanner, Tabs } from "../components/ui";
 import ProofImage from "../components/ProofImage";
+import Icon from "../components/Icon";
 import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
@@ -16,8 +17,8 @@ const TABS = [
 const STATUS_TONE = { pending: "warn", under_review: "accent", confirmed: "ok", failed: "danger", refunded: "slate" };
 const STATUS_TEXT = { pending: "waiting for proof", under_review: "to review", confirmed: "approved", failed: "cancelled", refunded: "refunded" };
 
-function ReviewRow({ p, user, onDone, setError }) {
-  const [showImg, setShowImg] = useState(false);
+function ReviewRow({ p, user, onDone, setError, defaultShowImg = false }) {
+  const [showImg, setShowImg] = useState(defaultShowImg);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [cancelPayment, setCancelPayment] = useState(false);
@@ -124,14 +125,37 @@ function ReviewRow({ p, user, onDone, setError }) {
 
 export default function PaymentApprovals() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetPaymentId = searchParams.get("paymentId");
   const [tab, setTab] = useState(user?.role === "student" ? "mine" : "review");
   const [items, setItems] = useState(null);
   const [counts, setCounts] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [needsAccount, setNeedsAccount] = useState(false);
+  const [notFoundNotice, setNotFoundNotice] = useState("");
 
   const current = TABS.find((t) => t.id === tab);
+
+  // Auto-switch tab based on targetPaymentId status
+  useEffect(() => {
+    if (!targetPaymentId) return;
+    client.get(`/payments/${targetPaymentId}`).then(({ data }) => {
+      const p = data.payment;
+      if (!p) return;
+      if (user?.role === "student" || p.payer_id === user?.id) {
+        setTab("mine");
+      } else if (p.status === "under_review") {
+        setTab("review");
+      } else if (p.status === "pending") {
+        setTab("awaiting");
+      } else {
+        setTab("history");
+      }
+    }).catch(() => {
+      setNotFoundNotice(`Payment #${targetPaymentId.slice(0, 8)} could not be found or has expired.`);
+    });
+  }, [targetPaymentId, user]);
 
   const load = useCallback(async () => {
     try {
@@ -154,6 +178,20 @@ export default function PaymentApprovals() {
     }
   }, [user, success]);
 
+  // Scroll to target payment card when loaded
+  useEffect(() => {
+    if (!items || !targetPaymentId) return;
+    const found = items.some((p) => p.id === targetPaymentId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`payment-${targetPaymentId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    }
+  }, [items, targetPaymentId]);
+
   function done(msg) {
     setSuccess(msg);
     load();
@@ -174,6 +212,22 @@ export default function PaymentApprovals() {
       )}
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
+      {notFoundNotice && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-xs text-amber-800 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Icon name="info" className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>{notFoundNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotFoundNotice("")}
+            className="text-amber-700 hover:text-amber-900 font-bold ml-2 text-sm leading-none"
+            aria-label="Dismiss notice"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       <Tabs
         className="my-4"
@@ -196,36 +250,52 @@ export default function PaymentApprovals() {
         <EmptyState title="Nothing here" subtitle={tab === "review" ? "No payment proofs are waiting for you." : "No payments in this list."} />
       ) : (
         <div className="space-y-3">
-          {items.map((p) => (
-            <Card key={p.id} className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-ink">{p.description || `${p.transactionType} payment`}</p>
-                  <p className="text-xs text-muted">
-                    {tab === "mine" ? `To ${p.payeeName}` : `From ${p.payerName}`} · {new Date(p.createdAt).toLocaleString()}
-                  </p>
-                  {p.proof?.status === "rejected" && p.status !== "under_review" && (
-                    <p className="mt-1 text-xs text-danger">Rejected: {p.proof.rejectReason}</p>
-                  )}
+          {items.map((p) => {
+            const isTarget = targetPaymentId === p.id;
+            return (
+              <Card
+                key={p.id}
+                id={`payment-${p.id}`}
+                className={`p-4 transition-all duration-300 border ${
+                  isTarget
+                    ? "border-blue-500/90 bg-white shadow-xl ring-2 ring-blue-500/30 scale-[1.01]"
+                    : "border-white/80"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-ink">{p.description || `${p.transactionType} payment`}</p>
+                      {isTarget && <Badge tone="accent">Selected from notification</Badge>}
+                    </div>
+                    <p className="text-xs text-muted">
+                      {tab === "mine" ? `To ${p.payeeName}` : `From ${p.payerName}`} · {new Date(p.createdAt).toLocaleString()}
+                    </p>
+                    {p.proof?.status === "rejected" && p.status !== "under_review" && (
+                      <p className="mt-1 text-xs text-danger">Rejected: {p.proof.rejectReason}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-ink">{p.amount.toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span></p>
+                    <Badge tone={STATUS_TONE[p.status]}>{STATUS_TEXT[p.status] || p.status}</Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-ink">{p.amount.toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span></p>
-                  <Badge tone={STATUS_TONE[p.status]}>{STATUS_TEXT[p.status] || p.status}</Badge>
-                </div>
-              </div>
-              {tab === "mine" && ["pending", "under_review"].includes(p.status) && (
-                <div className="mt-3">
-                  <Button as={Link} to={`/pay/manual/${p.id}`} variant="outline">
-                    {p.status === "pending" ? "Upload proof" : "View status"}
-                  </Button>
-                </div>
-              )}
-              {tab !== "mine" && p.status === "under_review" && <ReviewRow p={p} user={user} onDone={done} setError={setError} />}
-              {tab !== "mine" && p.status === "confirmed" && p.proof && (
-                <p className="mt-2 text-xs text-muted">Reference <span className="font-mono text-ink">{p.proof.referenceNumber}</span></p>
-              )}
-            </Card>
-          ))}
+                {tab === "mine" && ["pending", "under_review"].includes(p.status) && (
+                  <div className="mt-3">
+                    <Button as={Link} to={`/pay/manual/${p.id}`} variant="outline">
+                      {p.status === "pending" ? "Upload proof" : "View status"}
+                    </Button>
+                  </div>
+                )}
+                {tab !== "mine" && p.status === "under_review" && (
+                  <ReviewRow p={p} user={user} onDone={done} setError={setError} defaultShowImg={isTarget} />
+                )}
+                {tab !== "mine" && p.status === "confirmed" && p.proof && (
+                  <p className="mt-2 text-xs text-muted">Reference <span className="font-mono text-ink">{p.proof.referenceNumber}</span></p>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import { client } from "../api/client";
 import { Badge } from "./ui";
 import Icon from "./Icon";
 import { visibleTabs } from "../config/roles";
+import NotificationPopover from "./NotificationPopover";
 
 /* ------------------------------------------------------------------ */
 /* Brand                                                               */
@@ -121,7 +122,7 @@ function useUnread(user) {
     async function poll() {
       try {
         const { data } = await client.get("/notifications", { params: { unreadOnly: true } });
-        if (!cancelled) setUnread(data.unreadCount || 0);
+        if (!cancelled && typeof data.unreadCount === "number") setUnread(data.unreadCount);
       } catch {
         /* ignore polling errors */
       }
@@ -133,7 +134,7 @@ function useUnread(user) {
       clearInterval(id);
     };
   }, [user]);
-  return unread;
+  return [unread, setUnread];
 }
 
 /* ------------------------------------------------------------------ */
@@ -535,7 +536,7 @@ export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const unread = useUnread(user);
+  const [unread, setUnread] = useUnread(user);
   const onboarding = useOnboardingStatus(user);
 
   async function handleLogout() {
@@ -570,18 +571,7 @@ export default function AppLayout({ children }) {
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
             {user ? (
               <>
-                <Link
-                  to="/notifications"
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/90 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white hover:text-slate-900"
-                  aria-label="Notifications"
-                >
-                  <Icon name="bell" />
-                  {unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#1c222c] px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                      {unread > 99 ? "99+" : unread}
-                    </span>
-                  )}
-                </Link>
+                <NotificationPopover unreadCount={unread} onUnreadChange={setUnread} />
                 <UserMenu user={user} unread={unread} onLogout={handleLogout} onboarding={onboarding} />
               </>
             ) : (

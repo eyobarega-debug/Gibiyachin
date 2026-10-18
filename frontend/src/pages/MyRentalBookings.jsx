@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, TextArea } from "../components/ui";
@@ -16,8 +17,11 @@ const STATUS_TONE = {
 
 export default function MyRentalBookings() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetBookingId = searchParams.get("bookingId");
   const [bookings, setBookings] = useState(null);
   const [error, setError] = useState("");
+  const [notFoundNotice, setNotFoundNotice] = useState("");
   const [disputeFor, setDisputeFor] = useState(null);
   const [disputeReason, setDisputeReason] = useState("");
 
@@ -28,6 +32,21 @@ export default function MyRentalBookings() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!bookings || !targetBookingId) return;
+    const found = bookings.some((b) => b.id === targetBookingId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`booking-${targetBookingId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    } else {
+      setNotFoundNotice(`Rental booking #${targetBookingId.slice(0, 8)} could not be found or has been removed.`);
+    }
+  }, [bookings, targetBookingId]);
 
   async function act(path, id, body) {
     setError("");
@@ -51,14 +70,46 @@ export default function MyRentalBookings() {
     <div>
       <PageHeader title="My Rental Bookings" subtitle="As borrower and as lender — pickup, return, and disputes happen here." />
       <ErrorBanner message={error} />
+      {notFoundNotice && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-300/60 bg-amber-50/90 p-4 text-sm text-amber-800 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Icon name="alertCircle" className="h-5 w-5 shrink-0 text-amber-600" />
+            <span>{notFoundNotice}</span>
+          </div>
+          <button
+            onClick={() => setNotFoundNotice("")}
+            className="text-xs font-semibold uppercase tracking-wider text-amber-700 hover:text-amber-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {bookings.length === 0 ? (
         <EmptyState title="No bookings yet" />
       ) : (
         <div className="space-y-3">
           {bookings.map((b) => {
             const iAmBorrower = user.id !== b.owner_id;
+            const isSelected = targetBookingId && b.id === targetBookingId;
             return (
-              <Card key={b.id} className="glass glass-hover p-5">
+              <Card
+                key={b.id}
+                id={`booking-${b.id}`}
+                className={`glass glass-hover p-5 transition-all duration-300 ${
+                  isSelected
+                    ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95"
+                    : ""
+                }`}
+              >
+                {isSelected && (
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary backdrop-blur-sm">
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="checkCircle" className="h-4 w-4" />
+                      Selected booking from notification
+                    </span>
+                    <Badge tone="accent" className="animate-pulse">Active</Badge>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-ink">

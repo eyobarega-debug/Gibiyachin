@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner, Tabs } from "../components/ui";
 import TicketCard from "../components/TicketCard";
+import Icon from "../components/Icon";
 import { useConfirm } from "../components/ConfirmProvider";
 
 export default function MyTickets() {
+  const [searchParams] = useSearchParams();
+  const targetTicketId = searchParams.get("ticketId");
   const [tickets, setTickets] = useState(null);
   const [waitlist, setWaitlist] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [notFoundNotice, setNotFoundNotice] = useState("");
   const [filter, setFilter] = useState("all");
   const confirm = useConfirm();
 
@@ -30,6 +34,22 @@ export default function MyTickets() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!tickets || !targetTicketId) return;
+    const found = tickets.find((t) => t.id === targetTicketId);
+    if (found) {
+      setFilter("all");
+      setTimeout(() => {
+        const el = document.getElementById(`ticket-${targetTicketId}`) || document.getElementById(`ticket-pass-${targetTicketId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    } else {
+      setNotFoundNotice(`Ticket #${targetTicketId.slice(0, 8)} could not be found or has been removed.`);
+    }
+  }, [tickets, targetTicketId]);
 
   async function cancelActiveTicket(ticketId) {
     const ok = await confirm({
@@ -96,6 +116,21 @@ export default function MyTickets() {
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
 
+      {notFoundNotice && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-300/60 bg-amber-50/90 p-4 text-sm text-amber-800 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Icon name="alertCircle" className="h-5 w-5 shrink-0 text-amber-600" />
+            <span>{notFoundNotice}</span>
+          </div>
+          <button
+            onClick={() => setNotFoundNotice("")}
+            className="text-xs font-semibold uppercase tracking-wider text-amber-700 hover:text-amber-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       {tickets.length > 0 && (
         <Tabs
@@ -133,14 +168,35 @@ export default function MyTickets() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {filteredTickets.map((t) => (
-            <TicketCard
-              key={t.id}
-              ticket={t}
-              onCancel={cancelActiveTicket}
-              onCancelUnpaid={cancelUnpaidReservation}
-            />
-          ))}
+          {filteredTickets.map((t) => {
+            const isSelected = targetTicketId && t.id === targetTicketId;
+            return (
+              <div
+                key={t.id}
+                id={`ticket-${t.id}`}
+                className={`relative transition-all duration-300 rounded-[26px] ${
+                  isSelected
+                    ? "ring-2 ring-primary ring-offset-4 ring-offset-bg shadow-xl"
+                    : ""
+                }`}
+              >
+                {isSelected && (
+                  <div className="mb-2 flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary backdrop-blur-sm">
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="checkCircle" className="h-4 w-4" />
+                      Selected ticket from notification
+                    </span>
+                    <Badge tone="accent" className="animate-pulse">Active</Badge>
+                  </div>
+                )}
+                <TicketCard
+                  ticket={t}
+                  onCancel={cancelActiveTicket}
+                  onCancelUnpaid={cancelUnpaidReservation}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

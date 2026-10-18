@@ -208,7 +208,10 @@ async function settle(req, res, { where, params, sellerId }) {
     result.sellerId,
     "commission_update",
     "Commission settled",
-    `${result.settledCount} commission record(s) totalling ${result.total.toFixed(2)} birr were marked as paid by administrator.`
+    `${result.settledCount} commission record(s) totalling ${result.total.toFixed(2)} birr were marked as paid by administrator.`,
+    "/commissions",
+    "commission_payment",
+    result.paymentId
   );
   res.json({ settled: result.settledCount, total: result.total, referenceNumber: result.referenceNumber });
 }
@@ -307,7 +310,10 @@ router.post(
           admin.id,
           "commission_update",
           "Merchant commission payment submitted",
-          `${req.user.name} submitted proof for ${amount.toFixed(2)} birr commission payment. Reference: ${referenceNumber}.`
+          `${req.user.name} submitted proof for ${amount.toFixed(2)} birr commission payment. Reference: ${referenceNumber}.`,
+          `/admin/commissions?paymentId=${rows[0].id}`,
+          "commission_payment",
+          rows[0].id
         );
       }
 
@@ -483,7 +489,10 @@ router.post(
       result.merchant_id,
       "commission_update",
       "Commission payment verified",
-      `Your commission payment has been verified for ${Number(result.verified_amount).toFixed(2)} birr by the administrator.`
+      `Your commission payment has been verified for ${Number(result.verified_amount).toFixed(2)} birr by the administrator.`,
+      "/commissions",
+      "commission_payment",
+      result.id
     );
     res.json({ payment: result });
   })
@@ -522,7 +531,10 @@ router.post(
       cp.merchant_id,
       "commission_update",
       "Commission payment rejected",
-      `Your commission payment proof was rejected: ${req.body.reason}`
+      `Your commission payment proof was rejected: ${req.body.reason}`,
+      "/commissions",
+      "commission_payment",
+      cp.id
     );
     res.json({ payment: upd[0] });
   })

@@ -116,14 +116,25 @@ router.post(
       req.user.id,
       "organizer_application",
       "Your Gibiychin organizer application is waiting for review",
-      "A campus administrator will review it. You'll be notified once it's decided."
+      "A campus administrator will review it. You'll be notified once it's decided.",
+      "/organizer-apply",
+      "organizer_application",
+      result.id
     );
     const admins = await db.query("SELECT id FROM users WHERE role = 'admin' AND university_id = $1", [
       req.user.university_id,
     ]);
     await Promise.all(
       admins.rows.map((a) =>
-        notify(a.id, "organizer_application", "New organizer application", `${req.body.organizerName} applied to host events on ግቢያችን.`)
+        notify(
+          a.id,
+          "organizer_application",
+          "New organizer application",
+          `${req.body.organizerName} applied to host events on ግቢያችን.`,
+          `/admin?tab=Organizers&applicationId=${result.id}`,
+          "organizer_application",
+          result.id
+        )
       )
     );
     await audit(req.user.id, "organizer.apply", "organizer_application", result.id, {
@@ -227,7 +238,10 @@ router.patch(
         app.user_id,
         "organizer_decision",
         status === "approved" ? "Your Gibiychin organizer application was approved!" : "Your Gibiychin organizer application was rejected",
-        status === "approved" ? "You can now create and manage events." : req.body.reason
+        status === "approved" ? "You can now create and manage events." : req.body.reason,
+        status === "approved" ? "/organizer" : "/organizer-apply",
+        "organizer_application",
+        app.id
       );
       await audit(req.user.id, "organizer.decision", "organizer_application", app.id, {
         status,

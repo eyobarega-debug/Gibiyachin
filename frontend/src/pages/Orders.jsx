@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import { Badge, Card, EmptyState, ErrorBanner, PageHeader, Spinner, Button, SuccessBanner } from "../components/ui";
@@ -25,9 +26,12 @@ const STATUS_TONE = {
 };
 
 export default function Orders() {
+  const [searchParams] = useSearchParams();
+  const targetOrderId = searchParams.get("orderId");
   const [orders, setOrders] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [notFoundNotice, setNotFoundNotice] = useState("");
 
   async function load() {
     const { data } = await client.get("/orders");
@@ -37,6 +41,21 @@ export default function Orders() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!orders || !targetOrderId) return;
+    const found = orders.some((o) => o.id === targetOrderId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`order-${targetOrderId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    } else {
+      setNotFoundNotice(`Order #${targetOrderId.slice(0, 8)} could not be found or has been removed.`);
+    }
+  }, [orders, targetOrderId]);
 
   async function confirmReceipt(o) {
     setError("");
@@ -73,6 +92,22 @@ export default function Orders() {
       <PageHeader title="My Orders" subtitle="Track every marketplace purchase from payment to pickup." />
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
+      {notFoundNotice && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-xs text-amber-800 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Icon name="info" className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>{notFoundNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotFoundNotice("")}
+            className="text-amber-700 hover:text-amber-900 font-bold ml-2 text-sm leading-none"
+            aria-label="Dismiss notice"
+          >
+            &times;
+          </button>
+        </div>
+      )}
       {orders.length === 0 ? (
         <EmptyState
           icon="orders"
@@ -82,18 +117,33 @@ export default function Orders() {
         />
       ) : (
         <div className="space-y-4">
-          {orders.map((o) => (
-            <Card key={o.id} className="overflow-hidden p-5 border border-white/90 bg-white/80 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">
-                      Order #{o.id.slice(0, 8)}
-                    </h3>
-                    <Badge tone={STATUS_TONE[o.status] || "slate"}>
-                      {STATUS_LABEL[o.status] || o.status.replaceAll("_", " ")}
-                    </Badge>
-                  </div>
+          {orders.map((o) => {
+            const isTarget = targetOrderId === o.id;
+            return (
+              <Card
+                key={o.id}
+                id={`order-${o.id}`}
+                className={`overflow-hidden p-5 border transition-all duration-300 ${
+                  isTarget
+                    ? "border-blue-500/90 bg-white shadow-xl ring-2 ring-blue-500/30 scale-[1.01]"
+                    : "border-white/90 bg-white/80 shadow-sm"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-slate-900">
+                        Order #{o.id.slice(0, 8)}
+                      </h3>
+                      <Badge tone={STATUS_TONE[o.status] || "slate"}>
+                        {STATUS_LABEL[o.status] || o.status.replaceAll("_", " ")}
+                      </Badge>
+                      {isTarget && (
+                        <Badge tone="accent">
+                          Selected from notification
+                        </Badge>
+                      )}
+                    </div>
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
                       <Icon name="store" className="h-3.5 w-3.5 text-slate-400" /> {o.store_name}
@@ -148,7 +198,8 @@ export default function Orders() {
                 </div>
               )}
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>

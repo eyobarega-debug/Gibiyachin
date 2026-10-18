@@ -61,7 +61,10 @@ router.post(
         req.user.id,
         "verification_submitted",
         "Your campus verification request has been submitted",
-        "An administrator will review it shortly."
+        "An administrator will review it shortly.",
+        "/verify",
+        "verification_request",
+        rows[0].id
       );
       const admins = await db.query(
         "SELECT id FROM users WHERE role IN ('admin','super_admin') AND (role = 'super_admin' OR university_id = $1)",
@@ -69,7 +72,15 @@ router.post(
       );
       await Promise.all(
         admins.rows.map((a) =>
-          notify(a.id, "verification_request", "New campus verification request", `${req.user.name} submitted a verification request.`)
+          notify(
+            a.id,
+            "verification_request",
+            "New campus verification request",
+            `${req.user.name} submitted a verification request.`,
+            `/admin?tab=Verifications&requestId=${rows[0].id}`,
+            "verification_request",
+            rows[0].id
+          )
         )
       );
       await audit(req.user.id, "verification.submit", "verification_request", rows[0].id, { documentType: req.body.documentType });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, Checkbox, ErrorBanner, Input, Modal, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
@@ -26,7 +26,40 @@ const TABS = [
 
 export default function Admin() {
   const { user } = useAuth();
-  const [tab, setTab] = useState("Merchants");
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const targetApplicationId = searchParams.get("applicationId");
+  const targetRequestId = searchParams.get("requestId");
+  const targetEventId = searchParams.get("eventId");
+  const targetReportId = searchParams.get("reportId");
+  const targetPaymentId = searchParams.get("paymentId");
+
+  const resolveTabFromParam = (param) => {
+    if (!param) return "Merchants";
+    const p = param.toLowerCase();
+    if (p.includes("merchant")) return "Merchants";
+    if (p.includes("organizer")) return "Organizer Applications";
+    if (p.includes("event payment")) return "Event Payments";
+    if (p.includes("event")) return "Events";
+    if (p.includes("payout")) return "Organizer Payouts";
+    if (p.includes("commission")) return "Commission Payments";
+    if (p.includes("receiving")) return "Receiving Accounts";
+    if (p.includes("report") || p.includes("dispute")) return "Reports & Disputes";
+    if (p.includes("user")) return "Users";
+    if (p.includes("club")) return "Clubs";
+    if (p.includes("verification")) return "Verifications";
+    if (p.includes("analytic")) return "Analytics";
+    if (p.includes("audit")) return "Audit Log";
+    return "Merchants";
+  };
+
+  const [tab, setTab] = useState(() => resolveTabFromParam(tabParam));
+
+  useEffect(() => {
+    if (tabParam) {
+      setTab(resolveTabFromParam(tabParam));
+    }
+  }, [tabParam]);
 
   if (user?.role === "super_admin") {
     return (
@@ -76,17 +109,17 @@ export default function Admin() {
           </button>
         ))}
       </div>
-      {tab === "Merchants" && <ApplicationsReviewTab kind="merchant" />}
-      {tab === "Organizer Applications" && <ApplicationsReviewTab kind="organizer" />}
-      {tab === "Events" && <EventsTab />}
-      {tab === "Event Payments" && <EventPaymentsTab />}
+      {tab === "Merchants" && <ApplicationsReviewTab kind="merchant" targetId={targetApplicationId} />}
+      {tab === "Organizer Applications" && <ApplicationsReviewTab kind="organizer" targetId={targetApplicationId} />}
+      {tab === "Events" && <EventsTab targetId={targetEventId} />}
+      {tab === "Event Payments" && <EventPaymentsTab targetId={targetPaymentId} />}
       {tab === "Organizer Payouts" && <OrganizerPayoutsTab />}
-      {tab === "Commission Payments" && <CommissionPaymentsTab />}
+      {tab === "Commission Payments" && <CommissionPaymentsTab targetId={targetPaymentId} />}
       {tab === "Receiving Accounts" && <ReceivingAccountsTab />}
-      {tab === "Reports & Disputes" && <ReportsTab />}
+      {tab === "Reports & Disputes" && <ReportsTab targetId={targetReportId} />}
       {tab === "Users" && <UsersTab />}
       {tab === "Clubs" && <ClubsTab />}
-      {tab === "Verifications" && <VerificationsTab />}
+      {tab === "Verifications" && <VerificationsTab targetId={targetRequestId} />}
       {tab === "Analytics" && <AnalyticsTab />}
       {tab === "Audit Log" && <AuditLogTab />}
     </div>
@@ -121,7 +154,7 @@ const APPLICATION_TAB_CONFIG = {
 const APPLICATION_STATUS_TONES = { pending_review: "warn", approved: "ok", rejected: "danger" };
 const APPLICATION_STATUS_LABELS = { pending_review: "Pending", approved: "Approved", rejected: "Rejected" };
 
-function ApplicationsReviewTab({ kind }) {
+function ApplicationsReviewTab({ kind, targetId }) {
   const cfg = APPLICATION_TAB_CONFIG[kind];
   const [apps, setApps] = useState(null);
   const [status, setStatus] = useState("pending_review");
@@ -146,6 +179,20 @@ function ApplicationsReviewTab({ kind }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  useEffect(() => {
+    if (!apps || !targetId) return;
+    const found = apps.find((a) => a.id === targetId);
+    if (found) {
+      setSelected(found);
+      setTimeout(() => {
+        const el = document.getElementById(`app-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    } else if (status !== "all") {
+      setStatus("all");
+    }
+  }, [apps, targetId, status]);
 
   async function decide(app, decision) {
     setBusy(true);
@@ -193,30 +240,40 @@ function ApplicationsReviewTab({ kind }) {
         </p>
       ) : (
         <div className="space-y-2">
-          {apps.map((a) => (
-            <Card
-              key={a.id}
-              className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 ${
-                selected?.id === a.id ? "border-white/30 bg-white/8" : ""
-              }`}
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-ink">{cfg.nameOf(a)}</p>
-                <p className="text-xs text-muted">
-                  {a.applicant_name} · {a.applicant_email} · {a.university_name || "No campus"} · submitted{" "}
-                  {new Date(a.submitted_at || a.created_at).toLocaleString()}
-                </p>
-                {a.status === "rejected" && a.reason && (
-                  <p className="text-xs text-danger">Rejected: {a.reason}</p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={APPLICATION_STATUS_TONES[a.status] || "slate"}>
-                  {APPLICATION_STATUS_LABELS[a.status] || a.status}
-                </Badge>
-                <Button variant="outline" onClick={() => { setSelected(selected?.id === a.id ? null : a); setRejecting(false); setRejectReason(""); }}>
-                  {selected?.id === a.id ? "Close" : "View"}
-                </Button>
+          {apps.map((a) => {
+            const isSelected = targetId && a.id === targetId;
+            return (
+              <Card
+                key={a.id}
+                id={`app-${a.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                } ${
+                  selected?.id === a.id ? "border-white/30 bg-white/8" : ""
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">{cfg.nameOf(a)}</p>
+                  <p className="text-xs text-muted">
+                    {a.applicant_name} · {a.applicant_email} · {a.university_name || "No campus"} · submitted{" "}
+                    {new Date(a.submitted_at || a.created_at).toLocaleString()}
+                  </p>
+                  {a.status === "rejected" && a.reason && (
+                    <p className="text-xs text-danger">Rejected: {a.reason}</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isSelected && (
+                    <Badge tone="accent" className="animate-pulse">
+                      Selected from notification
+                    </Badge>
+                  )}
+                  <Badge tone={APPLICATION_STATUS_TONES[a.status] || "slate"}>
+                    {APPLICATION_STATUS_LABELS[a.status] || a.status}
+                  </Badge>
+                  <Button variant="outline" onClick={() => { setSelected(selected?.id === a.id ? null : a); setRejecting(false); setRejectReason(""); }}>
+                    {selected?.id === a.id ? "Close" : "View"}
+                  </Button>
                 {a.status === "pending_review" && (
                   <>
                     <Button variant="accent" disabled={busy} onClick={() => decide(a, "approve")}>
@@ -229,7 +286,8 @@ function ApplicationsReviewTab({ kind }) {
                 )}
               </div>
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
 
@@ -307,7 +365,7 @@ function ApplicationsReviewTab({ kind }) {
   );
 }
 
-function EventsTab() {
+function EventsTab({ targetId }) {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState("");
 
@@ -318,6 +376,17 @@ function EventsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!events || !targetId) return;
+    const found = events.find((e) => e.id === targetId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`event-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [events, targetId]);
 
   async function decide(id, decision) {
     setError("");
@@ -337,18 +406,34 @@ function EventsTab() {
         <p className="text-sm text-muted">No events pending review.</p>
       ) : (
         <div className="space-y-2">
-          {events.map((e) => (
-            <Card key={e.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold text-ink">{e.title}</p>
-                <p className="text-xs text-muted">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="accent" onClick={() => decide(e.id, "approve")}>Approve</Button>
-                <Button variant="danger" onClick={() => decide(e.id, "reject")}>Reject</Button>
-              </div>
-            </Card>
-          ))}
+          {events.map((e) => {
+            const isSelected = targetId && e.id === targetId;
+            return (
+              <Card
+                key={e.id}
+                id={`event-${e.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-ink">{e.title}</p>
+                    {isSelected && (
+                      <Badge tone="accent" className="animate-pulse">
+                        Selected from notification
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">{e.club_name} · {new Date(e.date_time).toLocaleString()} · {e.location}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="accent" onClick={() => decide(e.id, "approve")}>Approve</Button>
+                  <Button variant="danger" onClick={() => decide(e.id, "reject")}>Reject</Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -357,7 +442,7 @@ function EventsTab() {
 
 const ACTIONS = ["dismiss", "warn", "remove_listing", "suspend", "refund"];
 
-function ReportsTab() {
+function ReportsTab({ targetId }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -369,6 +454,17 @@ function ReportsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!data || !targetId) return;
+    const found = data.reports?.find((r) => r.id === targetId);
+    if (found) {
+      setTimeout(() => {
+        const el = document.getElementById(`report-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [data, targetId]);
 
   async function resolveReport(id, action) {
     setBusyId(id);
@@ -406,19 +502,35 @@ function ReportsTab() {
           <p className="text-sm text-muted">No open reports.</p>
         ) : (
           <div className="space-y-2">
-            {data.reports.map((r) => (
-              <Card key={r.id} className="glass glass-hover p-4">
-                <p className="font-semibold text-ink">{r.target_type} — {r.reason}</p>
-                <p className="text-xs text-muted">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {ACTIONS.map((a) => (
-                    <Button key={a} variant="outline" disabled={busyId === r.id} onClick={() => resolveReport(r.id, a)}>
-                      {a.replaceAll("_", " ")}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-            ))}
+            {data.reports.map((r) => {
+              const isSelected = targetId && r.id === targetId;
+              return (
+                <Card
+                  key={r.id}
+                  id={`report-${r.id}`}
+                  className={`glass glass-hover p-4 transition-all duration-300 ${
+                    isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-ink">{r.target_type} — {r.reason}</p>
+                    {isSelected && (
+                      <Badge tone="accent" className="animate-pulse">
+                        Selected from notification
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">Reported by {r.reporter_name} · {r.details || "No further details"}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {ACTIONS.map((a) => (
+                      <Button key={a} variant="outline" disabled={busyId === r.id} onClick={() => resolveReport(r.id, a)}>
+                        {a.replaceAll("_", " ")}
+                      </Button>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -929,7 +1041,7 @@ const VERIF_DOC_LABELS = {
 };
 const VERIF_STATUS_TONES = { pending: "warn", approved: "ok", rejected: "danger" };
 
-function VerificationsTab() {
+function VerificationsTab({ targetId }) {
   const [items, setItems] = useState(null);
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState("pending");
@@ -955,6 +1067,20 @@ function VerificationsTab() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  useEffect(() => {
+    if (!items || !targetId) return;
+    const found = items.find((r) => r.id === targetId);
+    if (found) {
+      open(found);
+      setTimeout(() => {
+        const el = document.getElementById(`verif-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    } else if (status !== "all") {
+      setStatus("all");
+    }
+  }, [items, targetId, status]);
 
   async function open(r) {
     setError("");
@@ -1032,33 +1158,44 @@ function VerificationsTab() {
         </p>
       ) : (
         <div className="space-y-2">
-          {items.map((r) => (
-            <Card
-              key={r.id}
-              className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 ${
-                selected?.id === r.id ? "border-white/30 bg-white/8" : ""
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-ink">
-                  {r.studentName} <span className="text-xs font-normal text-muted">({r.studentEmail})</span>
-                </p>
-                <p className="text-xs text-muted">
-                  {VERIF_DOC_LABELS[r.documentType] || r.documentType} · {r.universityName} · submitted{" "}
-                  {new Date(r.createdAt).toLocaleString()}
-                </p>
-                {r.status === "rejected" && r.rejectionReason && (
-                  <p className="text-xs text-danger">Rejected: {r.rejectionReason}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone={VERIF_STATUS_TONES[r.status] || "slate"}>{r.status}</Badge>
-                <Button variant="outline" onClick={() => open(r)}>
-                  Review
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {items.map((r) => {
+            const isSelected = targetId && r.id === targetId;
+            return (
+              <Card
+                key={r.id}
+                id={`verif-${r.id}`}
+                className={`glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                } ${
+                  selected?.id === r.id ? "border-white/30 bg-white/8" : ""
+                }`}
+              >
+                <div>
+                  <p className="font-semibold text-ink">
+                    {r.studentName} <span className="text-xs font-normal text-muted">({r.studentEmail})</span>
+                  </p>
+                  <p className="text-xs text-muted">
+                    {VERIF_DOC_LABELS[r.documentType] || r.documentType} · {r.universityName} · submitted{" "}
+                    {new Date(r.createdAt).toLocaleString()}
+                  </p>
+                  {r.status === "rejected" && r.rejectionReason && (
+                    <p className="text-xs text-danger">Rejected: {r.rejectionReason}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSelected && (
+                    <Badge tone="accent" className="animate-pulse">
+                      Selected from notification
+                    </Badge>
+                  )}
+                  <Badge tone={VERIF_STATUS_TONES[r.status] || "slate"}>{r.status}</Badge>
+                  <Button variant="outline" onClick={() => open(r)}>
+                    Review
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -1239,7 +1376,7 @@ function AuditLogTab() {
   );
 }
 
-function EventPaymentsTab() {
+function EventPaymentsTab({ targetId }) {
   const [items, setItems] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -1262,6 +1399,18 @@ function EventPaymentsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!items || !targetId) return;
+    const found = items.find((t) => t.id === targetId || t.payment_id === targetId);
+    if (found) {
+      setOpenImgId(found.payment_id);
+      setTimeout(() => {
+        const el = document.getElementById(`event-pay-${found.id}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [items, targetId]);
 
   async function decide(paymentId, action, body) {
     setError("");
@@ -1299,11 +1448,26 @@ function EventPaymentsTab() {
         <p className="text-sm text-slate">No ticket payments pending review.</p>
       ) : (
         <div className="space-y-3">
-          {items.map((t) => (
-            <Card key={t.id} className="glass glass-hover p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-ink">{t.event_title}</p>
+          {items.map((t) => {
+            const isSelected = targetId && (t.id === targetId || t.payment_id === targetId);
+            return (
+              <Card
+                key={t.id}
+                id={`event-pay-${t.id}`}
+                className={`glass glass-hover p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-ink">{t.event_title}</p>
+                      {isSelected && (
+                        <Badge tone="accent" className="animate-pulse">
+                          Selected from notification
+                        </Badge>
+                      )}
+                    </div>
                   <p className="text-xs text-muted">
                     Buyer: {t.student_name} ({t.student_email}) · {t.quantity}x {t.ticket_type_name}
                   </p>
@@ -1380,7 +1544,8 @@ function EventPaymentsTab() {
                 </div>
               )}
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>
@@ -1599,7 +1764,7 @@ function CommissionProofImage({ paymentId }) {
   );
 }
 
-function CommissionPaymentsTab() {
+function CommissionPaymentsTab({ targetId }) {
   const [payments, setPayments] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -1621,6 +1786,18 @@ function CommissionPaymentsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!payments || !targetId) return;
+    const found = payments.find((p) => p.id === targetId);
+    if (found) {
+      setOpenImgId(targetId);
+      setTimeout(() => {
+        const el = document.getElementById(`comm-pay-${targetId}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  }, [payments, targetId]);
 
   async function verify(id) {
     const ok = await confirm({
@@ -1681,11 +1858,26 @@ function CommissionPaymentsTab() {
         <p className="text-sm text-slate">No merchant commission payments submitted.</p>
       ) : (
         <div className="space-y-3">
-          {payments.map((p) => (
-            <Card key={p.id} className="glass glass-hover p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-ink">{p.merchant_name} <span className="text-xs text-muted">({p.merchant_email})</span></p>
+          {payments.map((p) => {
+            const isSelected = targetId && p.id === targetId;
+            return (
+              <Card
+                key={p.id}
+                id={`comm-pay-${p.id}`}
+                className={`glass glass-hover p-4 transition-all duration-300 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-bg shadow-lg bg-white/95" : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-ink">{p.merchant_name} <span className="text-xs text-muted">({p.merchant_email})</span></p>
+                      {isSelected && (
+                        <Badge tone="accent" className="animate-pulse">
+                          Selected from notification
+                        </Badge>
+                      )}
+                    </div>
                   <p className="text-xs text-muted">
                     Submitted: {new Date(p.created_at).toLocaleString()}
                   </p>
@@ -1741,7 +1933,8 @@ function CommissionPaymentsTab() {
                 </div>
               )}
             </Card>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>

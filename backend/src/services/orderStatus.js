@@ -109,8 +109,25 @@ async function releaseStock(client, orderId) {
 }
 
 // In-transaction notification (same table/type the payment finalizers already write to).
-async function queueNotification(client, userId, title, body) {
-  await client.query("INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'order_update',$2,$3)", [userId, title, body]);
+async function queueNotification(client, userId, title, body, targetRouteOrOptions = null, targetEntityType = null, targetEntityId = null) {
+  let targetRoute = null;
+  let entityType = null;
+  let entityId = null;
+
+  if (targetRouteOrOptions && typeof targetRouteOrOptions === "object") {
+    targetRoute = targetRouteOrOptions.targetRoute || targetRouteOrOptions.route || null;
+    entityType = targetRouteOrOptions.targetEntityType || targetRouteOrOptions.entityType || null;
+    entityId = targetRouteOrOptions.targetEntityId || targetRouteOrOptions.entityId || null;
+  } else if (typeof targetRouteOrOptions === "string") {
+    targetRoute = targetRouteOrOptions;
+    entityType = targetEntityType || null;
+    entityId = targetEntityId || null;
+  }
+
+  await client.query(
+    "INSERT INTO notifications (user_id, type, title, body, target_route, target_entity_type, target_entity_id) VALUES ($1,'order_update',$2,$3,$4,$5,$6)",
+    [userId, title, body, targetRoute, entityType, entityId ? String(entityId) : null]
+  );
 }
 
 async function getHistory(queryable, orderId) {

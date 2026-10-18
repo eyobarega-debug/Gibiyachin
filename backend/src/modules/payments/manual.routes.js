@@ -295,7 +295,10 @@ router.post(
             admin.id,
             "payment_update",
             "Event ticket payment to review",
-            `${req.user.name} submitted payment proof for ${payment.description || "event ticket"}. Check receiving account and approve or reject.`
+            `${req.user.name} submitted payment proof for ${payment.description || "event ticket"}. Check receiving account and approve or reject.`,
+            `/payment-approvals?paymentId=${payment.id}`,
+            "payment",
+            payment.id
           );
         }
       } else {
@@ -303,7 +306,10 @@ router.post(
           payment.payee_id,
           "payment_update",
           "Payment proof to review",
-          `${req.user.name} says they paid ${Number(payment.amount).toFixed(2)} birr for ${payment.description || "an order"}. Check your account, then approve or reject.`
+          `${req.user.name} says they paid ${Number(payment.amount).toFixed(2)} birr for ${payment.description || "an order"}. Check your account, then approve or reject.`,
+          `/payment-approvals?paymentId=${payment.id}`,
+          "payment",
+          payment.id
         );
       }
       res.status(201).json({ payment: publicPayment(payment) });
@@ -428,13 +434,36 @@ router.post(
     await audit(req.user.id, "payment.manual_rejected", payment.transaction_type, payment.transaction_id, {
       paymentId: payment.id, reason, cancelled: cancel,
     });
+
+    let rejectionRoute = `/pay/manual/${payment.id}`;
+    let rejectionEntityType = "payment";
+    let rejectionEntityId = payment.id;
+    if (cancel) {
+      if (payment.transaction_type === "ticket") {
+        rejectionRoute = `/tickets?ticketId=${payment.transaction_id}`;
+        rejectionEntityType = "ticket";
+        rejectionEntityId = payment.transaction_id;
+      } else if (payment.transaction_type === "order") {
+        rejectionRoute = `/orders?orderId=${payment.transaction_id}`;
+        rejectionEntityType = "order";
+        rejectionEntityId = payment.transaction_id;
+      } else if (payment.transaction_type === "booking") {
+        rejectionRoute = `/rentals/mine?bookingId=${payment.transaction_id}`;
+        rejectionEntityType = "rental_booking";
+        rejectionEntityId = payment.transaction_id;
+      }
+    }
+
     await notify(
       payment.payer_id,
       "payment_update",
       cancel ? "Payment rejected" : "Payment proof rejected",
       cancel
         ? `${payment.description || "Your purchase"} was cancelled: ${reason}`
-        : `${reason}. You can upload a corrected screenshot before the payment window closes.`
+        : `${reason}. You can upload a corrected screenshot before the payment window closes.`,
+      rejectionRoute,
+      rejectionEntityType,
+      rejectionEntityId
     );
     res.json({ payment: { id: payment.id, status } });
   })

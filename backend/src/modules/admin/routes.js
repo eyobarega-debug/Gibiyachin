@@ -198,7 +198,15 @@ router.patch(
 
     const status = req.body.action === "dismiss" ? "dismissed" : "resolved";
     await db.query("UPDATE reports SET status=$1, resolution=$2 WHERE id=$3", [status, req.body.resolution, report.id]);
-    await notify(report.reporter_id, "report_update", "Your report was reviewed", `Action taken: ${req.body.action}`);
+    await notify(
+      report.reporter_id,
+      "report_update",
+      "Your report was reviewed",
+      `Action taken: ${req.body.action}`,
+      "/notifications",
+      "report",
+      report.id
+    );
     await audit(req.user.id, "report.resolve", report.target_type, report.target_id, { action: req.body.action, notes: req.body.notes });
     res.json({ success: true });
   })
@@ -845,7 +853,10 @@ router.post(
       payout.organizer.id,
       "payout_update",
       "Organizer payout confirmed",
-      `A payout of ${amount.toFixed(2)} birr has been recorded (Reference: ${normRef}).`
+      `A payout of ${amount.toFixed(2)} birr has been recorded (Reference: ${normRef}).`,
+      "/organizer",
+      "organizer_payout",
+      payout.payout.id
     );
 
     res.status(201).json({ payout: payout.payout, remainingBalance: payout.remainingBalance });

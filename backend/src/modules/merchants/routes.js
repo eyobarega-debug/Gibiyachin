@@ -82,13 +82,26 @@ router.post(
       req.user.id,
       "merchant_application",
       "Your Gibiychen merchant application is waiting for review",
-      "A campus administrator will review it. You'll be notified once it's decided."
+      "A campus administrator will review it. You'll be notified once it's decided.",
+      "/merchant-apply",
+      "merchant_application",
+      application.id
     );
     const admins = req.user.university_id
       ? await db.query("SELECT id FROM users WHERE role = 'admin' AND university_id = $1", [req.user.university_id])
       : { rows: [] };
     await Promise.all(
-      admins.rows.map((a) => notify(a.id, "merchant_application", "New merchant application", `${req.body.businessName} applied to sell on ግቢያችን.`))
+      admins.rows.map((a) =>
+        notify(
+          a.id,
+          "merchant_application",
+          "New merchant application",
+          `${req.body.businessName} applied to sell on ግቢያችን.`,
+          `/admin?tab=Merchants&applicationId=${application.id}`,
+          "merchant_application",
+          application.id
+        )
+      )
     );
     await audit(req.user.id, "merchant.apply", "merchant_application", application.id, {
       businessName: req.body.businessName,
@@ -187,7 +200,10 @@ router.patch(
         app.user_id,
         "merchant_decision",
         status === "approved" ? "Your Gibiychen merchant application was approved!" : "Your Gibiychen merchant application was rejected",
-        req.body.reason || (status === "approved" ? "You can now create products." : undefined)
+        req.body.reason || (status === "approved" ? "You can now create products." : undefined),
+        status === "approved" ? "/merchant" : "/merchant-apply",
+        "merchant_application",
+        app.id
       );
       await audit(req.user.id, "merchant.decision", "merchant_application", app.id, { status, reason: req.body.reason });
 
