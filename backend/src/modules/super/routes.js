@@ -11,6 +11,7 @@ const { validate } = require("../../middleware/validate");
 const { asyncHandler, notFound, conflict, badRequest } = require("../../utils/errors");
 const { hashPassword } = require("../../utils/hash");
 const { audit } = require("../../utils/notify");
+const termsService = require("../../services/terms");
 
 const router = express.Router();
 router.use(requireAuth(), requireRole("super_admin"));
@@ -223,6 +224,124 @@ router.post(
   })
 );
 
+// Number of active (non-suspended) admins a campus has besides `excludeId`.
+async function otherActiveAdmins(universityId, excludeId) {
+  const { rows } = await db.query(
+    "SELECT count(*)::int AS n FROM users WHERE university_id = $1 AND role = 'admin' AND suspended = false AND id <> $2",
+    [universityId, excludeId]
+  );
+  return rows[0].n;
+}
+
+// Create a brand-new Campus Admin account (Phase 4/5). The admin MUST be
+// assigned to exactly one campus — "Admin → All Campuses" is not representable:
+// users.university_id is required for every non-super_admin role.
+router.post(
+  "/admins",
+  validate({
+    body: z.object({
+      name: z.string().trim().min(2).max(120),
+      email: z.string().trim().email().max(200),
+      password: z.string().min(8).max(200),
+      universityId: z.string().uuid(),
+      phone: z.string().trim().max(40).optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const b = req.body;
+    const uni = await db.query("SELECT id, status FROM universities WHERE id = $1", [b.universityId]);
+    if (!uni.rows[0]) throw notFound("University not found");
+    if (uni.rows[0].status !== "active") throw badRequest(`This university is ${uni.rows[0].status}`, "UNIVERSITY_INACTIVE");
+
+    const dup = await db.query("SELECT 1 FROM users WHERE lower(email) = lower($1)", [b.email]);
+    if (dup.rows.length) throw conflict("An account with this email already exists", "EMAIL_TAKEN");
+
+    const passwordHash = await hashPassword(b.password);
+    const { rows } = await db.query(
+      `INSERT INTO users (name, email, phone, role, university_id, verified, verification_method, email_verified, password_hash)
+       VALUES ($1, $2, $3, 'admin', $4, true, 'admin_provisioned', true, $5)
+       RETURNING id, name, email, phone, role, university_id, verified, suspended, created_at`,
+      [b.name, b.email.toLowerCase(), b.phone || null, b.universityId, passwordHash]
+    );
+    await audit(req.user.id, "SUPER_ADMIN_CREATED_ADMIN", "user", rows[0].id, {
+      universityId: b.universityId,
+      email: rows[0].email,
+    });
+    res.status(201).json({ admin: rows[0] });
+  })
+);
+
+// Change a Campus Admin's campus and/or suspend/reactivate them (Phase 18/19).
+// Guards: never touch super_admin accounts; a campus must always keep at least
+// one active administrator.
+router.patch(
+  "/admins/:id",
+  validate({
+    body: z
+      .object({
+        universityId: z.string().uuid().optional(),
+        suspended: z.boolean().optional(),
+        reason: z.string().trim().max(1000).optional(),
+      })
+      .refine((v) => v.universityId !== undefined || v.suspended !== undefined, {
+        message: "Nothing to update — provide universityId and/or suspended",
+      }),
+  }),
+  asyncHandler(async (req, res) => {
+    const b = req.body;
+    const { rows } = await db.query("SELECT * FROM users WHERE id = $1 AND role = 'admin'", [req.params.id]);
+    const target = rows[0];
+    if (!target) throw notFound("Administrator not found");
+
+    const campusChanged = b.universityId !== undefined && b.universityId !== target.university_id;
+
+    if (campusChanged) {
+      const uni = await db.query("SELECT id, status FROM universities WHERE id = $1", [b.universityId]);
+      if (!uni.rows[0]) throw notFound("University not found");
+      if (uni.rows[0].status !== "active") throw badRequest(`This university is ${uni.rows[0].status}`, "UNIVERSITY_INACTIVE");
+      if ((await otherActiveAdmins(target.university_id, target.id)) === 0) {
+        throw conflict(
+          "This admin is their campus's only active administrator — promote another admin there first",
+          "LAST_ADMIN"
+        );
+      }
+      await db.query("UPDATE users SET university_id = $1 WHERE id = $2", [b.universityId, target.id]);
+    }
+
+    if (b.suspended !== undefined && b.suspended !== target.suspended) {
+      if (b.suspended && (await otherActiveAdmins(target.university_id, target.id)) === 0) {
+        throw conflict(
+          "Suspending this admin would leave their campus without an active administrator",
+          "LAST_ADMIN"
+        );
+      }
+      await db.query("UPDATE users SET suspended = $1 WHERE id = $2", [b.suspended, target.id]);
+    }
+
+    const upd = await db.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.suspended, u.verified, u.university_id, u.created_at,
+              un.name AS university_name
+         FROM users u LEFT JOIN universities un ON un.id = u.university_id
+        WHERE u.id = $1`,
+      [target.id]
+    );
+
+    const action = b.suspended !== undefined
+      ? b.suspended
+        ? "SUPER_ADMIN_DEACTIVATED_ADMIN"
+        : "SUPER_ADMIN_REACTIVATED_ADMIN"
+      : "SUPER_ADMIN_CHANGED_ADMIN_CAMPUS";
+    await audit(req.user.id, action, "user", target.id, {
+      universityId: upd.rows[0].university_id,
+      previousUniversityId: target.university_id,
+      suspended: b.suspended,
+      reason: b.reason || null,
+    });
+
+    res.json({ admin: upd.rows[0] });
+  })
+);
+
 // ------------------------------------------------------------------
 // Fee schedules (append-only; newest effective row wins)
 // ------------------------------------------------------------------
@@ -261,6 +380,56 @@ router.post(
     );
     await audit(req.user.id, "fee_schedule.create", "fee_schedule", rows[0].id, b);
     res.status(201).json({ feeSchedule: rows[0] });
+  })
+);
+
+// ------------------------------------------------------------------
+// Platform terms (versioned Merchant / Organizer terms)
+// ------------------------------------------------------------------
+router.get(
+  "/terms",
+  asyncHandler(async (req, res) => {
+    res.json({ versions: await termsService.listVersions() });
+  })
+);
+
+router.post(
+  "/terms",
+  validate({
+    body: z.object({
+      agreementType: z.enum(["merchant_terms", "organizer_terms"]),
+      version: z.string().trim().min(1).max(20),
+      title: z.string().trim().min(2).max(200),
+      intro: z.string().max(2000).optional(),
+      content: z
+        .array(
+          z.object({
+            heading: z.string().trim().min(1),
+            items: z.array(z.string().trim().min(1)).min(1),
+          })
+        )
+        .min(1),
+      effectiveFrom: z.string().datetime().optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const b = req.body;
+    const version = await db.withTransaction((client) =>
+      termsService.createVersion(client, {
+        agreementType: b.agreementType,
+        version: b.version,
+        title: b.title,
+        intro: b.intro,
+        content: b.content,
+        effectiveFrom: b.effectiveFrom,
+        createdBy: req.user.id,
+      })
+    );
+    await audit(req.user.id, "terms.version.create", "agreement_version", version.id, {
+      agreementType: b.agreementType,
+      version: b.version,
+    });
+    res.status(201).json({ version });
   })
 );
 

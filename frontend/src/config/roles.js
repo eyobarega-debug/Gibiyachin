@@ -37,15 +37,27 @@ export const TABS = [
   { key: "organizer_scanner", label: "Gate Scanner", to: "/tickets/verify", icon: "qr", section: "Organizer", roles: ["organizer"] },
   { key: "organizer_payments", label: "Payments", to: "/payment-approvals", icon: "payments", section: "Organizer", roles: ["organizer"] },
 
-  // Admin Workspace
-  { key: "admin_dashboard", label: "Dashboard", to: "/admin", icon: "dashboard", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_users", label: "Users", to: "/admin", icon: "user", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_verify", label: "Verification", to: "/admin", icon: "verification", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_payments", label: "Payments", to: "/payment-approvals", icon: "payments", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_orders", label: "Orders", to: "/orders", icon: "orders", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_events", label: "Events", to: "/events", icon: "events", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_tickets", label: "Tickets", to: "/tickets", icon: "tickets", section: "Admin", roles: ADMIN_ROLES },
-  { key: "admin_reports", label: "Reports & Fees", to: "/admin/commissions", icon: "reports", section: "Admin", roles: ADMIN_ROLES },
+  // Campus Admin Workspace
+  { key: "admin_dashboard", label: "Dashboard", to: "/admin", icon: "dashboard", section: "Admin", roles: ["admin"] },
+  { key: "admin_users", label: "Users", to: "/admin", icon: "user", section: "Admin", roles: ["admin"] },
+  { key: "admin_verify", label: "Verification", to: "/admin", icon: "verification", section: "Admin", roles: ["admin"] },
+  { key: "admin_payments", label: "Payments", to: "/payment-approvals", icon: "payments", section: "Admin", roles: ["admin"] },
+  { key: "admin_orders", label: "Orders", to: "/orders", icon: "orders", section: "Admin", roles: ["admin"] },
+  { key: "admin_events", label: "Events", to: "/events", icon: "events", section: "Admin", roles: ["admin"] },
+  { key: "admin_tickets", label: "Tickets", to: "/tickets", icon: "tickets", section: "Admin", roles: ["admin"] },
+  { key: "admin_reports", label: "Reports & Fees", to: "/admin/commissions", icon: "reports", section: "Admin", roles: ["admin"] },
+
+  // Super Admin Workspace (platform-wide, cross-tenant)
+  { key: "super_dashboard", label: "Dashboard", to: "/super-admin", icon: "dashboard", section: "Super Admin", roles: ["super_admin"], end: true },
+  { key: "super_applications", label: "Applications", to: "/super-admin/applications", icon: "file", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_campuses", label: "Campuses", to: "/super-admin/campuses", icon: "university", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_admins", label: "Campus Admins", to: "/super-admin/admins", icon: "shield", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_users", label: "Users", to: "/super-admin/users", icon: "user", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_verifications", label: "Verifications", to: "/super-admin/verifications", icon: "verification", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_orders", label: "Orders & Payments", to: "/super-admin/orders", icon: "orders", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_reports", label: "Reports", to: "/super-admin/reports", icon: "reports", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_audit", label: "Audit Logs", to: "/super-admin/audit-logs", icon: "shield", section: "Super Admin", roles: ["super_admin"] },
+  { key: "super_settings", label: "Settings", to: "/super-admin/settings", icon: "key", section: "Super Admin", roles: ["super_admin"] },
 ];
 
 export function canSee(tab, user) {

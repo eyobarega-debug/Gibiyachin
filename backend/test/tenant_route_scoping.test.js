@@ -349,10 +349,21 @@ describe("Stage 3: Merchant Applications & Scoped Admin Notifications", () => {
     // Clear notifications for adminA and adminB before applying
     await db.query("DELETE FROM notifications WHERE user_id IN ($1, $2)", [adminAUser.id, adminBUser.id]);
 
+    // The apply endpoint now requires explicit acceptance of the active terms version.
+    const termsRes = await apiRequest("/api/onboarding/terms?type=merchant", {
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+    });
+    assert.equal(termsRes.status, 200, "Applicant must be able to load the active merchant terms");
+    assert.ok(termsRes.data.terms.version, "Active terms must expose a version");
+
     const res = await apiRequest("/api/merchants/apply", {
       method: "POST",
       headers: { Authorization: `Bearer ${studentA2Token}` },
-      body: { businessName: "Student A2 Shop", category: "Books" },
+      body: {
+        businessName: "Student A2 Shop",
+        category: "Books",
+        terms: { accepted: true, version: termsRes.data.terms.version },
+      },
     });
     assert.equal(res.status, 201);
 

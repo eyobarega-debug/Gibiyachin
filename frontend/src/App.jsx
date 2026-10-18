@@ -31,6 +31,7 @@ import OrganizerEvents from "./pages/OrganizerEvents";
 import OrganizerEventDetail from "./pages/OrganizerEventDetail";
 import Merchant from "./pages/Merchant";
 import MerchantApply from "./pages/MerchantApply";
+import OrganizerApply from "./pages/OrganizerApply";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
 import ManualPayment from "./pages/ManualPayment";
@@ -43,6 +44,17 @@ import MockCheckout from "./pages/MockCheckout";
 import NotFound from "./pages/NotFound";
 import Commissions from "./pages/Commissions";
 import AdminCommissions from "./pages/AdminCommissions";
+import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
+import SuperAdminApplications from "./pages/superadmin/SuperAdminApplications";
+import SuperAdminCampuses from "./pages/superadmin/SuperAdminCampuses";
+import SuperAdminAdmins from "./pages/superadmin/SuperAdminAdmins";
+import SuperAdminUsers from "./pages/superadmin/SuperAdminUsers";
+import SuperAdminVerifications from "./pages/superadmin/SuperAdminVerifications";
+import SuperAdminOrders from "./pages/superadmin/SuperAdminOrders";
+import SuperAdminReports from "./pages/superadmin/SuperAdminReports";
+import SuperAdminAuditLogs from "./pages/superadmin/SuperAdminAuditLogs";
+import SuperAdminSettings from "./pages/superadmin/SuperAdminSettings";
 import { ADMIN_ROLES } from "./config/roles";
 
 export default function App() {
@@ -84,10 +96,31 @@ export default function App() {
             <Route path="/organizer" element={<ProtectedRoute role={["organizer", ...ADMIN_ROLES]}><OrganizerEvents /></ProtectedRoute>} />
             <Route path="/organizer/:id" element={<ProtectedRoute role={["organizer", ...ADMIN_ROLES]}><OrganizerEventDetail /></ProtectedRoute>} />
 
-            <Route path="/merchant-apply" element={<ProtectedRoute role="student"><MerchantApply /></ProtectedRoute>} />
+            <Route path="/merchant-apply" element={<ProtectedRoute role={["student", "merchant", "organizer"]}><MerchantApply /></ProtectedRoute>} />
+            <Route path="/organizer-apply" element={<ProtectedRoute role={["student", "merchant", "organizer"]}><OrganizerApply /></ProtectedRoute>} />
             <Route path="/merchant" element={<ProtectedRoute role={["merchant", ...ADMIN_ROLES]}><Merchant /></ProtectedRoute>} />
 
             <Route path="/admin" element={<ProtectedRoute role={ADMIN_ROLES}><Admin /></ProtectedRoute>} />
+
+            <Route
+              path="/super-admin"
+              element={
+                <ProtectedRoute role="super_admin">
+                  <SuperAdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SuperAdminDashboard />} />
+              <Route path="applications" element={<SuperAdminApplications />} />
+              <Route path="campuses" element={<SuperAdminCampuses />} />
+              <Route path="admins" element={<SuperAdminAdmins />} />
+              <Route path="users" element={<SuperAdminUsers />} />
+              <Route path="verifications" element={<SuperAdminVerifications />} />
+              <Route path="orders" element={<SuperAdminOrders />} />
+              <Route path="reports" element={<SuperAdminReports />} />
+              <Route path="audit-logs" element={<SuperAdminAuditLogs />} />
+              <Route path="settings" element={<SuperAdminSettings />} />
+            </Route>
 
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

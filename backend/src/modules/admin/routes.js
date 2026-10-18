@@ -3,7 +3,7 @@ const { z } = require("zod");
 const db = require("../../db");
 const { requireAuth, requireRole } = require("../../middleware/auth");
 const { validate } = require("../../middleware/validate");
-const { asyncHandler, notFound, conflict, badRequest } = require("../../utils/errors");
+const { asyncHandler, notFound, conflict, badRequest, forbidden } = require("../../utils/errors");
 const { notify, audit } = require("../../utils/notify");
 const { toCsv } = require("../../utils/csv");
 
@@ -279,17 +279,25 @@ router.get(
     const user = rows[0];
     if (!user) throw notFound("User not found");
 
-    const [reportsRes, verifRes, ordersCount, listingsCount] = await Promise.all([
+    const [reportsRes, verifRes, ordersCount, listingsCount, storeRes, clubRes] = await Promise.all([
       db.query("SELECT * FROM reports WHERE target_type = 'user' AND target_id = $1 ORDER BY created_at DESC LIMIT 5", [user.id]),
       db.query("SELECT * FROM verification_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1", [user.id]),
       db.query("SELECT count(*)::int AS count FROM orders WHERE buyer_id = $1", [user.id]),
       db.query("SELECT count(*)::int AS count FROM p2p_listings WHERE seller_id = $1", [user.id]),
+      user.role === "merchant"
+        ? db.query("SELECT id, name, status, created_at FROM stores WHERE merchant_id = $1 ORDER BY created_at LIMIT 1", [user.id])
+        : Promise.resolve({ rows: [] }),
+      user.role === "organizer"
+        ? db.query("SELECT id, name, status FROM clubs WHERE lead_user_id = $1 ORDER BY created_at LIMIT 5", [user.id])
+        : Promise.resolve({ rows: [] }),
     ]);
 
     res.json({
       user,
       recentReports: reportsRes.rows,
       verificationRequest: verifRes.rows[0] || null,
+      store: storeRes.rows[0] || null,
+      clubs: clubRes.rows,
       activity: {
         ordersCount: ordersCount.rows[0]?.count || 0,
         listingsCount: listingsCount.rows[0]?.count || 0,
@@ -305,6 +313,7 @@ router.patch(
       role: z.enum(["student", "merchant", "organizer", "admin"]).optional(),
       verified: z.boolean().optional(),
       suspended: z.boolean().optional(),
+      reason: z.string().trim().max(1000).optional(),
       clearAvatar: z.boolean().optional(),
       clearCover: z.boolean().optional(),
       clearBio: z.boolean().optional(),
@@ -323,6 +332,17 @@ router.patch(
       [req.params.id, req.tenant.universityId]
     );
     if (!existing.rows[0]) throw notFound("User not found");
+    const target = existing.rows[0];
+
+    // Campus admins manage students/merchants/organizers only — admin accounts
+    // (including their own) are exclusively managed through the Super Admin
+    // console. Super admins may manage campus admins via this endpoint.
+    if (target.role === "admin" && req.user.role === "admin") {
+      throw forbidden("Campus administrators cannot modify other administrators — use the Super Admin console", "ADMIN_TARGET_FORBIDDEN");
+    }
+    if (target.id === req.user.id && (suspended !== undefined || role !== undefined)) {
+      throw conflict("You cannot change your own role or suspend your own account", "SELF_MODIFY_FORBIDDEN");
+    }
 
     const updates = [];
     const values = [];
@@ -358,11 +378,139 @@ router.patch(
          RETURNING id, name, email, role, verified, suspended, avatar_url, cover_image_url, bio`,
         values
       );
-      await audit(req.user.id, "user.update", "user", req.params.id, req.body);
+      await audit(req.user.id, "user.update", "user", req.params.id, { ...req.body, targetRole: target.role });
       return res.json({ user: rows[0] });
     }
 
     res.json({ user: existing.rows[0] });
+  })
+);
+
+// ------------------------------------------------------------------
+// Admin user management — dependency-aware deactivation & deletion
+// (Phases 8–14). Deactivation = users.suspended (existing convention;
+// requireAuth()/login already block suspended accounts everywhere).
+// Physical deletion is only allowed when the account has NO historical
+// records that other rows reference — otherwise the API answers
+// DEPENDENCIES_EXIST and the caller must deactivate instead, so orders,
+// payments, tickets, reviews, events and audit history stay intact.
+// ------------------------------------------------------------------
+const DEPENDENCY_QUERIES = [
+  ["orders", "SELECT count(*)::int AS n FROM orders WHERE buyer_id = $1"],
+  ["payments", "SELECT count(*)::int AS n FROM payments WHERE payer_id = $1 OR payee_id = $1"],
+  ["tickets", "SELECT count(*)::int AS n FROM tickets WHERE holder_id = $1 OR used_by = $1"],
+  ["reviews", "SELECT count(*)::int AS n FROM reviews WHERE author_id = $1"],
+  ["products", "SELECT count(*)::int AS n FROM products WHERE store_id IN (SELECT id FROM stores WHERE merchant_id = $1)"],
+  ["stores", "SELECT count(*)::int AS n FROM stores WHERE merchant_id = $1"],
+  ["clubs", "SELECT count(*)::int AS n FROM clubs WHERE lead_user_id = $1"],
+  ["events", "SELECT count(*)::int AS n FROM events WHERE club_id IN (SELECT id FROM clubs WHERE lead_user_id = $1)"],
+  ["listings", "SELECT count(*)::int AS n FROM p2p_listings WHERE seller_id = $1"],
+  ["p2pOrders", "SELECT count(*)::int AS n FROM p2p_orders WHERE buyer_id = $1 OR seller_id = $1"],
+  ["rentalItems", "SELECT count(*)::int AS n FROM rental_items WHERE owner_id = $1"],
+  ["rentalBookings", "SELECT count(*)::int AS n FROM rental_bookings WHERE borrower_id = $1"],
+  ["waitlistEntries", "SELECT count(*)::int AS n FROM waitlist_entries WHERE user_id = $1"],
+  ["merchantApplications", "SELECT count(*)::int AS n FROM merchant_applications WHERE user_id = $1"],
+  ["organizerApplications", "SELECT count(*)::int AS n FROM organizer_applications WHERE user_id = $1"],
+  ["agreements", "SELECT count(*)::int AS n FROM application_agreements WHERE user_id = $1"],
+  ["verificationRequests", "SELECT count(*)::int AS n FROM verification_requests WHERE user_id = $1"],
+  ["reports", "SELECT count(*)::int AS n FROM reports WHERE reporter_id = $1 OR (target_type = 'user' AND target_id = $1)"],
+  ["disputes", "SELECT count(*)::int AS n FROM disputes WHERE raised_by = $1"],
+  ["auditRecords", "SELECT count(*)::int AS n FROM audit_logs WHERE actor_id = $1"],
+];
+
+async function countDependencies(userId) {
+  const counts = {};
+  let total = 0;
+  for (const [key, sql] of DEPENDENCY_QUERIES) {
+    const { rows } = await db.query(sql, [userId]);
+    counts[key] = rows[0].n;
+    total += rows[0].n;
+  }
+  return { counts, total };
+}
+
+// Shared loader + guard for deactivate/delete. Tenant-scoped: a campus admin
+// can only ever act on users of their own university, and never on admins.
+async function loadManageableUser(req) {
+  const { rows } = await db.query(
+    "SELECT * FROM users WHERE id = $1 AND role NOT IN ('super_admin') AND ($2::uuid IS NULL OR university_id = $2)",
+    [req.params.id, req.tenant.universityId]
+  );
+  const target = rows[0];
+  if (!target) throw notFound("User not found");
+  if (target.role === "admin" && req.user.role === "admin") {
+    throw forbidden("Campus administrators cannot manage other administrators — use the Super Admin console", "ADMIN_TARGET_FORBIDDEN");
+  }
+  if (target.id === req.user.id) {
+    throw conflict("You cannot deactivate or delete your own account", "SELF_MODIFY_FORBIDDEN");
+  }
+  return target;
+}
+
+// Dry-run dependency check so the UI can decide between "Deactivate" and
+// "Delete" and show exactly what historical data will be preserved.
+router.get(
+  "/users/:id/dependencies",
+  asyncHandler(async (req, res) => {
+    const target = await loadManageableUser(req);
+    const { counts, total } = await countDependencies(target.id);
+    res.json({
+      user: { id: target.id, name: target.name, email: target.email, role: target.role, university_id: target.university_id, suspended: target.suspended },
+      counts,
+      total,
+      canDelete: total === 0,
+    });
+  })
+);
+
+// Deactivate (suspend) an account. Historical records are untouched; the
+// suspension is enforced centrally by requireAuth()/login.
+router.post(
+  "/users/:id/deactivate",
+  validate({ body: z.object({ reason: z.string().trim().max(1000).optional() }) }),
+  asyncHandler(async (req, res) => {
+    const target = await loadManageableUser(req);
+    if (target.suspended) throw conflict("This account is already deactivated", "ALREADY_SUSPENDED");
+
+    await db.query("UPDATE users SET suspended = true WHERE id = $1", [target.id]);
+    const action =
+      target.role === "merchant" ? "ADMIN_DEACTIVATED_MERCHANT"
+      : target.role === "organizer" ? "ADMIN_DEACTIVATED_ORGANIZER"
+      : "ADMIN_DEACTIVATED_USER";
+    await audit(req.user.id, action, "user", target.id, {
+      targetRole: target.role,
+      universityId: target.university_id,
+      reason: req.body.reason || null,
+    });
+    res.json({ user: { id: target.id, name: target.name, role: target.role, suspended: true } });
+  })
+);
+
+// Physical delete — only for accounts with zero historical dependencies.
+// Everything else must go through deactivate so financial/moderation history
+// survives (Phase 8/11 "safe deletion").
+router.delete(
+  "/users/:id",
+  validate({ body: z.object({ reason: z.string().trim().max(1000).optional() }) }),
+  asyncHandler(async (req, res) => {
+    const target = await loadManageableUser(req);
+    const { counts, total } = await countDependencies(target.id);
+    if (total > 0) {
+      const present = Object.entries(counts).filter(([, n]) => n > 0).map(([k]) => k);
+      throw conflict(
+        `This account has historical records (${present.join(", ")}). Deactivate it instead — records will be preserved.`,
+        "DEPENDENCIES_EXIST"
+      );
+    }
+    await db.withTransaction(async (client) => {
+      await client.query("DELETE FROM users WHERE id = $1", [target.id]);
+    });
+    await audit(req.user.id, "ADMIN_DELETED_USER", "user", target.id, {
+      targetRole: target.role,
+      universityId: target.university_id,
+      reason: req.body.reason || null,
+    });
+    res.json({ success: true, deleted: true });
   })
 );
 

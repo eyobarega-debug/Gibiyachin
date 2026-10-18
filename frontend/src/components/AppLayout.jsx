@@ -64,7 +64,7 @@ function SideNav({ user, onNavigate }) {
           </p>
           <div className="flex flex-col gap-1">
             {section.tabs.map((t) => (
-              <NavLink key={t.key} to={t.to} end={t.to === "/"} className={navItemClass} onClick={onNavigate}>
+              <NavLink key={t.key} to={t.to} end={t.end ?? t.to === "/"} className={navItemClass} onClick={onNavigate}>
                 <Icon name={t.icon || t.key} className="h-[18px] w-[18px] shrink-0" />
                 <span className="truncate">{t.label}</span>
               </NavLink>
@@ -120,6 +120,41 @@ function useUnread(user) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Onboarding status (merchant / organizer applications)               */
+/* ------------------------------------------------------------------ */
+function useOnboardingStatus(user) {
+  const [status, setStatus] = useState(null);
+  useEffect(() => {
+    if (!user || user.role !== "student") {
+      setStatus(null);
+      return;
+    }
+    let cancelled = false;
+    client
+      .get("/onboarding/status")
+      .then(({ data }) => {
+        if (!cancelled) setStatus(data);
+      })
+      .catch(() => {
+        if (!cancelled) setStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+  return status;
+}
+
+function onboardingEntry(app, { applyTo, dashTo, label, icon }) {
+  if (!app) return { to: applyTo, label: `Become a ${label}`, icon };
+  if (app.status === "approved") return { to: dashTo, label: `${label} Dashboard`, icon: "dashboard" };
+  if (app.status === "pending_review") {
+    return { to: applyTo, label: `${label} Application`, icon: "clock", badge: "Pending", tone: "warn" };
+  }
+  return { to: applyTo, label: `${label} Application`, icon: "alert", badge: "Rejected", tone: "danger" };
+}
+
+/* ------------------------------------------------------------------ */
 /* User menu                                                           */
 /* ------------------------------------------------------------------ */
 function roleLabel(role) {
@@ -134,7 +169,7 @@ function roleLabel(role) {
   );
 }
 
-function UserMenu({ user, unread, onLogout }) {
+function UserMenu({ user, unread, onLogout, onboarding }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -147,6 +182,23 @@ function UserMenu({ user, unread, onLogout }) {
   }, []);
 
   const initial = user.name?.[0]?.toUpperCase() || "U";
+
+  const merchantEntry =
+    user.role === "student" &&
+    onboardingEntry(onboarding?.merchant, {
+      applyTo: "/merchant-apply",
+      dashTo: "/merchant",
+      label: "Merchant",
+      icon: "store",
+    });
+  const organizerEntry =
+    user.role === "student" &&
+    onboardingEntry(onboarding?.organizer, {
+      applyTo: "/organizer-apply",
+      dashTo: "/organizer",
+      label: "Organizer",
+      icon: "events",
+    });
 
   return (
     <div className="relative" ref={ref}>
@@ -174,7 +226,7 @@ function UserMenu({ user, unread, onLogout }) {
       {open && (
         <div
           role="menu"
-          className="glass-panel animate-rise absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl"
+          className="glass-panel animate-rise absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl"
         >
           <div className="border-b border-slate-200/70 bg-slate-50/70 px-4 py-3">
             <p className="truncate text-sm font-semibold text-slate-900">{user.name}</p>
@@ -189,10 +241,42 @@ function UserMenu({ user, unread, onLogout }) {
             <MenuLink to="/profile" icon="user" onClick={() => setOpen(false)}>
               My Profile
             </MenuLink>
+            <MenuLink to="/orders" icon="orders" onClick={() => setOpen(false)}>
+              My Orders
+            </MenuLink>
+            <MenuLink to="/favorites" icon="favorites" onClick={() => setOpen(false)}>
+              Saved Items
+            </MenuLink>
             <MenuLink to="/notifications" icon="bell" onClick={() => setOpen(false)} badge={unread}>
               Notifications
             </MenuLink>
           </div>
+          {(merchantEntry || organizerEntry) && (
+            <div className="border-t border-slate-200/70 p-1.5">
+              {merchantEntry && (
+                <MenuLink
+                  to={merchantEntry.to}
+                  icon={merchantEntry.icon}
+                  onClick={() => setOpen(false)}
+                  badgeLabel={merchantEntry.badge}
+                  badgeTone={merchantEntry.tone}
+                >
+                  {merchantEntry.label}
+                </MenuLink>
+              )}
+              {organizerEntry && (
+                <MenuLink
+                  to={organizerEntry.to}
+                  icon={organizerEntry.icon}
+                  onClick={() => setOpen(false)}
+                  badgeLabel={organizerEntry.badge}
+                  badgeTone={organizerEntry.tone}
+                >
+                  {organizerEntry.label}
+                </MenuLink>
+              )}
+            </div>
+          )}
           <div className="border-t border-slate-200/70 p-1.5">
             <button
               type="button"
@@ -212,7 +296,7 @@ function UserMenu({ user, unread, onLogout }) {
   );
 }
 
-function MenuLink({ to, icon, children, onClick, badge }) {
+function MenuLink({ to, icon, children, onClick, badge, badgeLabel, badgeTone }) {
   return (
     <Link
       to={to}
@@ -222,6 +306,7 @@ function MenuLink({ to, icon, children, onClick, badge }) {
     >
       <Icon name={icon} className="h-4 w-4" />
       <span className="flex-1">{children}</span>
+      {badgeLabel && <Badge tone={badgeTone || "slate"}>{badgeLabel}</Badge>}
       {badge > 0 && <Badge tone="accent">{badge}</Badge>}
     </Link>
   );
@@ -260,7 +345,7 @@ function SearchBox({ className = "", onDone }) {
 /* ------------------------------------------------------------------ */
 /* Mobile drawer + bottom nav                                          */
 /* ------------------------------------------------------------------ */
-function MobileDrawer({ open, onClose, user, unread, onLogout }) {
+function MobileDrawer({ open, onClose, user, unread, onLogout, onboarding }) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -306,6 +391,38 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
         <div className="border-t border-slate-200/70 p-3">
           {user ? (
             <div className="flex flex-col gap-1">
+              {user.role === "student" && (
+                <>
+                  {(() => {
+                    const entries = [
+                      onboardingEntry(onboarding?.merchant, {
+                        applyTo: "/merchant-apply",
+                        dashTo: "/merchant",
+                        label: "Merchant",
+                        icon: "store",
+                      }),
+                      onboardingEntry(onboarding?.organizer, {
+                        applyTo: "/organizer-apply",
+                        dashTo: "/organizer",
+                        label: "Organizer",
+                        icon: "events",
+                      }),
+                    ];
+                    return entries.map((entry) => (
+                      <NavLink key={entry.label} to={entry.to} onClick={onClose} className={navItemClass}>
+                        <Icon name={entry.icon || "compass"} className="h-[18px] w-[18px]" />
+                        <span className="truncate">{entry.label}</span>
+                        {entry.badge && (
+                          <Badge tone={entry.tone || "slate"} className="ml-auto">
+                            {entry.badge}
+                          </Badge>
+                        )}
+                      </NavLink>
+                    ));
+                  })()}
+                  <div className="hairline mx-1 my-1 h-px" />
+                </>
+              )}
               <NavLink to="/notifications" onClick={onClose} className={navItemClass}>
                 <Icon name="bell" className="h-[18px] w-[18px]" />
                 Notifications
@@ -393,6 +510,7 @@ export default function AppLayout({ children }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const unread = useUnread(user);
+  const onboarding = useOnboardingStatus(user);
 
   async function handleLogout() {
     await logout();
@@ -438,7 +556,7 @@ export default function AppLayout({ children }) {
                     </span>
                   )}
                 </Link>
-                <UserMenu user={user} unread={unread} onLogout={handleLogout} />
+                <UserMenu user={user} unread={unread} onLogout={handleLogout} onboarding={onboarding} />
               </>
             ) : (
               <>
@@ -561,6 +679,7 @@ export default function AppLayout({ children }) {
         user={user}
         unread={unread}
         onLogout={handleLogout}
+        onboarding={onboarding}
       />
     </div>
   );
