@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { client } from "../api/client";
-import { Badge, Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
+import { Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
 import QrScanner from "../components/QrScanner";
+import Icon from "../components/Icon";
 
 const RESULT_STYLE = {
-  ADMIT: { tone: "ok", label: "✅ ADMITTED — ENTRY GRANTED" },
-  VALID: { tone: "ok", label: "🟢 VALID TICKET — READY FOR ENTRY" },
-  ALREADY_USED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET ALREADY USED" },
-  PAYMENT_NOT_APPROVED: { tone: "warn", label: "⚠️ ENTRY DENIED — PAYMENT NOT VERIFIED" },
-  CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET CANCELLED" },
-  EVENT_CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — EVENT CANCELLED" },
-  INVALID: { tone: "danger", label: "⛔ ENTRY DENIED — INVALID TICKET" },
-  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", label: "⛔ CROSS-CAMPUS TICKET NOT ADMITTED" },
+  ADMIT: { tone: "ok", icon: "checkCircle", label: "ADMITTED — ENTRY GRANTED" },
+  VALID: { tone: "ok", icon: "checkCircle", label: "VALID TICKET — READY FOR ENTRY" },
+  ALREADY_USED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET ALREADY USED" },
+  PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
+  CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
+  EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
+  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
 
 export default function OrganizerEventDetail() {
@@ -214,7 +215,10 @@ export default function OrganizerEventDetail() {
         online ? "bg-ok/10 text-ok border border-ok/20" : "bg-warn/10 text-warn border border-warn/20"
       }`}>
         <div className="flex items-center gap-2">
-          <span>{online ? "🟢 Online Mode" : "🟠 Offline Queue Mode"}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name={online ? "checkCircle" : "clock"} className="h-4 w-4" />
+            {online ? "Online Mode" : "Offline Queue Mode"}
+          </span>
           <span className="text-xs text-slate">· Gibiyachin Gate Auth</span>
         </div>
         {queue.length > 0 && (
@@ -259,7 +263,7 @@ export default function OrganizerEventDetail() {
               }`}
             >
               <p
-                className={`text-base font-extrabold tracking-wide ${
+                className={`inline-flex items-center justify-center gap-1.5 text-base font-extrabold tracking-wide ${
                   scanResult.result === "ADMIT" || scanResult.result === "VALID"
                     ? "text-ok"
                     : scanResult.result === "QUEUED" || scanResult.result === "PAYMENT_NOT_APPROVED"
@@ -267,12 +271,19 @@ export default function OrganizerEventDetail() {
                     : "text-danger"
                 }`}
               >
+                <Icon
+                  name={
+                    RESULT_STYLE[scanResult.result]?.icon ||
+                    (scanResult.result === "QUEUED" ? "clock" : "alert")
+                  }
+                  className="h-4 w-4 shrink-0"
+                />
                 {RESULT_STYLE[scanResult.result]?.label || scanResult.result}
               </p>
 
               {/* Attendee & Ticket Info */}
               {(scanResult.ticket || scanResult.attendeeName) && (
-                <div className="mt-3 rounded-lg bg-white/80 p-3 text-left shadow-xs">
+                <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3 text-left">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-slate uppercase text-[10px] font-semibold">Attendee</span>
@@ -308,8 +319,9 @@ export default function OrganizerEventDetail() {
 
               {/* Previous check-in details if ALREADY USED */}
               {scanResult.previousScanAt && (
-                <div className="mt-2 rounded-md bg-danger/10 p-2 text-xs text-danger">
-                  ⚠️ First admitted at: {new Date(scanResult.previousScanAt).toLocaleString()}
+                <div className="mt-2 flex items-center justify-center gap-1.5 rounded-md bg-danger/10 p-2 text-xs text-danger">
+                  <Icon name="alert" className="h-3.5 w-3.5 shrink-0" />
+                  First admitted at: {new Date(scanResult.previousScanAt).toLocaleString()}
                 </div>
               )}
 
@@ -317,7 +329,8 @@ export default function OrganizerEventDetail() {
               {scanResult.result === "VALID" && (
                 <div className="mt-3">
                   <Button variant="accent" onClick={admitInspected} className="w-full font-bold">
-                    ✓ Confirm & Admit Attendee
+                    <Icon name="checkCircle" className="h-4 w-4" />
+                    Confirm & Admit Attendee
                   </Button>
                 </div>
               )}
@@ -330,7 +343,8 @@ export default function OrganizerEventDetail() {
                     onClick={() => reverseCheckIn(scanResult.ticket.id)}
                     className="w-full text-xs text-slate hover:text-navy"
                   >
-                    ↺ Reverse Check-In (Admin Reset)
+                    <Icon name="refresh" className="h-3.5 w-3.5" />
+                    Reverse Check-In (Admin Reset)
                   </Button>
                 </div>
               )}
@@ -338,7 +352,10 @@ export default function OrganizerEventDetail() {
           )}
 
           <div className="mt-4 rounded-lg bg-paper p-3 text-xs text-slate">
-            <span className="font-semibold text-navy">💡 Quick Tips:</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-navy">
+              <Icon name="sparkles" className="h-3.5 w-3.5" />
+              Quick Tips:
+            </span>
             <ul className="mt-1 list-inside list-disc space-y-0.5">
               <li>Turn on "Auto-Admit" for fast line processing at the door.</li>
               <li>Turn off "Auto-Admit" to inspect attendee name and tier before admitting.</li>
@@ -369,7 +386,8 @@ export default function OrganizerEventDetail() {
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-semibold text-navy">Live Gate Admissions ({checkins.length})</h2>
               <Button variant="ghost" onClick={load} className="text-xs">
-                ↻ Refresh
+                <Icon name="refresh" className="h-3.5 w-3.5" />
+                Refresh
               </Button>
             </div>
 
@@ -381,7 +399,7 @@ export default function OrganizerEventDetail() {
                   <div
                     key={chk.id}
                     className={`flex items-center justify-between rounded-lg border p-2.5 text-xs ${
-                      chk.is_reversal ? "border-warn/30 bg-warn/5" : "border-slate/15 bg-white"
+                      chk.is_reversal ? "border-warn/30 bg-warn/5" : "border-slate/15 glass-soft"
                     }`}
                   >
                     <div>
@@ -394,8 +412,9 @@ export default function OrganizerEventDetail() {
                         {chk.staff_name && ` by ${chk.staff_name}`}
                       </p>
                       {chk.is_reversal && (
-                        <p className="text-[10px] text-warn">
-                          ↺ Reversed: {chk.notes || "Check-in reversed"}
+                        <p className="flex items-center gap-1 text-[10px] text-warn">
+                          <Icon name="refresh" className="h-3 w-3 shrink-0" />
+                          Reversed: {chk.notes || "Check-in reversed"}
                         </p>
                       )}
                     </div>

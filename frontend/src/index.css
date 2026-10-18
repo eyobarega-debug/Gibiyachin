@@ -1,22 +1,306 @@
 @import "tailwindcss";
 
+/*
+ * ግቢያችን (Gibiyachin) design system — premium glass
+ * ---------------------------------------------------
+ * Black / charcoal / silver visual language: deep charcoal base, frosted
+ * translucent panels, soft metallic highlights and restrained accents.
+ *
+ * The legacy token names (navy / accent / slate / paper / ink / canvas) are
+ * kept as aliases so existing pages adopt the new dark-glass palette without
+ * any markup churn.
+ */
 @theme {
-  --color-navy: #1f3b57;
-  --color-navy-dark: #16293d;
-  --color-slate: #3f5f7a;
-  --color-accent: #c77b33;
-  --color-accent-dark: #a3631f;
-  --color-paper: #f7f9fb;
-  --color-ok: #1f6e4a;
-  --color-warn: #b8863e;
-  --color-danger: #b84a3e;
+  /* Primary brand accent — silver / mirror */
+  --color-primary: #dbe2ec;
+  --color-primary-dark: #ffffff;
+  --color-primary-soft: #23272e;
+
+  /* Neutral ink + surfaces */
+  --color-ink: #f1f5f9; /* primary text on dark */
+  --color-muted: #98a2b3; /* secondary silver text */
+  --color-line: #2b313b; /* subtle borders */
+  --color-canvas: #191c22; /* raised surface */
+
+  /* Semantic status colours — kept soft and premium, never neon */
+  --color-ok: #5ec994;
+  --color-warn: #e2b765;
+  --color-danger: #f0808a;
+  --color-info: #82b8e6;
+
+  /* Legacy aliases — existing utility classes keep working on dark glass */
+  --color-navy: #cbd4e0;
+  --color-navy-dark: #eef2f7;
+  --color-slate: #98a2b3;
+  --color-accent: #d7dee8;
+  --color-accent-dark: #eef2f7;
+  --color-paper: #141619;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
+    "Helvetica Neue", Arial, "Noto Sans Ethiopic", "Noto Sans", sans-serif;
 }
 
-html, body, #root {
-  height: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    background-color: #0c0e12;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Soft charcoal base so the page never reads as flat black even before the
+     depth layer mounts. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 720px at 10% -12%, rgba(150, 166, 188, 0.14), transparent 62%),
+      linear-gradient(180deg, #14171c 0%, #0d0f13 50%, #0a0b0e 100%);
+  }
+
+  /* Atmospheric depth layer — sits behind the app shell so glass panels have
+     something soft and layered to refract. Never a flat #000. */
+  .bg-depth {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 720px at 10% -12%, rgba(150, 166, 188, 0.16), transparent 62%),
+      radial-gradient(980px 680px at 88% -8%, rgba(120, 141, 170, 0.14), transparent 60%),
+      radial-gradient(900px 640px at 52% 118%, rgba(96, 112, 138, 0.12), transparent 62%),
+      linear-gradient(180deg, #14171c 0%, #0e1015 46%, #0a0b0e 100%);
+  }
+  .bg-depth::before,
+  .bg-depth::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+  }
+  .bg-depth::before {
+    width: 46vw;
+    height: 46vw;
+    top: -12vw;
+    left: 28vw;
+    background: radial-gradient(circle at 30% 30%, rgba(190, 202, 219, 0.16), transparent 68%);
+  }
+  .bg-depth::after {
+    width: 40vw;
+    height: 40vw;
+    bottom: -14vw;
+    left: -6vw;
+    background: radial-gradient(circle at 60% 40%, rgba(120, 140, 168, 0.14), transparent 70%);
+  }
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(78% 70% at 50% 24%, #000 0%, transparent 78%);
+    -webkit-mask-image: radial-gradient(78% 70% at 50% 24%, #000 0%, transparent 78%);
+  }
+  .bg-streak {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.05) 47%, transparent 52%),
+      linear-gradient(115deg, transparent 68%, rgba(255, 255, 255, 0.03) 72%, transparent 76%);
+  }
+
+  /* Consistent, accessible focus treatment for keyboard users */
+  :focus-visible {
+    outline: 2px solid rgba(214, 222, 232, 0.85);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgba(219, 226, 236, 0.28);
+    color: #fff;
+  }
 }
 
-body {
-  background-color: var(--color-paper);
-  color: #1f2a33;
+@layer components {
+  /* Frosted translucent panel — the core glass surface.
+     A diagonal silver sheen keeps it feeling reflective rather than flat gray. */
+  .glass {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.11) 0%,
+        rgba(255, 255, 255, 0.05) 42%,
+        rgba(255, 255, 255, 0.022) 100%
+      );
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 22px 50px -28px rgba(0, 0, 0, 0.85);
+  }
+
+  /* Larger hero / section glass with a stronger reflective edge */
+  .glass-panel {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.075) 0%,
+        rgba(255, 255, 255, 0.035) 48%,
+        rgba(255, 255, 255, 0.02) 100%
+      );
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(24px) saturate(165%);
+    -webkit-backdrop-filter: blur(24px) saturate(165%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 34px 80px -42px rgba(0, 0, 0, 0.95);
+  }
+
+  /* More opaque glass for chrome: header, sidebar, modals */
+  .glass-strong {
+    background: linear-gradient(
+      180deg,
+      rgba(26, 30, 37, 0.9) 0%,
+      rgba(15, 17, 22, 0.86) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(24px) saturate(165%);
+    -webkit-backdrop-filter: blur(24px) saturate(165%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 18px 45px -34px rgba(0, 0, 0, 0.9);
+  }
+
+  /* Softer inset surface for rows, tables, placeholders */
+  .glass-soft {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--color-ink);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .glass-input::placeholder {
+    color: rgba(152, 162, 179, 0.75);
+  }
+  .glass-input:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Subtle interactive glass lift */
+  .glass-hover {
+    transition:
+      transform 0.25s ease,
+      border-color 0.25s ease,
+      box-shadow 0.25s ease,
+      background-color 0.25s ease;
+  }
+  .glass-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 34px 70px -34px rgba(0, 0, 0, 1);
+  }
+
+  /* Layered section surface — one step brighter than the page background so
+     content regions read as a distinct plane. */
+  .surface {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.028) 0%,
+      rgba(255, 255, 255, 0.012) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Premium metallic text treatment for brand headings */
+  .text-mirror {
+    background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 55%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Thin silver hairline divider */
+  .hairline {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  /* Thin, unobtrusive scrollbars for scrollable panels */
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+  }
+
+  /* Gentle entrance used for page-level content */
+  .animate-rise {
+    animation: gibi-rise 0.4s ease both;
+  }
+  .animate-fade {
+    animation: gibi-fade 0.35s ease both;
+  }
+}
+
+@keyframes gibi-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gibi-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-fade {
+    animation: none;
+  }
+  .glass-hover {
+    transition: none;
+  }
 }

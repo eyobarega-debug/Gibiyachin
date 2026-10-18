@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner } from "../components/ui";
+import { Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner } from "../components/ui";
 import { METHOD_LABEL } from "./ManualPayment";
+import { useConfirm } from "../components/ConfirmProvider";
 
 export default function PayoutAccounts() {
   const [accounts, setAccounts] = useState(null);
   const [form, setForm] = useState({ method: "telebirr", accountName: "", accountNumber: "", instructions: "", isDefault: false });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   async function load() {
     const { data } = await client.get("/payout-accounts");
@@ -24,10 +27,17 @@ export default function PayoutAccounts() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    const errs = {};
+    if (form.accountName.trim().length < 2) errs.accountName = "Account holder name is required.";
+    if (form.accountNumber.trim().length < 4) errs.accountNumber = "Enter a valid account number or phone.";
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) return;
+
     setBusy(true);
     try {
       await client.post("/payout-accounts", form);
       setForm({ ...form, accountName: "", accountNumber: "", instructions: "", isDefault: false });
+      setFieldErrors({});
       setSuccess("Account saved. Students will see it when they pay you.");
       await load();
     } catch (err) {
@@ -42,7 +52,13 @@ export default function PayoutAccounts() {
     load();
   }
   async function remove(id) {
-    if (!window.confirm("Remove this account? Payments already started keep the details they showed.")) return;
+    const ok = await confirm({
+      title: "Remove account?",
+      message: "Remove this account? Payments already started keep the details they showed.",
+      confirmLabel: "Remove account",
+      variant: "danger",
+    });
+    if (!ok) return;
     await client.delete(`/payout-accounts/${id}`);
     load();
   }
@@ -81,13 +97,27 @@ export default function PayoutAccounts() {
       )}
 
       <Card className="mt-6 p-6">
-        <h2 className="mb-3 font-semibold text-navy">Add an account</h2>
-        <form onSubmit={add} className="space-y-3">
+        <h2 className="mb-3 font-semibold text-ink">Add an account</h2>
+        <form onSubmit={add} className="space-y-4" noValidate>
           <Select label="Bank / wallet" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}>
             {Object.entries(METHOD_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
-          <Input label="Account holder name" value={form.accountName} onChange={(e) => setForm({ ...form, accountName: e.target.value })} required minLength={2} />
-          <Input label="Account number / phone" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} required minLength={4} />
+          <Input
+            label="Account holder name"
+            required
+            placeholder="e.g. Selam Tesfaye"
+            value={form.accountName}
+            error={fieldErrors.accountName}
+            onChange={(e) => setForm({ ...form, accountName: e.target.value })}
+          />
+          <Input
+            label="Account number / phone"
+            required
+            placeholder="e.g. 0912345678"
+            value={form.accountNumber}
+            error={fieldErrors.accountNumber}
+            onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
+          />
           <Input
             label="Note for buyers (optional)"
             placeholder="e.g. Write your full name in the reference"
@@ -95,11 +125,15 @@ export default function PayoutAccounts() {
             value={form.instructions}
             onChange={(e) => setForm({ ...form, instructions: e.target.value })}
           />
-          <label className="flex items-center gap-2 text-sm text-slate">
-            <input type="checkbox" checked={form.isDefault} onChange={(e) => setForm({ ...form, isDefault: e.target.checked })} />
-            Show this one first
-          </label>
-          <Button type="submit" variant="accent" disabled={busy}>{busy ? "Saving..." : "Save account"}</Button>
+          <Checkbox
+            label="Show this one first"
+            hint="Buyers will see this account at the top of your payment instructions."
+            checked={form.isDefault}
+            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+          />
+          <Button type="submit" loading={busy} disabled={busy}>
+            {busy ? "Saving…" : "Save account"}
+          </Button>
         </form>
       </Card>
     </div>

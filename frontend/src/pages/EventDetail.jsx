@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
+import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import { PAYMENT_METHOD, startCheckout } from "../api/checkout";
 
 export default function EventDetail() {
@@ -88,11 +90,11 @@ export default function EventDetail() {
         subtitle={`${event.organizer_name || event.club_name} · ${new Date(event.date_time).toLocaleString()} · ${event.venue_name || event.location}`}
       />
       <Card className="overflow-hidden">
-        {event.poster_url && (
-          <div className="h-64 w-full overflow-hidden bg-navy/10">
-            <img src={event.poster_url} alt={event.title} className="h-full w-full object-cover" />
-          </div>
-        )}
+        <div className="relative h-64 w-full overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/25" />
+          <MediaImage src={event.poster_url} alt={event.title} icon="events" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
 
         <div className="p-6">
           <ErrorBanner message={error} />
@@ -112,12 +114,16 @@ export default function EventDetail() {
           </div>
 
           <div className="mb-4 rounded-xl bg-paper p-3 text-xs text-slate">
-            <p className="font-semibold text-navy">📍 Venue & Location:</p>
+            <p className="flex items-center gap-1.5 font-semibold text-navy">
+              <Icon name="mapPin" className="h-3.5 w-3.5" />
+              Venue & Location:
+            </p>
             <p className="font-medium text-navy">{event.venue_name || event.location}</p>
             {event.venue_address && <p>{event.venue_address}</p>}
             {event.end_time && (
-              <p className="mt-1">
-                ⏱️ Ends at: {new Date(event.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              <p className="mt-1 flex items-center gap-1.5">
+                <Icon name="clock" className="h-3.5 w-3.5" />
+                Ends at: {new Date(event.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
             )}
           </div>

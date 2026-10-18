@@ -1,5 +1,5 @@
 // Single source of truth for which tabs/routes each role can see.
-// Navbar.jsx and App.jsx both read from here, so adding a tab means editing ONE place.
+// AppLayout reads from here, so adding a tab means editing ONE place.
 //
 // Roles: student | merchant | organizer | admin | super_admin
 // Admins (and super admins) see every tab.
@@ -8,32 +8,33 @@ export const ADMIN_ROLES = ["admin", "super_admin"];
 export const ALL_ROLES = ["student", "merchant", "organizer", "admin", "super_admin"];
 
 // roles: who sees the tab.  null/undefined = everyone (even logged-out visitors).
+// `section` groups the sidebar; `icon` maps to the shared Icon set.
 export const TABS = [
-  // Public browsing tabs
-  { key: "marketplace", label: "Marketplace", to: "/marketplace" },
-  { key: "listings", label: "P2P", to: "/listings" },
-  { key: "rentals", label: "Rentals", to: "/rentals" },
-  { key: "events", label: "Events", to: "/events" },
+  // Public browsing
+  { key: "home", label: "Home", to: "/", icon: "home", section: "Browse" },
+  { key: "marketplace", label: "Marketplace", to: "/marketplace", icon: "marketplace", section: "Browse" },
+  { key: "listings", label: "P2P Market", to: "/listings", icon: "listings", section: "Browse" },
+  { key: "rentals", label: "Rentals", to: "/rentals", icon: "rentals", section: "Browse" },
+  { key: "events", label: "Events", to: "/events", icon: "events", section: "Browse" },
 
-  // Student-only tabs (+ admin sees all)
-  { key: "orders", label: "My Orders", to: "/orders", roles: ["student", ...ADMIN_ROLES] },
-  { key: "tickets", label: "My Tickets", to: "/tickets", roles: ["student", ...ADMIN_ROLES] },
-  { key: "favorites", label: "Favorites", to: "/favorites", roles: ["student", "merchant", "organizer", ...ADMIN_ROLES] },
+  // Personal activity
+  { key: "orders", label: "My Orders", to: "/orders", icon: "orders", section: "My Activity", roles: ["student", ...ADMIN_ROLES] },
+  { key: "tickets", label: "My Tickets", to: "/tickets", icon: "tickets", section: "My Activity", roles: ["student", ...ADMIN_ROLES] },
+  { key: "favorites", label: "Favorites", to: "/favorites", icon: "favorites", section: "My Activity", roles: ["student", "merchant", "organizer", ...ADMIN_ROLES] },
+  { key: "payments", label: "Payments", to: "/payment-approvals", icon: "payments", section: "My Activity", roles: ["student", "merchant", "organizer", ...ADMIN_ROLES] },
+  { key: "commissions", label: "Commissions", to: "/commissions", adminTo: "/admin/commissions", icon: "commission", section: "My Activity", roles: ["student", "merchant", ...ADMIN_ROLES] },
 
-  // Shared logged-in tabs
-  { key: "payments", label: "Payments", to: "/payment-approvals", roles: ["student", "merchant", "organizer", ...ADMIN_ROLES] },
+  // Merchant workspace
+  { key: "merchant", label: "Merchant Dashboard", to: "/merchant", icon: "store", section: "Merchant", roles: ["merchant", ...ADMIN_ROLES] },
 
-  // Commissions: merchants/students see their own, admins see the admin view
-  { key: "commissions", label: "Commissions", to: "/commissions", adminTo: "/admin/commissions", roles: ["student", "merchant", ...ADMIN_ROLES] },
+  // Organizer workspace
+  { key: "organizer", label: "Organizer", to: "/organizer", icon: "events", section: "Organizer", roles: ["organizer", ...ADMIN_ROLES] },
 
-  // Merchant-only (+ admin)
-  { key: "merchant", label: "Merchant Dashboard", to: "/merchant", roles: ["merchant", ...ADMIN_ROLES] },
-
-  // Organizer-only (+ admin)
-  { key: "organizer", label: "Organizer", to: "/organizer", roles: ["organizer", ...ADMIN_ROLES] },
+  // Administration
+  { key: "verifyCampus", label: "Verification", to: "/verify", icon: "verification", section: "Account", roles: ["student", "merchant", "organizer", ...ADMIN_ROLES] },
 
   // Admin-only
-  { key: "admin", label: "Admin", to: "/admin", roles: ADMIN_ROLES },
+  { key: "admin", label: "Admin", to: "/admin", icon: "admin", section: "Admin", roles: ADMIN_ROLES },
 ];
 
 export function canSee(tab, user) {

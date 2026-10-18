@@ -3,11 +3,22 @@ import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import { Badge, Card, EmptyState, ErrorBanner, PageHeader, Spinner, Button, SuccessBanner } from "../components/ui";
 import ManualPaymentStatus from "../components/ManualPaymentStatus";
+import OrderStatus from "../components/OrderStatus";
+import Icon from "../components/Icon";
+
+const STATUS_LABEL = {
+  pending_payment: "pending payment",
+  confirmed: "paid",
+  ready: "ready for pickup",
+  completed: "completed",
+  cancellation_requested: "cancellation requested",
+  cancelled: "cancelled",
+};
 
 const STATUS_TONE = {
   pending_payment: "warn",
-  confirmed: "navy",
-  ready: "accent",
+  confirmed: "accent",
+  ready: "info",
   completed: "ok",
   cancellation_requested: "warn",
   cancelled: "danger",
@@ -63,18 +74,37 @@ export default function Orders() {
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
       {orders.length === 0 ? (
-        <EmptyState title="No orders yet" subtitle="Browse the marketplace to make your first purchase." />
+        <EmptyState
+          icon="orders"
+          title="No orders yet"
+          subtitle="Browse the marketplace to make your first purchase."
+          action={<Button as="a" href="/marketplace" variant="outline">Explore marketplace</Button>}
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {orders.map((o) => (
-            <Card key={o.id} className="p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <Card key={o.id} className="overflow-hidden p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-navy">Order #{o.id.slice(0, 8)} · {o.store_name}</p>
-                  <p className="text-xs text-slate">{new Date(o.created_at).toLocaleString()} · {Number(o.total_amount).toFixed(2)} birr</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-ink">
+                      Order #{o.id.slice(0, 8)}
+                    </h3>
+                    <Badge tone={STATUS_TONE[o.status] || "slate"}>
+                      {STATUS_LABEL[o.status] || o.status.replaceAll("_", " ")}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="store" className="h-3.5 w-3.5" /> {o.store_name}
+                    </span>
+                    <span>·</span>
+                    <span>{new Date(o.created_at).toLocaleString()}</span>
+                    <span>·</span>
+                    <span className="font-semibold text-ink">{Number(o.total_amount).toFixed(2)} ETB</span>
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge tone={STATUS_TONE[o.status] || "slate"}>{o.status.replaceAll("_", " ")}</Badge>
                   {["confirmed", "ready"].includes(o.status) && !o.buyer_confirmed_at && (
                     <Button variant="accent" onClick={() => confirmReceipt(o)}>Confirm receipt</Button>
                   )}
@@ -84,30 +114,38 @@ export default function Orders() {
                 </div>
               </div>
 
+              <div className="mt-5 border-t border-white/8 pt-5">
+                <OrderStatus status={o.status} />
+              </div>
+
               {(o.merchant_confirmed_at || o.buyer_confirmed_at) && (
-                <div className="flex flex-wrap gap-4 rounded-lg bg-paper px-3 py-2 text-xs text-slate">
+                <div className="mt-4 flex flex-wrap gap-4 rounded-xl glass-soft px-3 py-2 text-xs text-muted">
                   {o.merchant_confirmed_at && (
-                    <span>
-                      ✓ Payment confirmed by merchant ({new Date(o.merchant_confirmed_at).toLocaleDateString()})
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="check" className="h-3.5 w-3.5 text-ink" />
+                      Payment confirmed by merchant ({new Date(o.merchant_confirmed_at).toLocaleDateString()})
                     </span>
                   )}
                   {o.buyer_confirmed_at && (
-                    <span className="text-ok font-medium">
-                      ✓ Material delivery confirmed ({new Date(o.buyer_confirmed_at).toLocaleDateString()})
+                    <span className="flex items-center gap-1.5 text-ok">
+                      <Icon name="check" className="h-3.5 w-3.5" />
+                      Material delivery confirmed ({new Date(o.buyer_confirmed_at).toLocaleDateString()})
                     </span>
                   )}
                 </div>
               )}
 
               {o.status === "pending_payment" && (
-                <ManualPaymentStatus
-                  paymentId={o.payment_id}
-                  status={o.payment_status}
-                  provider={o.payment_provider}
-                  rejectReason={o.payment_reject_reason}
-                  returnTo="/orders"
-                  label={`Order #${o.id.slice(0, 8)} · ${o.store_name}`}
-                />
+                <div className="mt-4">
+                  <ManualPaymentStatus
+                    paymentId={o.payment_id}
+                    status={o.payment_status}
+                    provider={o.payment_provider}
+                    rejectReason={o.payment_reject_reason}
+                    returnTo="/orders"
+                    label={`Order #${o.id.slice(0, 8)} · ${o.store_name}`}
+                  />
+                </div>
               )}
             </Card>
           ))}

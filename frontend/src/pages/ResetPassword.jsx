@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
-import { Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
+import { Button, ErrorBanner, Input, SuccessBanner } from "../components/ui";
+import AuthCard from "../components/AuthCard";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [token, setToken] = useState(params.get("token") || "");
   const [newPassword, setNewPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,9 +18,16 @@ export default function ResetPassword() {
   async function submit(e) {
     e.preventDefault();
     setError("");
+    setSuccess("");
+    const errs = {};
+    if (!token.trim()) errs.token = "The reset token from your email is required.";
+    if (newPassword.length < 8) errs.password = "Password must be at least 8 characters.";
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) return;
+
     setLoading(true);
     try {
-      await client.post("/auth/reset-password", { token, newPassword });
+      await client.post("/auth/reset-password", { token: token.trim(), newPassword });
       setSuccess("Password updated. All previous sessions were signed out for security.");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
@@ -29,29 +38,42 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <PageHeader title="Reset password" subtitle="Choose a new password for your account." />
-      <Card className="p-6">
-        <form onSubmit={submit} className="space-y-4">
-          <ErrorBanner message={error} />
-          <SuccessBanner message={success} />
-          <Input label="Reset token" required value={token} onChange={(e) => setToken(e.target.value)} />
-          <Input
-            label="New password"
-            type="password"
-            required
-            minLength={8}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Saving..." : "Reset password"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-slate">
-          <Link to="/login" className="underline">Back to log in</Link>
-        </p>
-      </Card>
-    </div>
+    <AuthCard
+      title="Reset password"
+      subtitle="Paste the reset token from your email and choose a new password."
+      footer={
+        <Link to="/login" className="font-medium text-primary underline">
+          Back to log in
+        </Link>
+      }
+    >
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <ErrorBanner message={error} />
+        <SuccessBanner message={success} />
+        <Input
+          label="Reset token"
+          required
+          placeholder="Paste the token from your reset email"
+          value={token}
+          error={fieldErrors.token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+        <Input
+          label="New password"
+          type="password"
+          required
+          autoComplete="new-password"
+          minLength={8}
+          placeholder="At least 8 characters"
+          hint="Use at least 8 characters."
+          value={newPassword}
+          error={fieldErrors.password}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+        <Button type="submit" className="w-full" loading={loading}>
+          {loading ? "Saving…" : "Reset password"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

@@ -4,6 +4,8 @@ import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner } from "../components/ui";
 import ReviewsPanel from "../components/ReviewsPanel";
+import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import { PAYMENT_METHOD, startCheckout } from "../api/checkout";
 
 export default function ProductDetail() {
@@ -96,18 +98,22 @@ export default function ProductDetail() {
         <span>Sold by</span>
         <Link to={`/seller/${product.store_id}`} className="font-medium text-navy underline">{product.store_name}</Link>
         {Number(product.store_review_count) > 0 && (
-          <span>· ⭐ {Number(product.store_avg_rating).toFixed(1)} ({product.store_review_count} reviews)</span>
+          <span className="inline-flex items-center gap-1">
+            ·
+            <Icon name="star" className="h-3.5 w-3.5" />
+            {Number(product.store_avg_rating).toFixed(1)} ({product.store_review_count} reviews)
+          </span>
         )}
         <span>·</span>
-        <Link to={`/seller/${product.store_id}`} className="text-navy underline">View seller profile →</Link>
+        <Link to={`/seller/${product.store_id}`} className="inline-flex items-center gap-1 text-navy underline">
+          View seller profile
+          <Icon name="arrowRight" className="h-3.5 w-3.5" />
+        </Link>
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card className="flex h-72 items-center justify-center text-6xl">
-          {product.images?.[0] ? (
-            <img src={product.images[0]} alt="" className="h-full w-full rounded-xl object-cover" />
-          ) : (
-            "🛍️"
-          )}
+        <Card className="relative flex h-72 items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/20" />
+          <MediaImage src={product.images?.[0]} alt={product.title} icon="marketplace" />
         </Card>
         <div>
           <ErrorBanner message={error} />
@@ -115,7 +121,10 @@ export default function ProductDetail() {
           <div className="mt-2">
             {product.status === "out_of_stock" ? <Badge tone="danger">Out of stock</Badge> : <Badge tone="ok">{product.stock} in stock</Badge>}
             {Number(product.review_count) > 0 && (
-              <span className="ml-2 text-sm text-slate">⭐ {Number(product.avg_rating).toFixed(1)} ({product.review_count} reviews)</span>
+              <span className="ml-2 inline-flex items-center gap-1 text-sm text-slate">
+                <Icon name="star" className="h-3.5 w-3.5" />
+                {Number(product.avg_rating).toFixed(1)} ({product.review_count} reviews)
+              </span>
             )}
           </div>
           <p className="mt-4 whitespace-pre-line text-sm text-slate">{product.description || "No description provided."}</p>
@@ -128,12 +137,15 @@ export default function ProductDetail() {
                 max={product.stock}
                 value={qty}
                 onChange={(e) => setQty(Number(e.target.value))}
-                className="w-20 rounded-lg border border-slate/25 px-3 py-2 text-sm"
+                className="glass-input w-20 rounded-lg px-3 py-2 text-sm outline-none"
               />
               <Button variant="accent" disabled={busy || product.status === "out_of_stock"} onClick={buyNow}>
                 {busy ? "Placing order..." : "Buy now"}
               </Button>
-              <Button variant="outline" onClick={favorite}>{favorited ? "♥ Saved" : "♡ Save"}</Button>
+              <Button variant="outline" onClick={favorite}>
+                <Icon name="favorites" className={`h-4 w-4 ${favorited ? "fill-current" : ""}`} />
+                {favorited ? "Saved" : "Save"}
+              </Button>
             </div>
           )}
           {!user && <p className="mt-6 text-sm text-slate">Log in as a student to purchase this product.</p>}

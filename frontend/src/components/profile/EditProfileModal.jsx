@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Button, Card, ErrorBanner, Input, TextArea } from "../ui";
+import { Button, ErrorBanner, Input, Modal, TextArea } from "../ui";
 import { client, errMsg } from "../../api/client";
 import ProfileHeader from "./ProfileHeader";
 
@@ -19,11 +19,12 @@ export default function EditProfileModal({ user, isOpen, onClose, onSaved }) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
 
   async function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
@@ -69,6 +70,11 @@ export default function EditProfileModal({ user, isOpen, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.name.trim()) {
+      setNameError("Full name is required.");
+      return;
+    }
+    setNameError("");
     setSaving(true);
     setError("");
     try {
@@ -103,230 +109,210 @@ export default function EditProfileModal({ user, isOpen, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <Card className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate/15 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-navy">Edit Profile</h2>
-            <div className="flex rounded-lg bg-slate/10 p-0.5">
-              <button
-                type="button"
-                onClick={() => setActiveTab("form")}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                  activeTab === "form" ? "bg-white text-navy shadow-sm" : "text-slate hover:text-navy"
-                }`}
-              >
-                Edit Details
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("preview")}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                  activeTab === "preview" ? "bg-white text-navy shadow-sm" : "text-slate hover:text-navy"
-                }`}
-              >
-                Live Preview
-              </button>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-slate transition hover:bg-slate/10 hover:text-navy"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <ErrorBanner message={error} />
-
-          {activeTab === "preview" ? (
-            <div className="space-y-4">
-              <p className="text-xs text-slate">
-                This is a live preview of how your updated profile header will appear across ግቢያችን:
-              </p>
-              <ProfileHeader user={previewUser} isOwner={false} />
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} id="edit-profile-form" className="space-y-4">
-              {/* Avatar & Cover Uploaders */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Profile Picture */}
-                <div>
-                  <label className="block text-sm font-medium text-navy mb-1">
-                    Profile Picture / Avatar
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-slate/20 bg-slate/10">
-                      {form.avatarUrl ? (
-                        <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-navy text-white font-bold">
-                          {form.name?.[0]?.toUpperCase() || "U"}
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <input
-                        type="file"
-                        ref={avatarInputRef}
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="px-2.5 py-1 text-xs"
-                          onClick={() => avatarInputRef.current?.click()}
-                          disabled={uploadingAvatar}
-                        >
-                          {uploadingAvatar ? "Uploading..." : "Upload Photo"}
-                        </Button>
-                        {form.avatarUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, avatarUrl: "" }))}
-                            className="text-xs text-danger hover:underline"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-slate">PNG, JPG, WEBP up to 5MB</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cover / Wallpaper */}
-                <div>
-                  <label className="block text-sm font-medium text-navy mb-1">
-                    Profile Cover / Wallpaper
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <div className="h-16 w-24 overflow-hidden rounded-lg border-2 border-slate/20 bg-slate/10">
-                      {form.coverImageUrl ? (
-                        <img src={form.coverImageUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-r from-navy to-accent/60 text-[10px] text-white">
-                          Default Cover
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <input
-                        type="file"
-                        ref={coverInputRef}
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        onChange={handleCoverUpload}
-                        className="hidden"
-                      />
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="px-2.5 py-1 text-xs"
-                          onClick={() => coverInputRef.current?.click()}
-                          disabled={uploadingCover}
-                        >
-                          {uploadingCover ? "Uploading..." : "Upload Cover"}
-                        </Button>
-                        {form.coverImageUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, coverImageUrl: "" }))}
-                            className="text-xs text-danger hover:underline"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-slate">Wide banner, max 5MB</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Basic Fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Full Name *"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Phone Number"
-                  placeholder="+251 9..."
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </div>
-
-              {/* Academic Fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Department / Major"
-                  placeholder="e.g. Software Engineering"
-                  value={form.department}
-                  onChange={(e) => setForm({ ...form, department: e.target.value })}
-                />
-                <Input
-                  label="Year / Academic Standing"
-                  placeholder="e.g. 3rd Year / Senior"
-                  value={form.year}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
-                />
-              </div>
-
-              {/* Bio Field with character counter */}
-              <div>
-                <TextArea
-                  label="Bio / About"
-                  rows={3}
-                  placeholder="Share a few words about what you study, sell, organize, or your campus interests..."
-                  value={form.bio}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 1000) {
-                      setForm({ ...form, bio: e.target.value });
-                    }
-                  }}
-                />
-                <p className="mt-1 text-right text-[11px] text-slate">
-                  {form.bio.length} / 1000 characters
-                </p>
-              </div>
-
-              {/* University Affiliation (Read-Only) */}
-              <div className="rounded-lg bg-slate/5 p-3 text-xs text-slate">
-                <span className="font-semibold text-navy">University: </span>
-                {user.university_name || "ግቢያችን"} ·{" "}
-                <span className="italic">
-                  University affiliation, role, and verification badges cannot be modified directly.
-                </span>
-              </div>
-            </form>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate/15 bg-slate/5 px-6 py-3">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="Edit Profile"
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="edit-profile-form"
-            disabled={saving || uploadingAvatar || uploadingCover}
-          >
-            {saving ? "Saving Changes..." : "Save Profile"}
+          <Button type="submit" form="edit-profile-form" loading={saving} disabled={saving || uploadingAvatar || uploadingCover}>
+            {saving ? "Saving Changes…" : "Save Profile"}
           </Button>
+        </>
+      }
+    >
+      {/* Tab switcher */}
+      <div className="mb-4 inline-flex rounded-lg border border-line bg-canvas p-0.5">
+        <button
+          type="button"
+          onClick={() => setActiveTab("form")}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            activeTab === "form" ? "glass-soft text-ink shadow-sm" : "text-slate hover:text-ink"
+          }`}
+        >
+          Edit Details
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("preview")}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            activeTab === "preview" ? "glass-soft text-ink shadow-sm" : "text-slate hover:text-ink"
+          }`}
+        >
+          Live Preview
+        </button>
+      </div>
+
+      <ErrorBanner message={error} />
+
+      {activeTab === "preview" ? (
+        <div className="mt-4 space-y-4">
+          <p className="text-xs text-slate">
+            This is a live preview of how your updated profile header will appear across ግቢያችን:
+          </p>
+          <ProfileHeader user={previewUser} isOwner={false} />
         </div>
-      </Card>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} id="edit-profile-form" className="mt-4 space-y-5">
+          {/* Avatar & Cover Uploaders */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-ink">Profile Picture / Avatar</label>
+              <div className="flex items-center gap-3">
+                <div className="h-16 w-16 overflow-hidden rounded-full border border-line bg-canvas">
+                  {form.avatarUrl ? (
+                    <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-primary text-lg font-bold text-[#0b0d11]">
+                      {form.name?.[0]?.toUpperCase() || "U"}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => avatarInputRef.current?.click()}
+                      loading={uploadingAvatar}
+                      disabled={uploadingAvatar}
+                    >
+                      {uploadingAvatar ? "Uploading…" : "Upload Photo"}
+                    </Button>
+                    {form.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, avatarUrl: "" }))}
+                        className="text-xs text-danger hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted">PNG, JPG, WEBP up to 5MB</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-ink">Profile Cover / Wallpaper</label>
+              <div className="flex items-center gap-3">
+                <div className="h-16 w-24 overflow-hidden rounded-lg border border-line bg-canvas">
+                  {form.coverImageUrl ? (
+                    <img src={form.coverImageUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[10px] text-muted">
+                      Default Cover
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <input
+                    type="file"
+                    ref={coverInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleCoverUpload}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => coverInputRef.current?.click()}
+                      loading={uploadingCover}
+                      disabled={uploadingCover}
+                    >
+                      {uploadingCover ? "Uploading…" : "Upload Cover"}
+                    </Button>
+                    {form.coverImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, coverImageUrl: "" }))}
+                        className="text-xs text-danger hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted">Wide banner, max 5MB</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Basic Fields */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Full Name"
+              value={form.name}
+              error={nameError}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+            <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="+251 9…"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+          </div>
+
+          {/* Academic Fields */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Department / Major"
+              placeholder="e.g. Software Engineering"
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
+            />
+            <Input
+              label="Year / Academic Standing"
+              placeholder="e.g. 3rd Year / Senior"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            />
+          </div>
+
+          {/* Bio Field with character counter */}
+          <div>
+            <TextArea
+              label="Bio / About"
+              rows={3}
+              placeholder="Share a few words about what you study, sell, organize, or your campus interests…"
+              value={form.bio}
+              onChange={(e) => {
+                if (e.target.value.length <= 1000) {
+                  setForm({ ...form, bio: e.target.value });
+                }
+              }}
+            />
+            <p className="mt-1 text-right text-[11px] text-muted">{form.bio.length} / 1000 characters</p>
+          </div>
+
+          {/* University Affiliation (Read-Only) */}
+          <div className="rounded-lg border border-line bg-canvas p-3 text-xs text-slate">
+            <span className="font-semibold text-ink">University: </span>
+            {user.university_name || "ግቢያችን"} ·{" "}
+            <span className="italic">
+              University affiliation, role, and verification badges cannot be modified directly.
+            </span>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }

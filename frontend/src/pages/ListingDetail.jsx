@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner, TextArea } from "../components/ui";
+import { MediaImage } from "../components/cards";
 import { PAYMENT_METHOD, startCheckout } from "../api/checkout";
 
 export default function ListingDetail() {
@@ -107,8 +108,8 @@ export default function ListingDetail() {
         action={<Badge tone={listing.status === "active" ? "ok" : "slate"}>{listing.status}</Badge>}
       />
       <Card className="p-6">
-        <div className="mb-4 flex h-56 items-center justify-center rounded-lg bg-paper text-5xl">
-          {listing.images?.[0] ? <img src={listing.images[0]} alt="" className="h-full w-full rounded-lg object-cover" /> : "📦"}
+        <div className="mb-4 h-56 overflow-hidden rounded-lg bg-paper">
+          <MediaImage src={listing.images?.[0]} alt={listing.title} icon="products" className="transition duration-500 hover:scale-[1.03]" />
         </div>
         <p className="text-2xl font-bold text-accent-dark">{Number(listing.price).toFixed(2)} birr</p>
         <p className="mt-2 text-sm text-slate">{listing.description || "No description provided."}</p>

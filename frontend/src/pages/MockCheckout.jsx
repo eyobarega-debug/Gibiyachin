@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import { Button, Card, ErrorBanner, PageHeader } from "../components/ui";
+import Icon from "../components/Icon";
 
 export default function MockCheckout() {
   const { paymentId } = useParams();
@@ -35,10 +36,12 @@ export default function MockCheckout() {
         {amount != null && <p className="mb-6 text-3xl font-bold text-accent">{Number(amount).toFixed(2)} birr</p>}
         <div className="flex flex-col gap-3">
           <Button variant="accent" disabled={loading} onClick={() => complete("success")}>
-            {loading ? "Processing..." : "✅ Simulate successful payment"}
+            <Icon name="checkCircle" className="h-4 w-4" />
+            {loading ? "Processing..." : "Simulate successful payment"}
           </Button>
           <Button variant="outline" disabled={loading} onClick={() => complete("fail")}>
-            ❌ Simulate failed payment
+            <Icon name="close" className="h-4 w-4" />
+            Simulate failed payment
           </Button>
         </div>
         <p className="mt-6 text-xs text-slate">

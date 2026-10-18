@@ -5,6 +5,7 @@ import { errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, ErrorBanner, Input, PageHeader, Select, SuccessBanner, TextArea } from "../components/ui";
 import ImageUploader from "../components/ImageUploader";
 import TicketCard from "../components/TicketCard";
+import Icon from "../components/Icon";
 
 const STATUS_TONE = {
   draft: "slate",
@@ -198,7 +199,17 @@ export default function OrganizerEvents() {
               setSuccess("");
             }}
           >
-            {showForm ? "✕ Close Form" : "+ Create New Event"}
+            {showForm ? (
+              <>
+                <Icon name="close" className="h-4 w-4" />
+                Close Form
+              </>
+            ) : (
+              <>
+                <Icon name="plus" className="h-4 w-4" />
+                Create New Event
+              </>
+            )}
           </Button>
         }
       />
@@ -222,7 +233,8 @@ export default function OrganizerEvents() {
               onClick={() => setPreviewOpen(true)}
               className="text-xs"
             >
-              👁️ Preview Ticket Design
+              <Icon name="tickets" className="h-4 w-4" />
+              Preview Ticket Design
             </Button>
           </div>
 
@@ -360,7 +372,7 @@ export default function OrganizerEvents() {
 
               <div className="space-y-3">
                 {form.ticketTypes.map((tt, i) => (
-                  <div key={i} className="rounded-lg border border-slate/15 bg-white p-3 shadow-xs">
+                  <div key={i} className="rounded-lg border border-slate/15 glass-soft p-3 shadow-xs">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
                       <Input
                         label="Tier Name"
@@ -420,7 +432,8 @@ export default function OrganizerEvents() {
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>
-                👁️ Preview Ticket
+                <Icon name="tickets" className="h-4 w-4" />
+                Preview Ticket
               </Button>
               <Button type="submit" variant="accent">
                 Save Event as Draft
@@ -441,7 +454,7 @@ export default function OrganizerEvents() {
                 onClick={() => setPreviewOpen(false)}
                 className="rounded-full p-1 text-slate hover:bg-slate/10 hover:text-navy"
               >
-                ✕
+                <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
             <TicketCard ticket={sampleTicket} isPreview={true} showActions={false} />
@@ -487,8 +500,15 @@ export default function OrganizerEvents() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate mt-1">
-                      📅 {new Date(ev.date_time).toLocaleString()} · 📍 {ev.venue_name || ev.location}
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate">
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="calendar" className="h-3.5 w-3.5" />
+                        {new Date(ev.date_time).toLocaleString()}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="mapPin" className="h-3.5 w-3.5" />
+                        {ev.venue_name || ev.location}
+                      </span>
                     </p>
                     {ev.organizer_name && (
                       <p className="text-xs text-slate">Organizer: {ev.organizer_name}</p>
@@ -536,7 +556,9 @@ export default function OrganizerEvents() {
                 </div>
 
                 <Button as={Link} to={`/organizer/${ev.id}`} variant="primary" className="text-xs">
-                  🎟️ Attendees, Check-in & Scanner →
+                  <Icon name="tickets" className="h-4 w-4" />
+                  Attendees, Check-in &amp; Scanner
+                  <Icon name="arrowRight" className="h-4 w-4" />
                 </Button>
               </div>
             </Card>

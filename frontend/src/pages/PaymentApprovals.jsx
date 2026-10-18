@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
+import { Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Input, PageHeader, Spinner, SuccessBanner, Tabs } from "../components/ui";
 import ProofImage from "../components/ProofImage";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
   { id: "review", label: "To review", url: "/payments/manual/incoming?status=under_review" },
@@ -21,6 +22,7 @@ function ReviewRow({ p, user, onDone, setError }) {
   const [reason, setReason] = useState("");
   const [cancelPayment, setCancelPayment] = useState(false);
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
   const isTicket = p.transactionType === "ticket";
@@ -36,6 +38,16 @@ function ReviewRow({ p, user, onDone, setError }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function approve() {
+    const ok = await confirm({
+      title: "Approve payment?",
+      message: `Confirm you received ${p.amount.toFixed(2)} birr from ${p.payerName}?`,
+      confirmLabel: "Approve payment",
+      variant: "primary",
+    });
+    if (ok) await act("approve");
   }
 
   if (isTicket && !isAdmin) {
@@ -81,25 +93,27 @@ function ReviewRow({ p, user, onDone, setError }) {
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setShowImg((v) => !v)}>{showImg ? "Hide screenshot" : "View screenshot"}</Button>
-        <Button variant="accent" disabled={busy} onClick={() => window.confirm(`Confirm you received ${p.amount.toFixed(2)} birr from ${p.payerName}?`) && act("approve")}>
+        <Button variant="accent" loading={busy} disabled={busy} onClick={approve}>
           Approve
         </Button>
         <Button variant="danger" disabled={busy} onClick={() => setRejecting((v) => !v)}>Reject</Button>
       </div>
       {showImg && <div className="mt-3"><ProofImage paymentId={p.id} /></div>}
       {rejecting && (
-        <div className="mt-3 space-y-2 rounded-lg bg-paper p-3">
-          <input
-            className="w-full rounded-lg border border-slate/25 px-3 py-2 text-sm"
-            placeholder="Reason, e.g. amount doesn't match"
+        <div className="mt-3 space-y-3 rounded-lg border border-line bg-canvas p-3">
+          <Input
+            label="Rejection reason"
+            required
+            placeholder="e.g. amount doesn't match"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <label className="flex items-center gap-2 text-sm text-slate">
-            <input type="checkbox" checked={cancelPayment} onChange={(e) => setCancelPayment(e.target.checked)} />
-            Cancel the whole purchase (otherwise the buyer can upload a corrected proof)
-          </label>
-          <Button variant="danger" disabled={busy || reason.trim().length < 3} onClick={() => act("reject", { reason: reason.trim(), cancelPayment })}>
+          <Checkbox
+            label="Cancel the whole purchase (otherwise the buyer can upload a corrected proof)"
+            checked={cancelPayment}
+            onChange={(e) => setCancelPayment(e.target.checked)}
+          />
+          <Button variant="danger" loading={busy} disabled={busy || reason.trim().length < 3} onClick={() => act("reject", { reason: reason.trim(), cancelPayment })}>
             Send rejection
           </Button>
         </div>
@@ -161,17 +175,20 @@ export default function PaymentApprovals() {
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
 
-      <div className="my-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setSuccess(""); setError(""); }}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === t.id ? "bg-navy text-white" : "bg-white text-slate border border-slate/20 hover:bg-slate/10"}`}
-          >
-            {t.label}{t.id === "review" && counts.review ? ` (${counts.review})` : ""}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="my-4"
+        value={tab}
+        onChange={(key) => {
+          setTab(key);
+          setSuccess("");
+          setError("");
+        }}
+        items={TABS.map((t) => ({
+          key: t.id,
+          label: t.label,
+          count: t.id === "review" && counts.review ? counts.review : undefined,
+        }))}
+      />
 
       {!items ? (
         <div className="flex justify-center py-12"><Spinner /></div>

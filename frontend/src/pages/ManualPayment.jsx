@@ -4,6 +4,7 @@ import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, ErrorBanner, Input, PageHeader, Spinner, SuccessBanner } from "../components/ui";
 import ProofImage from "../components/ProofImage";
+import { useConfirm } from "../components/ConfirmProvider";
 
 export const METHOD_LABEL = {
   cbe: "Commercial Bank of Ethiopia",
@@ -51,6 +52,7 @@ export default function ManualPayment() {
   const [busy, setBusy] = useState(false);
   const [imgVersion, setImgVersion] = useState(0);
   const fileInput = useRef(null);
+  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     try {
@@ -98,7 +100,13 @@ export default function ManualPayment() {
   }
 
   async function cancelPurchase() {
-    if (!window.confirm("Cancel this purchase? Your reservation will be released.")) return;
+    const ok = await confirm({
+      title: "Cancel purchase?",
+      message: "Cancel this purchase? Your reservation will be released.",
+      confirmLabel: "Cancel purchase",
+      variant: "danger",
+    });
+    if (!ok) return;
     setError("");
     try {
       await client.post(`/payments/${paymentId}/cancel`, {});
@@ -181,30 +189,36 @@ export default function ManualPayment() {
           )}
           <ErrorBanner message={error} />
           <SuccessBanner message={success} />
-          <form onSubmit={submit} className="mt-3 space-y-3">
+          <form onSubmit={submit} className="mt-3 space-y-3" noValidate>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-navy">Screenshot (JPG, PNG or WEBP, max 5MB)</span>
+              <span className="mb-1.5 block text-sm font-medium text-ink">
+                Screenshot <span className="text-danger">*</span>
+              </span>
               <input
                 ref={fileInput}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-slate file:mr-3 file:rounded-lg file:border-0 file:bg-navy file:px-3 file:py-2 file:text-sm file:text-white"
+                className="block w-full cursor-pointer rounded-lg border border-line glass-soft text-sm text-slate file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-primary-dark focus:outline-none"
               />
+              <span className="mt-1 block text-xs text-muted">JPG, PNG or WEBP, max 5MB</span>
             </label>
             <Input
               label="Transaction reference"
+              required
               placeholder="e.g. FT26287ABCDE"
+              hint="Shown on your bank or Telebirr confirmation."
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              required
               minLength={4}
             />
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="accent" disabled={busy || attemptsLeft <= 0}>
-                {busy ? "Uploading..." : "Submit proof"}
+              <Button type="submit" loading={busy} disabled={busy || attemptsLeft <= 0}>
+                {busy ? "Uploading…" : "Submit proof"}
               </Button>
-              <Button type="button" variant="ghost" onClick={cancelPurchase}>Cancel purchase</Button>
+              <Button type="button" variant="ghost" onClick={cancelPurchase} disabled={busy}>
+                Cancel purchase
+              </Button>
             </div>
           </form>
         </Card>

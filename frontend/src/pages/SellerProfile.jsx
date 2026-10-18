@@ -4,6 +4,8 @@ import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import ImageUploader from "../components/ImageUploader";
 import ReviewsPanel from "../components/ReviewsPanel";
+import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Spinner, SuccessBanner, TextArea } from "../components/ui";
 
 const VERIFY_TONE = { verified: "ok", pending: "warn", unverified: "slate", suspended: "danger" };
@@ -81,14 +83,14 @@ export default function SellerProfile() {
       <SuccessBanner message={notice} />
 
       <Card className="overflow-hidden">
-        <div className="h-40 w-full bg-gradient-to-r from-navy to-accent">
+        <div className="h-40 w-full bg-gradient-to-r from-[#1c2128] via-[#12161c] to-[#0b0e12]">
           {seller.coverImageUrl && <img src={seller.coverImageUrl} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="relative px-6 pb-6">
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-3">
             <div className="flex items-end gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border-4 border-white bg-paper text-3xl shadow">
-                {seller.logoUrl ? <img src={seller.logoUrl} alt="" className="h-full w-full object-cover" /> : "🏬"}
+              <div className="h-20 w-20 overflow-hidden rounded-xl border-4 border-[#15181d] bg-paper shadow">
+                <MediaImage src={seller.logoUrl} alt={seller.name} icon="store" />
               </div>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -130,15 +132,16 @@ export default function SellerProfile() {
         <Stat label="Active listings" value={seller.stats.activeListings} />
         <Stat label="Completed sales" value={seller.stats.completedSales} />
         <Stat label="Reviews" value={seller.stats.reviewCount} />
-        <Stat label="Avg rating" value={seller.stats.reviewCount ? `⭐ ${seller.stats.avgRating.toFixed(1)}` : "—"} />
+        <Stat label="Avg rating" value={seller.stats.reviewCount ? seller.stats.avgRating.toFixed(1) : "—"} />
       </div>
 
       <div className="mt-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-navy">Active listings</h2>
           {listingsTotal > listings.length && (
-            <Link to={`/marketplace?store=${seller.id}`} className="text-sm text-navy underline">
-              View all {listingsTotal} listings →
+            <Link to={`/marketplace?store=${seller.id}`} className="inline-flex items-center gap-1 text-sm text-navy underline">
+              View all {listingsTotal} listings
+              <Icon name="arrowRight" className="h-3.5 w-3.5" />
             </Link>
           )}
         </div>
@@ -149,10 +152,15 @@ export default function SellerProfile() {
             {listings.map((p) => (
               <Link key={p.id} to={`/marketplace/${p.id}`}>
                 <Card className="h-full p-4 transition hover:shadow-md">
-                  <div className="relative mb-3 flex h-32 items-center justify-center rounded-lg bg-paper text-3xl">
-                    {p.images?.[0] ? <img src={p.images[0]} alt="" className="h-full w-full rounded-lg object-cover" /> : "🛍️"}
+                  <div className="relative mb-3 h-32 overflow-hidden rounded-lg bg-paper">
+                    <MediaImage src={p.images?.[0]} alt={p.title} icon="marketplace" />
                     {p.is_featured && (
-                      <span className="absolute left-2 top-2"><Badge tone="accent">⭐ Featured</Badge></span>
+                      <span className="absolute left-2 top-2">
+                        <Badge tone="accent">
+                          <Icon name="star" className="h-3 w-3" />
+                          Featured
+                        </Badge>
+                      </span>
                     )}
                   </div>
                   <p className="font-medium text-navy line-clamp-1">{p.title}</p>
@@ -161,7 +169,10 @@ export default function SellerProfile() {
                     <Badge tone="ok">{p.stock} in stock</Badge>
                   </div>
                   {Number(p.review_count) > 0 && (
-                    <p className="mt-1 text-xs text-slate">⭐ {Number(p.avg_rating).toFixed(1)} ({p.review_count})</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-slate">
+                      <Icon name="star" className="h-3 w-3" />
+                      {Number(p.avg_rating).toFixed(1)} ({p.review_count})
+                    </p>
                   )}
                 </Card>
               </Link>

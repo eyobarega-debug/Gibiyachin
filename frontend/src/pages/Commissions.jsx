@@ -81,7 +81,7 @@ function SubmitCommissionModal({ defaultAmount, accounts, onDone, onCancel }) {
           <p className="text-xs font-semibold text-navy uppercase tracking-wider">Official Receiving Accounts</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {accounts.map((acc) => (
-              <div key={acc.id} className="rounded-lg bg-white border border-slate/20 p-2.5 text-xs">
+              <div key={acc.id} className="rounded-lg glass-soft border border-slate/20 p-2.5 text-xs">
                 <p className="font-semibold text-navy">{acc.account_name} ({acc.method})</p>
                 <p className="font-mono text-slate font-medium text-sm">{acc.account_number}</p>
                 {acc.instructions && <p className="text-slate text-[11px] mt-0.5">{acc.instructions}</p>}
@@ -118,7 +118,7 @@ function SubmitCommissionModal({ defaultAmount, accounts, onDone, onCancel }) {
             accept="image/*"
             required
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="text-xs text-slate file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-navy file:text-white hover:file:bg-navy-dark"
+              className="text-xs text-slate file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary file:text-[#0b0d11] hover:file:bg-primary-dark"
           />
         </div>
         <TextArea
@@ -288,7 +288,7 @@ export default function Commissions() {
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${filter === f.id ? "bg-navy text-white" : "border border-slate/20 bg-white text-slate hover:bg-slate/10"}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${filter === f.id ? "bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11]" : "border border-slate/20 glass-soft text-slate hover:bg-slate/10"}`}
               >
                 {f.label}
               </button>

@@ -4,16 +4,17 @@ import { client } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
 import QrScanner from "../components/QrScanner";
+import Icon from "../components/Icon";
 
 const RESULT_STYLE = {
-  ADMIT: { tone: "ok", label: "✅ ADMITTED — ENTRY GRANTED" },
-  VALID: { tone: "ok", label: "🟢 VALID TICKET — READY FOR ENTRY" },
-  ALREADY_USED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET ALREADY USED" },
-  PAYMENT_NOT_APPROVED: { tone: "warn", label: "⚠️ ENTRY DENIED — PAYMENT NOT VERIFIED" },
-  CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — TICKET CANCELLED" },
-  EVENT_CANCELLED: { tone: "danger", label: "⛔ ENTRY DENIED — EVENT CANCELLED" },
-  INVALID: { tone: "danger", label: "⛔ ENTRY DENIED — INVALID TICKET" },
-  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", label: "⛔ CROSS-CAMPUS TICKET NOT ADMITTED" },
+  ADMIT: { tone: "ok", icon: "checkCircle", label: "ADMITTED — ENTRY GRANTED" },
+  VALID: { tone: "ok", icon: "checkCircle", label: "VALID TICKET — READY FOR ENTRY" },
+  ALREADY_USED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET ALREADY USED" },
+  PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
+  CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
+  EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
+  FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
 
 export default function TicketVerifyPage() {
@@ -157,6 +158,9 @@ export default function TicketVerifyPage() {
                       : "danger"
                   }
                 >
+                  {RESULT_STYLE[scanResult.result]?.icon && (
+                    <Icon name={RESULT_STYLE[scanResult.result].icon} className="h-3.5 w-3.5" />
+                  )}
                   {RESULT_STYLE[scanResult.result]?.label || scanResult.result}
                 </Badge>
 
@@ -167,7 +171,7 @@ export default function TicketVerifyPage() {
 
               {/* Attendee Details Card */}
               {(scanResult.ticket || scanResult.attendeeName) && (
-                <div className="mt-4 rounded-xl border border-slate/15 bg-white p-4 shadow-xs">
+                <div className="mt-4 rounded-xl border border-slate/15 glass-soft p-4 shadow-xs">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-[10px] font-semibold text-slate uppercase">Attendee</span>
@@ -202,9 +206,9 @@ export default function TicketVerifyPage() {
               )}
 
               {scanResult.previousScanAt && (
-                <div className="mt-3 rounded-lg bg-danger/10 p-2.5 text-center text-xs text-danger font-medium">
-                  ⚠️ This ticket was already admitted on:{" "}
-                  {new Date(scanResult.previousScanAt).toLocaleString()}
+                <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-danger/10 p-2.5 text-center text-xs font-medium text-danger">
+                  <Icon name="alert" className="h-3.5 w-3.5 shrink-0" />
+                  This ticket was already admitted on: {new Date(scanResult.previousScanAt).toLocaleString()}
                 </div>
               )}
 
@@ -212,7 +216,8 @@ export default function TicketVerifyPage() {
               <div className="mt-5 space-y-2">
                 {scanResult.result === "VALID" && (
                   <Button variant="accent" onClick={handleAdmit} className="w-full text-base font-bold">
-                    ✓ Confirm & Admit Attendee
+                    <Icon name="checkCircle" className="h-4 w-4" />
+                    Confirm & Admit Attendee
                   </Button>
                 )}
 
@@ -223,13 +228,21 @@ export default function TicketVerifyPage() {
                     disabled={reversing}
                     className="w-full text-xs text-slate hover:text-danger"
                   >
-                    {reversing ? "Reversing..." : "↺ Reverse Check-In (Admin Reset)"}
+                    {reversing ? (
+                      "Reversing..."
+                    ) : (
+                      <>
+                        <Icon name="refresh" className="h-3.5 w-3.5" />
+                        Reverse Check-In (Admin Reset)
+                      </>
+                    )}
                   </Button>
                 )}
 
                 {token && (
                   <Button as={Link} to="/tickets/verify" variant="ghost" className="w-full text-xs">
-                    ← Scan Another Ticket
+                    <Icon name="arrowLeft" className="h-3.5 w-3.5" />
+                    Scan Another Ticket
                   </Button>
                 )}
               </div>

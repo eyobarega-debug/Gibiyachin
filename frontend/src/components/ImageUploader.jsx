@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { client } from "../api/client";
+import Icon from "./Icon";
 
 export default function ImageUploader({ value = [], onChange, max = 4 }) {
   const [uploading, setUploading] = useState(false);
@@ -39,9 +40,10 @@ export default function ImageUploader({ value = [], onChange, max = 4 }) {
             <button
               type="button"
               onClick={() => remove(url)}
-              className="absolute right-0.5 top-0.5 rounded-full bg-black/60 px-1.5 text-xs text-white"
+              className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white transition hover:bg-black/80"
+              aria-label="Remove image"
             >
-              ✕
+              <Icon name="close" className="h-3 w-3" />
             </button>
           </div>
         ))}

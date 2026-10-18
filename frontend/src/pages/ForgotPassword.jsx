@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { errMsg } from "../context/AuthContext";
-import { Button, Card, ErrorBanner, Input, PageHeader, SuccessBanner } from "../components/ui";
+import { Button, ErrorBanner, Input, SuccessBanner } from "../components/ui";
+import AuthCard from "../components/AuthCard";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,9 +16,14 @@ export default function ForgotPassword() {
     e.preventDefault();
     setError("");
     setMessage("");
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setFieldError("Enter a valid email address.");
+      return;
+    }
+    setFieldError("");
     setLoading(true);
     try {
-      const { data } = await client.post("/auth/forgot-password", { email });
+      const { data } = await client.post("/auth/forgot-password", { email: email.trim() });
       setMessage(data.message);
     } catch (err) {
       setError(errMsg(err, "Could not process that request"));
@@ -26,22 +33,32 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <PageHeader title="Forgot password" subtitle="We'll help you get back into your account." />
-      <Card className="p-6">
-        <form onSubmit={submit} className="space-y-4">
-          <ErrorBanner message={error} />
-          <SuccessBanner message={message} />
-          <Input label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sending..." : "Send reset link"}
-          </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-slate">
-          <Link to="/login" className="underline">Back to log in</Link>
-        </p>
-      </Card>
-    </div>
+    <AuthCard
+      title="Forgot password"
+      subtitle="Enter your account email and we'll send you a reset link."
+      footer={
+        <Link to="/login" className="font-medium text-primary underline">
+          Back to log in
+        </Link>
+      }
+    >
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <ErrorBanner message={error} />
+        <SuccessBanner message={message} />
+        <Input
+          label="Email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="you@aastu.edu.et"
+          value={email}
+          error={fieldError}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Button type="submit" className="w-full" loading={loading}>
+          {loading ? "Sending…" : "Send reset link"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

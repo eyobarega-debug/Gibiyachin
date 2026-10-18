@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, TextArea } from "../components/ui";
+import Icon from "../components/Icon";
 
 const STATUS_TONE = {
   pending_payment: "warn",
@@ -63,9 +64,12 @@ export default function MyRentalBookings() {
                     <p className="font-medium text-navy">
                       {b.title} <span className="text-xs text-slate">({iAmBorrower ? "borrowing" : "lending"})</span>
                     </p>
-                    <p className="text-xs text-slate">
-                      {b.start_date?.slice(0, 10)} → {b.end_date?.slice(0, 10)} · deposit status: {b.deposit_status}
-                      {Number(b.late_fee) > 0 && ` · late fee ${Number(b.late_fee).toFixed(2)}`}
+                    <p className="flex flex-wrap items-center gap-1 text-xs text-slate">
+                      <span>{b.start_date?.slice(0, 10)}</span>
+                      <Icon name="arrowRight" className="h-3 w-3" />
+                      <span>{b.end_date?.slice(0, 10)}</span>
+                      <span>· deposit status: {b.deposit_status}</span>
+                      {Number(b.late_fee) > 0 && <span>· late fee {Number(b.late_fee).toFixed(2)}</span>}
                     </p>
                   </div>
                   <Badge tone={STATUS_TONE[b.status] || "slate"}>{b.status.replaceAll("_", " ")}</Badge>
@@ -91,10 +95,16 @@ export default function MyRentalBookings() {
                 {(b.owner_confirmed_at || b.renter_confirmed_at) && (
                   <div className="mt-2 flex flex-wrap gap-4 rounded-lg bg-paper px-3 py-1.5 text-xs text-slate">
                     {b.owner_confirmed_at && (
-                      <span>✓ Payment confirmed by owner ({new Date(b.owner_confirmed_at).toLocaleDateString()})</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="check" className="h-3.5 w-3.5" />
+                        Payment confirmed by owner ({new Date(b.owner_confirmed_at).toLocaleDateString()})
+                      </span>
                     )}
                     {b.renter_confirmed_at && (
-                      <span className="text-ok font-medium">✓ Item pickup confirmed by renter ({new Date(b.renter_confirmed_at).toLocaleDateString()})</span>
+                      <span className="inline-flex items-center gap-1 font-medium text-ok">
+                        <Icon name="check" className="h-3.5 w-3.5" />
+                        Item pickup confirmed by renter ({new Date(b.renter_confirmed_at).toLocaleDateString()})
+                      </span>
                     )}
                   </div>
                 )}

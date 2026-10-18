@@ -143,6 +143,7 @@ export default function VerifyCampus() {
               <form onSubmit={submit} className="space-y-4">
                 <Select
                   label="Verification document type"
+                  required
                   value={form.documentType}
                   onChange={(e) => setForm({ ...form, documentType: e.target.value })}
                 >
@@ -153,19 +154,21 @@ export default function VerifyCampus() {
                   ))}
                 </Select>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-navy">Document upload</span>
+                  <span className="mb-1.5 block text-sm font-medium text-ink">
+                    Document upload <span className="text-danger">*</span>
+                  </span>
                   <input
                     id="verification-document-input"
                     type="file"
                     required
                     accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-slate file:mr-3 file:rounded-lg file:border-0 file:bg-navy/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-navy"
+                    className="block w-full cursor-pointer rounded-lg border border-line glass-soft text-sm text-slate file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-primary-dark focus:outline-none"
                   />
-                  <span className="mt-1 block text-xs text-slate">
+                  <span className="mt-1 block text-xs text-muted">
                     JPEG, PNG, WEBP, GIF or PDF — up to 10MB. Your file is stored privately.
                   </span>
-                  {file && <span className="mt-1 block text-xs text-navy">Selected: {file.name}</span>}
+                  {file && <span className="mt-1 block text-xs font-medium text-ink">Selected: {file.name}</span>}
                 </label>
                 <TextArea
                   label="Note to the reviewer (optional)"
@@ -174,8 +177,8 @@ export default function VerifyCampus() {
                   value={form.studentNote}
                   onChange={(e) => setForm({ ...form, studentNote: e.target.value })}
                 />
-                <Button type="submit" className="w-full" disabled={submitting || !canSubmit}>
-                  {submitting ? "Submitting..." : "Submit verification request"}
+                <Button type="submit" className="w-full" loading={submitting} disabled={submitting || !canSubmit}>
+                  {submitting ? "Submitting…" : "Submit verification request"}
                 </Button>
               </form>
             </div>

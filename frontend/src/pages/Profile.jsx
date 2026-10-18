@@ -2,12 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { client } from "../api/client";
-import { Button, Card, Spinner } from "../components/ui";
+import { Button, Card, Spinner, Tabs } from "../components/ui";
 import ProfileHeader from "../components/profile/ProfileHeader";
 import ProfileStats from "../components/profile/ProfileStats";
 import ProfileActivity from "../components/profile/ProfileActivity";
 import ProfileSettings from "../components/profile/ProfileSettings";
 import EditProfileModal from "../components/profile/EditProfileModal";
+import Icon from "../components/Icon";
 
 export default function Profile() {
   const { user, reload } = useAuth();
@@ -63,48 +64,15 @@ export default function Profile() {
       />
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate/20">
-        <button
-          type="button"
-          onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "overview"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          📊 Overview & Stats
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("activity")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "activity"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          ⏱️ Activity Feed
-          {activities.length > 0 && (
-            <span className="rounded-full bg-slate/10 px-2 py-0.5 text-xs text-slate">
-              {activities.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("settings")}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition ${
-            activeTab === "settings"
-              ? "border-navy text-navy"
-              : "border-transparent text-slate hover:text-navy"
-          }`}
-        >
-          ⚙️ Account Settings
-        </button>
-      </div>
+      <Tabs
+        items={[
+          { key: "overview", label: "Overview & Stats" },
+          { key: "activity", label: "Activity Feed", count: activities.length || undefined },
+          { key: "settings", label: "Account Settings" },
+        ]}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* Tab Contents */}
       {loadingData ? (
@@ -125,7 +93,10 @@ export default function Profile() {
               {role === "student" && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🛍️ Orders & Resale</p>
+                    <p className="flex items-center gap-2 font-semibold text-navy">
+                      <Icon name="marketplace" className="h-4 w-4 text-accent-dark" />
+                      Orders &amp; Resale
+                    </p>
                     <p className="mt-1 text-xs text-slate">
                       Browse your active purchases and peer-to-peer listings on campus.
                     </p>
@@ -140,7 +111,10 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🔄 Rentals & Borrowing</p>
+                    <p className="flex items-center gap-2 font-semibold text-navy">
+                      <Icon name="rentals" className="h-4 w-4 text-accent-dark" />
+                      Rentals &amp; Borrowing
+                    </p>
                     <p className="mt-1 text-xs text-slate">
                       Track your equipment, book rentals, and return due dates.
                     </p>
@@ -155,7 +129,10 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="font-semibold text-navy">🎟️ Campus Events</p>
+                    <p className="flex items-center gap-2 font-semibold text-navy">
+                      <Icon name="events" className="h-4 w-4 text-accent-dark" />
+                      Campus Events
+                    </p>
                     <p className="mt-1 text-xs text-slate">
                       View your registered event tickets, club workshops, and QR passes.
                     </p>
@@ -174,7 +151,10 @@ export default function Profile() {
               {role === "merchant" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card className="p-5">
-                    <h4 className="font-bold text-navy">🏪 Merchant Storefront</h4>
+                    <h4 className="flex items-center gap-2 font-bold text-navy">
+                      <Icon name="store" className="h-4 w-4 text-accent-dark" />
+                      Merchant Storefront
+                    </h4>
                     <p className="mt-1 text-xs text-slate">
                       Manage your campus store catalog, upload new products, and configure store policies.
                     </p>
@@ -189,7 +169,10 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-5">
-                    <h4 className="font-bold text-navy">💳 Payouts & Commissions</h4>
+                    <h4 className="flex items-center gap-2 font-bold text-navy">
+                      <Icon name="wallet" className="h-4 w-4 text-accent-dark" />
+                      Payouts &amp; Commissions
+                    </h4>
                     <p className="mt-1 text-xs text-slate">
                       Track your earnings, commission rates, and linked bank or mobile money payout accounts.
                     </p>
@@ -207,7 +190,10 @@ export default function Profile() {
 
               {role === "organizer" && (
                 <Card className="p-5">
-                  <h4 className="font-bold text-navy">📅 Event Organizer Center</h4>
+                  <h4 className="flex items-center gap-2 font-bold text-navy">
+                    <Icon name="calendar" className="h-4 w-4 text-accent-dark" />
+                    Event Organizer Center
+                  </h4>
                   <p className="mt-1 text-xs text-slate">
                     Create new student events, manage ticket capacities, and validate attendee entry via QR check-in.
                   </p>
@@ -224,7 +210,10 @@ export default function Profile() {
 
               {(role === "admin" || role === "super_admin") && (
                 <Card className="p-5">
-                  <h4 className="font-bold text-navy">🛡️ University Administration</h4>
+                  <h4 className="flex items-center gap-2 font-bold text-navy">
+                    <Icon name="shield" className="h-4 w-4 text-accent-dark" />
+                    University Administration
+                  </h4>
                   <p className="mt-1 text-xs text-slate">
                     Review verification requests, manage student dispute cases, and monitor platform activity.
                   </p>

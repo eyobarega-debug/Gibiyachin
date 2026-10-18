@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
-import { Badge, Button, Card, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
+import { Badge, Button, Card, Checkbox, ErrorBanner, Input, PageHeader, Select, Spinner, SuccessBanner, TextArea } from "../components/ui";
 import VerificationDocument from "../components/VerificationDocument";
 import ProofImage from "../components/ProofImage";
+import Icon from "../components/Icon";
+import { useConfirm } from "../components/ConfirmProvider";
 
 const TABS = [
   "Merchants",
@@ -33,16 +35,18 @@ export default function Admin() {
           subtitle="Super Administrator System Oversight"
         />
         <Card className="p-8 text-center space-y-4">
-          <div className="text-4xl">🌐</div>
+          <div className="flex justify-center text-accent-dark">
+            <Icon name="university" className="h-10 w-10" />
+          </div>
           <h2 className="text-xl font-bold text-navy">Platform Superadmin Overview</h2>
           <p className="text-sm text-slate max-w-md mx-auto">
             You are logged in as a platform-level Super Administrator. Campus-specific administrative consoles (merchants, events, clubs, verifications, and disputes) are scoped to individual universities and require a campus administrator account.
           </p>
           <div className="rounded-lg bg-navy/5 p-4 text-xs text-slate max-w-md mx-auto space-y-1 text-left">
             <p className="font-semibold text-navy">Platform Superadmin Controls:</p>
-            <p>• Multi-campus university management via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/universities</code></p>
-            <p>• Global platform metrics via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/stats</code></p>
-            <p>• Platform-wide audit trails via <code className="bg-white px-1 py-0.5 rounded border border-slate/20">/api/super/audit-logs</code></p>
+            <p>• Multi-campus university management via <code className="glass-soft px-1 py-0.5 rounded border border-slate/20">/api/super/universities</code></p>
+            <p>• Global platform metrics via <code className="glass-soft px-1 py-0.5 rounded border border-slate/20">/api/super/stats</code></p>
+            <p>• Platform-wide audit trails via <code className="glass-soft px-1 py-0.5 rounded border border-slate/20">/api/super/audit-logs</code></p>
           </div>
           <div className="pt-2">
             <Button as={Link} to="/marketplace" variant="primary">
@@ -648,9 +652,18 @@ function AnalyticsTab() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => downloadCsv("orders")}>⬇ Export orders CSV</Button>
-        <Button variant="outline" onClick={() => downloadCsv("transactions")}>⬇ Export transactions CSV</Button>
-        <Button variant="outline" onClick={() => downloadCsv("users")}>⬇ Export users CSV</Button>
+        <Button variant="outline" onClick={() => downloadCsv("orders")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export orders CSV
+        </Button>
+        <Button variant="outline" onClick={() => downloadCsv("transactions")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export transactions CSV
+        </Button>
+        <Button variant="outline" onClick={() => downloadCsv("users")}>
+          <Icon name="download" className="h-4 w-4" />
+          Export users CSV
+        </Button>
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Students" value={stats.usersByRole.student || 0} />
@@ -696,7 +709,12 @@ function AuditLogTab() {
             <Card key={l.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
               <div>
                 <span className="font-mono text-xs text-accent-dark">{l.action}</span>{" "}
-                {l.target_type && <span className="text-slate">→ {l.target_type} {l.target_id?.slice(0, 8)}</span>}
+                {l.target_type && (
+                  <span className="inline-flex items-center gap-1 text-slate">
+                    <Icon name="arrowRight" className="h-3 w-3" />
+                    {l.target_type} {l.target_id?.slice(0, 8)}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-slate">
                 {l.actor_name || "system"} · {new Date(l.created_at).toLocaleString()}
@@ -718,6 +736,7 @@ function EventPaymentsTab() {
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [cancelPayment, setCancelPayment] = useState(false);
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -795,8 +814,17 @@ function EventPaymentsTab() {
                 </Button>
                 <Button
                   variant="accent"
+                  loading={busyId === t.payment_id}
                   disabled={busyId === t.payment_id}
-                  onClick={() => window.confirm(`Confirm receipt of ${Number(t.amount).toFixed(2)} birr from ${t.student_name}?`) && decide(t.payment_id, "approve")}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Confirm payment receipt",
+                      message: `Confirm receipt of ${Number(t.amount).toFixed(2)} birr from ${t.student_name}?`,
+                      confirmLabel: "Approve ticket",
+                      variant: "accent",
+                    });
+                    if (ok) decide(t.payment_id, "approve");
+                  }}
                 >
                   Approve Ticket
                 </Button>
@@ -921,7 +949,7 @@ function OrganizerPayoutsTab() {
             <div className="mb-4 space-y-1">
               <p className="text-xs font-semibold text-navy">Organizer's Registered Payout Accounts:</p>
               {payingOrg.payout_accounts.map((acc) => (
-                <div key={acc.id} className="text-xs bg-white rounded border border-slate/20 p-2">
+                <div key={acc.id} className="text-xs glass-soft rounded border border-slate/20 p-2">
                   <span className="font-semibold">{acc.account_name}</span> ({acc.method}) · <span className="font-mono">{acc.account_number}</span>
                   {acc.instructions && <span className="text-slate ml-2">— {acc.instructions}</span>}
                 </div>
@@ -1067,6 +1095,7 @@ function CommissionPaymentsTab() {
   const [openImgId, setOpenImgId] = useState(null);
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -1082,7 +1111,13 @@ function CommissionPaymentsTab() {
   }, []);
 
   async function verify(id) {
-    if (!window.confirm("Verify that this commission payment has been received in ግቢያችን's receiving account?")) return;
+    const ok = await confirm({
+      title: "Verify commission payment",
+      message: "Verify that this commission payment has been received in ግቢያችን's receiving account?",
+      confirmLabel: "Verify payment",
+      variant: "accent",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     setBusyId(id);
@@ -1213,6 +1248,7 @@ function ReceivingAccountsTab() {
     instructions: "",
     isDefault: false,
   });
+  const confirm = useConfirm();
 
   async function load() {
     try {
@@ -1245,7 +1281,13 @@ function ReceivingAccountsTab() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Deactivate this receiving account?")) return;
+    const ok = await confirm({
+      title: "Deactivate account?",
+      message: "Deactivate this receiving account? Buyers will no longer see it.",
+      confirmLabel: "Deactivate",
+      variant: "danger",
+    });
+    if (!ok) return;
     setError("");
     setSuccess("");
     try {
@@ -1304,16 +1346,13 @@ function ReceivingAccountsTab() {
             value={form.instructions}
             onChange={(e) => setForm({ ...form, instructions: e.target.value })}
           />
-          <label className="flex items-center gap-2 text-sm text-slate">
-            <input
-              type="checkbox"
-              checked={form.isDefault}
-              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-            />
-            Make this the primary default account for this campus
-          </label>
-          <Button type="submit" variant="accent" disabled={busy}>
-            {busy ? "Saving..." : "Add Receiving Account"}
+          <Checkbox
+            label="Make this the primary default account for this campus"
+            checked={form.isDefault}
+            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+          />
+          <Button type="submit" loading={busy} disabled={busy}>
+            {busy ? "Saving…" : "Add Receiving Account"}
           </Button>
         </form>
       </Card>

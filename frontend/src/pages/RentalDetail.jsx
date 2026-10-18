@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Button, Card, EmptyState, ErrorBanner, Input, PageHeader, Spinner } from "../components/ui";
+import { MediaImage } from "../components/cards";
 import { PAYMENT_METHOD, startCheckout } from "../api/checkout";
 
 export default function RentalDetail() {
@@ -84,8 +85,8 @@ export default function RentalDetail() {
     <div className="mx-auto max-w-2xl">
       <PageHeader title={item.title} subtitle={`Owned by ${item.owner_name}`} />
       <Card className="p-6">
-        <div className="mb-4 flex h-56 items-center justify-center rounded-lg bg-paper text-5xl">
-          {item.images?.[0] ? <img src={item.images[0]} alt="" className="h-full w-full rounded-lg object-cover" /> : "🎒"}
+        <div className="mb-4 h-56 overflow-hidden rounded-lg bg-paper">
+          <MediaImage src={item.images?.[0]} alt={item.title} icon="rentals" className="transition duration-500 hover:scale-[1.03]" />
         </div>
         <p className="text-sm text-slate">{item.description}</p>
         <div className="mt-3 flex gap-4 text-sm">

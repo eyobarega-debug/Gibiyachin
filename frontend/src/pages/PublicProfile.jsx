@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, Spinner } from "../components/ui";
+import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import ProfileHeader from "../components/profile/ProfileHeader";
 
 export default function PublicProfile() {
@@ -81,23 +83,16 @@ export default function PublicProfile() {
             <Card className="p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  {roleData.store.logo_url ? (
-                    <img
-                      src={roleData.store.logo_url}
-                      alt={roleData.store.name}
-                      className="h-16 w-16 rounded-xl object-cover border border-slate/15"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-accent/15 text-2xl">
-                      🏪
-                    </div>
-                  )}
+                  <div className="h-16 w-16 overflow-hidden rounded-xl border border-slate/15 bg-paper">
+                    <MediaImage src={roleData.store.logo_url} alt={roleData.store.name} icon="store" />
+                  </div>
                   <div>
                     <h2 className="text-xl font-bold text-navy">{roleData.store.name}</h2>
                     <p className="text-sm text-slate">{roleData.store.description || "Campus Merchant Store"}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <Badge tone="accent">
-                        ★ {roleData.rating || "5.0"} ({roleData.reviewCount || 0} reviews)
+                        <Icon name="star" className="h-3 w-3" />
+                        {roleData.rating || "5.0"} ({roleData.reviewCount || 0} reviews)
                       </Badge>
                       <Badge tone="ok">{roleData.store.status || "Active"}</Badge>
                     </div>
@@ -118,14 +113,8 @@ export default function PublicProfile() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeProducts.map((prod) => (
                   <Card key={prod.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-36 w-full bg-slate/10">
-                      {prod.images?.[0] ? (
-                        <img src={prod.images[0]} alt={prod.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate/40 text-2xl">
-                          📦
-                        </div>
-                      )}
+                    <div className="h-36 w-full overflow-hidden bg-slate/10">
+                      <MediaImage src={prod.images?.[0]} alt={prod.title} icon="products" />
                     </div>
                     <div className="p-3">
                       <h4 className="font-semibold text-navy truncate" title={prod.title}>
@@ -156,8 +145,8 @@ export default function PublicProfile() {
           {roleData.club && (
             <Card className="p-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-ok/15 text-2xl">
-                  🏛️
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-ok/15 text-ok">
+                  <Icon name="university" className="h-6 w-6" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-navy">{roleData.club.name}</h2>
@@ -180,11 +169,13 @@ export default function PublicProfile() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h4 className="font-bold text-navy">{evt.title}</h4>
-                        <p className="mt-1 text-xs text-slate">
-                          📍 {evt.location || "Campus Venue"}
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate">
+                          <Icon name="mapPin" className="h-3.5 w-3.5" />
+                          {evt.location || "Campus Venue"}
                         </p>
-                        <p className="text-xs text-slate">
-                          🗓️ {new Date(evt.date_time).toLocaleString()}
+                        <p className="flex items-center gap-1.5 text-xs text-slate">
+                          <Icon name="calendar" className="h-3.5 w-3.5" />
+                          {new Date(evt.date_time).toLocaleString()}
                         </p>
                       </div>
                       <Badge tone="ok">Open</Badge>
@@ -211,7 +202,7 @@ export default function PublicProfile() {
         <div className="space-y-6">
           {isCrossCampus && (
             <div className="flex items-center gap-2 rounded-lg border border-navy/15 bg-navy/5 px-4 py-3 text-xs text-slate">
-              <span>🔒</span>
+              <Icon name="shield" className="h-4 w-4 shrink-0" />
               <span>Some marketplace and rental activity is only visible to members of the same campus.</span>
             </div>
           )}
@@ -222,7 +213,8 @@ export default function PublicProfile() {
               <h3 className="text-lg font-bold text-navy">Resale Marketplace Items</h3>
               {roleData.sellerRating > 0 && (
                 <Badge tone="accent">
-                  ★ {roleData.sellerRating} ({roleData.reviewCount} reviews)
+                  <Icon name="star" className="h-3 w-3" />
+                  {roleData.sellerRating} ({roleData.reviewCount} reviews)
                 </Badge>
               )}
             </div>
@@ -231,14 +223,8 @@ export default function PublicProfile() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeListings.map((item) => (
                   <Card key={item.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-32 w-full bg-slate/10">
-                      {item.images?.[0] ? (
-                        <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate/40 text-xl">
-                          🏷️
-                        </div>
-                      )}
+                    <div className="h-32 w-full overflow-hidden bg-slate/10">
+                      <MediaImage src={item.images?.[0]} alt={item.title} icon="listings" />
                     </div>
                     <div className="p-3">
                       <h4 className="font-semibold text-navy truncate" title={item.title}>
@@ -272,14 +258,8 @@ export default function PublicProfile() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeRentals.map((rental) => (
                   <Card key={rental.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-32 w-full bg-slate/10">
-                      {rental.images?.[0] ? (
-                        <img src={rental.images[0]} alt={rental.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate/40 text-xl">
-                          🔄
-                        </div>
-                      )}
+                    <div className="h-32 w-full overflow-hidden bg-slate/10">
+                      <MediaImage src={rental.images?.[0]} alt={rental.title} icon="rentals" />
                     </div>
                     <div className="p-3">
                       <h4 className="font-semibold text-navy truncate" title={rental.title}>

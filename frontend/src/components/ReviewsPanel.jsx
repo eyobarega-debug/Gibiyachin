@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Button, Card, ErrorBanner, TextArea } from "./ui";
+import Icon from "./Icon";
 
 const PAGE_SIZE = 10;
 
@@ -54,7 +55,12 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
   return (
     <div className={className}>
       <h2 className="mb-3 text-lg font-semibold text-navy">
-        Reviews {count > 0 && <span className="text-sm font-normal text-slate">· ⭐ {avgRating.toFixed(1)} ({count})</span>}
+        Reviews {count > 0 && (
+          <span className="inline-flex items-center gap-1 align-middle text-sm font-normal text-slate">
+            ·<Icon name="star" className="h-3.5 w-3.5" />
+            {avgRating.toFixed(1)} ({count})
+          </span>
+        )}
       </h2>
 
       {count > 0 && breakdown.length > 0 && (
@@ -62,7 +68,10 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
           <div className="space-y-1">
             {breakdown.map((b) => (
               <div key={b.rating} className="flex items-center gap-2 text-xs text-slate">
-                <span className="w-6">{b.rating}★</span>
+                <span className="flex w-6 items-center gap-0.5">
+                  {b.rating}
+                  <Icon name="star" className="h-3 w-3" />
+                </span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate/10">
                   <div className="h-full rounded-full bg-accent" style={{ width: `${(b.count / totalBars) * 100}%` }} />
                 </div>
@@ -85,8 +94,9 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
                   key={n}
                   onClick={() => setRating(n)}
                   className={n <= rating ? "text-accent" : "text-slate/30"}
+                  aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
                 >
-                  ★
+                  <Icon name="star" className="h-5 w-5" />
                 </button>
               ))}
             </div>
@@ -105,7 +115,15 @@ export default function ReviewsPanel({ targetType, targetId, className = "" }) {
             <Card key={r.id} className="p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-navy">{r.author_name}</span>
-                <span className="text-accent">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span>
+                <span className="flex items-center gap-0.5 text-accent" aria-label={`${r.rating} out of 5 stars`}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Icon
+                      key={i}
+                      name="star"
+                      className={`h-3.5 w-3.5 ${i < r.rating ? "text-accent" : "text-slate/30"}`}
+                    />
+                  ))}
+                </span>
               </div>
               {r.comment && <p className="mt-1 text-sm text-slate">{r.comment}</p>}
               {r.created_at && <p className="mt-1 text-xs text-slate/70">{new Date(r.created_at).toLocaleDateString()}</p>}

@@ -1,14 +1,15 @@
 import { Link } from "react-router-dom";
 import { Badge, Card, EmptyState } from "../ui";
+import Icon from "../Icon";
 
 const TYPE_ICONS = {
-  order: "🛍️",
-  rental: "🔄",
-  listing: "🏷️",
-  ticket: "🎟️",
-  product: "📦",
-  event: "📅",
-  audit: "📋",
+  order: "marketplace",
+  rental: "refresh",
+  listing: "listings",
+  ticket: "tickets",
+  product: "products",
+  event: "calendar",
+  audit: "file",
 };
 
 const STATUS_TONES = {
@@ -38,7 +39,7 @@ export default function ProfileActivity({ activities = [] }) {
   return (
     <div className="space-y-3">
       {activities.map((item, index) => {
-        const icon = TYPE_ICONS[item.type] || "📌";
+        const icon = TYPE_ICONS[item.type] || "mapPin";
         const tone = STATUS_TONES[item.status] || "slate";
         const formattedDate = item.date
           ? new Date(item.date).toLocaleDateString(undefined, {
@@ -55,8 +56,8 @@ export default function ProfileActivity({ activities = [] }) {
             className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:border-navy/30"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate/10 text-lg">
-                {icon}
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/6 text-muted">
+                <Icon name={icon} className="h-5 w-5" />
               </div>
               <div>
                 <p className="font-medium text-navy">{item.title}</p>
