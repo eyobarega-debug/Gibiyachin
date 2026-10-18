@@ -115,8 +115,8 @@ export default function TicketVerifyPage() {
 
       {!isAuthorized ? (
         <Card className="p-6 text-center">
-          <p className="font-semibold text-navy">Staff Authorization Required</p>
-          <p className="mt-1 text-sm text-slate">
+          <p className="font-semibold text-ink">Staff Authorization Required</p>
+          <p className="mt-1 text-sm text-muted">
             You must be logged in as an event organizer or university administrator to admit attendees.
           </p>
           <Button as={Link} to="/login" variant="accent" className="mt-4">
@@ -127,7 +127,7 @@ export default function TicketVerifyPage() {
         <div className="space-y-5">
           {!token && (
             <Card className="p-5">
-              <h2 className="mb-3 font-semibold text-navy">Scan Ticket QR Code</h2>
+              <h2 className="mb-3 font-semibold text-ink">Scan Ticket QR Code</h2>
               <QrScanner onScan={inspectToken} />
             </Card>
           )}
@@ -164,36 +164,36 @@ export default function TicketVerifyPage() {
                   {RESULT_STYLE[scanResult.result]?.label || scanResult.result}
                 </Badge>
 
-                <h2 className="mt-3 text-xl font-bold text-navy">
+                <h2 className="mt-3 text-xl font-bold text-ink">
                   {scanResult.eventTitle || scanResult.ticket?.event_title || "Campus Event"}
                 </h2>
               </div>
 
               {/* Attendee Details Card */}
               {(scanResult.ticket || scanResult.attendeeName) && (
-                <div className="mt-4 rounded-xl border border-slate/15 glass-soft p-4 shadow-xs">
+                <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/80 p-4 shadow-xs">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Attendee</span>
-                      <p className="font-bold text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Attendee</span>
+                      <p className="font-bold text-ink">
                         {scanResult.attendeeName || scanResult.ticket?.holder_name}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Ticket Number</span>
-                      <p className="font-mono font-bold text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Ticket Number</span>
+                      <p className="font-mono font-bold text-ink">
                         {scanResult.ticketNumber || scanResult.ticket?.ticket_number || scanResult.ticket?.id?.slice(0, 8)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Ticket Tier</span>
-                      <p className="font-medium text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Ticket Tier</span>
+                      <p className="font-medium text-ink">
                         {scanResult.ticketType || scanResult.ticket?.ticket_type}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate uppercase">Campus</span>
-                      <p className="font-medium text-navy">
+                      <span className="text-[10px] font-semibold text-muted uppercase">Campus</span>
+                      <p className="font-medium text-ink">
                         {scanResult.ticket?.university_name || "Campus Community"}
                       </p>
                     </div>
@@ -202,7 +202,7 @@ export default function TicketVerifyPage() {
               )}
 
               {scanResult.reason && (
-                <p className="mt-3 text-center text-xs text-slate">{scanResult.reason}</p>
+                <p className="mt-3 text-center text-xs text-muted">{scanResult.reason}</p>
               )}
 
               {scanResult.previousScanAt && (
@@ -226,7 +226,7 @@ export default function TicketVerifyPage() {
                     variant="outline"
                     onClick={handleReverse}
                     disabled={reversing}
-                    className="w-full text-xs text-slate hover:text-danger"
+                    className="w-full text-xs text-muted hover:text-danger"
                   >
                     {reversing ? (
                       "Reversing..."

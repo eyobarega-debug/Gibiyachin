@@ -11,14 +11,17 @@ import { visibleTabs } from "../config/roles";
 /* ------------------------------------------------------------------ */
 function Brand({ onClick }) {
   return (
-    <Link to="/" onClick={onClick} className="group flex items-center gap-2.5">
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/25 bg-gradient-to-b from-white to-[#c3ccd8] text-lg font-bold text-[#0b0d11] shadow-[0_8px_20px_-10px_rgba(255,255,255,0.7),inset_0_1px_0_rgba(255,255,255,0.9)]">
+    <Link to="/" onClick={onClick} className="group flex items-center gap-3">
+      <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-white/90 bg-white/90 text-lg font-black text-slate-900 shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition duration-200 group-hover:scale-105">
         ግ
       </span>
       <span className="flex flex-col leading-none">
-        <span className="text-mirror text-base font-bold tracking-tight">ግቢያችን</span>
-        <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-muted">
-          Gibiyachin
+        <span className="text-mirror text-lg font-extrabold tracking-tight">ግቢያችን</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+          GIBIYACHIN
+        </span>
+        <span className="hidden xl:inline text-[9px] font-medium text-slate-400 tracking-normal mt-0.5">
+          University Marketplace &amp; Campus Services
         </span>
       </span>
     </Link>
@@ -29,10 +32,10 @@ function Brand({ onClick }) {
 /* Sidebar                                                             */
 /* ------------------------------------------------------------------ */
 function navItemClass({ isActive }) {
-  return `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
+  return `group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition duration-200 ${
     isActive
-      ? "border border-white/15 bg-white/10 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_16px_32px_-22px_rgba(255,255,255,0.55)]"
-      : "border border-transparent text-muted hover:border-white/8 hover:bg-white/5 hover:text-ink"
+      ? "border border-white/90 bg-white text-slate-900 shadow-sm font-semibold"
+      : "border border-transparent text-slate-600 hover:border-slate-200/60 hover:bg-white/60 hover:text-slate-900"
   }`;
 }
 
@@ -150,32 +153,32 @@ function UserMenu({ user, unread, onLogout }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-white/12 bg-white/5 py-1 pl-1 pr-2.5 transition hover:border-white/20 hover:bg-white/10"
+        className="flex items-center gap-2 rounded-full border border-white/90 bg-white/80 py-1 pl-1 pr-2.5 shadow-sm transition hover:bg-white"
         aria-haspopup="menu"
         aria-expanded={open}
       >
         {user.avatar_url ? (
           <img src={user.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-b from-white to-[#c3ccd8] text-xs font-bold text-[#0b0d11]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1c222c] text-xs font-bold text-white">
             {initial}
           </span>
         )}
         <span className="hidden max-w-[120px] flex-col items-start leading-tight sm:flex">
-          <span className="truncate text-sm font-medium text-ink">{user.name?.split(" ")[0]}</span>
-          <span className="truncate text-[10px] text-muted">{roleLabel(user.role)}</span>
+          <span className="truncate text-sm font-semibold text-slate-800">{user.name?.split(" ")[0]}</span>
+          <span className="truncate text-[10px] text-slate-500">{roleLabel(user.role)}</span>
         </span>
-        <Icon name="chevron" className="h-4 w-4 text-muted" />
+        <Icon name="chevron" className="h-4 w-4 text-slate-400" />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="glass-strong animate-rise absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl shadow-2xl"
+          className="glass-panel animate-rise absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl"
         >
-          <div className="border-b border-white/8 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-            <p className="truncate text-xs text-muted">{user.email}</p>
+          <div className="border-b border-slate-200/70 bg-slate-50/70 px-4 py-3">
+            <p className="truncate text-sm font-semibold text-slate-900">{user.name}</p>
+            <p className="truncate text-xs text-slate-500">{user.email}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Badge tone="accent">{roleLabel(user.role)}</Badge>
               {user.verified && <Badge tone="ok">Verified</Badge>}
@@ -190,14 +193,14 @@ function UserMenu({ user, unread, onLogout }) {
               Notifications
             </MenuLink>
           </div>
-          <div className="border-t border-white/8 p-1.5">
+          <div className="border-t border-slate-200/70 p-1.5">
             <button
               type="button"
               onClick={() => {
                 setOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-danger transition hover:bg-danger/10"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-danger transition hover:bg-red-50"
             >
               <Icon name="logout" className="h-4 w-4" />
               Log out
@@ -215,7 +218,7 @@ function MenuLink({ to, icon, children, onClick, badge }) {
       to={to}
       onClick={onClick}
       role="menuitem"
-      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:bg-white/8 hover:text-ink"
+      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
     >
       <Icon name={icon} className="h-4 w-4" />
       <span className="flex-1">{children}</span>
@@ -241,14 +244,14 @@ function SearchBox({ className = "", onDone }) {
 
   return (
     <form onSubmit={submit} role="search" className={`relative ${className}`}>
-      <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
       <input
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search products, events, rentals…"
         aria-label="Search the marketplace"
-        className="glass-input w-full rounded-full py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-white/35 focus:ring-2 focus:ring-white/15"
+        className="glass-input w-full rounded-full bg-white/80 border border-slate-200/90 py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none shadow-xs transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200"
       />
     </form>
   );
@@ -271,14 +274,14 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
-      <div className="glass-strong absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/8 px-4 py-3.5">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+      <div className="glass-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-slate-200/80 bg-white/95 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3.5">
           <Brand onClick={onClose} />
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted transition hover:bg-white/8 hover:text-ink"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             aria-label="Close menu"
           >
             <Icon name="close" className="h-5 w-5" />
@@ -286,9 +289,9 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
         </div>
 
         {user && (
-          <div className="border-b border-white/8 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-            <p className="truncate text-xs text-muted">{user.email}</p>
+          <div className="border-b border-slate-200/70 bg-slate-50/50 px-4 py-3">
+            <p className="truncate text-sm font-semibold text-slate-900">{user.name}</p>
+            <p className="truncate text-xs text-slate-500">{user.email}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Badge tone="accent">{roleLabel(user.role)}</Badge>
               {user.university_name && <Badge tone="slate">{user.university_name}</Badge>}
@@ -300,7 +303,7 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
           <SideNav user={user} onNavigate={onClose} />
         </div>
 
-        <div className="border-t border-white/8 p-3">
+        <div className="border-t border-slate-200/70 p-3">
           {user ? (
             <div className="flex flex-col gap-1">
               <NavLink to="/notifications" onClick={onClose} className={navItemClass}>
@@ -318,7 +321,7 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
                   onClose();
                   onLogout();
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger transition hover:bg-red-50"
               >
                 <Icon name="logout" className="h-[18px] w-[18px]" />
                 Log out
@@ -329,14 +332,14 @@ function MobileDrawer({ open, onClose, user, unread, onLogout }) {
               <Link
                 to="/login"
                 onClick={onClose}
-                className="rounded-xl border border-white/12 px-3 py-2.5 text-center text-sm font-medium text-ink transition hover:bg-white/8"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-sm font-medium text-slate-800 shadow-xs transition hover:bg-slate-50"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
                 onClick={onClose}
-                className="rounded-xl bg-gradient-to-b from-white to-[#cbd5e1] px-3 py-2.5 text-center text-sm font-medium text-[#0b0d11]"
+                className="rounded-xl bg-[#1c222c] hover:bg-[#2c3545] px-3 py-2.5 text-center text-sm font-medium text-white shadow-sm"
               >
                 Sign up
               </Link>
@@ -359,7 +362,7 @@ function BottomNav({ user }) {
       : { to: "/login", label: "Log in", icon: "user" },
   ];
   return (
-    <nav className="glass-strong fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-white/8 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="glass-strong fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-slate-200/80 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       {items.map((it) => (
         <NavLink
           key={it.to}
@@ -367,7 +370,7 @@ function BottomNav({ user }) {
           end={it.end}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition ${
-              isActive ? "text-ink" : "text-muted"
+              isActive ? "text-slate-900 font-semibold" : "text-slate-500 hover:text-slate-800"
             }`
           }
         >
@@ -403,12 +406,12 @@ export default function AppLayout({ children }) {
         <div className="bg-streak" />
       </div>
 
-      <header className="glass-strong sticky top-0 z-40 border-x-0 border-t-0">
+      <header className="glass-strong sticky top-0 z-40 border-b border-slate-200/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="-ml-1 rounded-xl p-2 text-muted transition hover:bg-white/8 hover:text-ink lg:hidden"
+            className="-ml-1 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 lg:hidden"
             aria-label="Open navigation menu"
           >
             <Icon name="menu" />
@@ -425,12 +428,12 @@ export default function AppLayout({ children }) {
               <>
                 <Link
                   to="/notifications"
-                  className="glass relative flex h-10 w-10 items-center justify-center rounded-full text-muted transition hover:text-ink"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/90 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white hover:text-slate-900"
                   aria-label="Notifications"
                 >
                   <Icon name="bell" />
                   {unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gradient-to-b from-white to-[#cbd5e1] px-1 text-[10px] font-bold text-[#0b0d11] ring-2 ring-[#0e1015]">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#1c222c] px-1 text-[10px] font-bold text-white ring-2 ring-white">
                       {unread > 99 ? "99+" : unread}
                     </span>
                   )}
@@ -441,13 +444,13 @@ export default function AppLayout({ children }) {
               <>
                 <Link
                   to="/login"
-                  className="rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:bg-white/8 hover:text-ink"
+                  className="rounded-xl px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-900"
                 >
                   Log in
                 </Link>
                 <Link
                   to="/register"
-                  className="rounded-xl bg-gradient-to-b from-white to-[#cbd5e1] px-4 py-2 text-sm font-medium text-[#0b0d11] shadow-[0_10px_30px_-14px_rgba(255,255,255,0.5)] transition hover:to-white"
+                  className="rounded-xl bg-[#1c222c] hover:bg-[#2c3545] px-4 py-2 text-sm font-medium text-white shadow-sm transition"
                 >
                   Sign up
                 </Link>
@@ -460,20 +463,89 @@ export default function AppLayout({ children }) {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-[1600px]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col overflow-y-auto border-r border-white/8 bg-white/[0.02] backdrop-blur-sm lg:flex">
-          <div className="px-5 pb-3 pt-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted/70">
-              University Marketplace
+      <div className="mx-auto flex max-w-[1600px] gap-6 px-4 sm:px-6">
+        <aside className="sticky top-20 my-4 hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col overflow-y-auto rounded-3xl glass-sidebar p-2.5 shadow-xl lg:flex border border-white/80">
+          <div className="px-3.5 pb-2 pt-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+              Campus Marketplace
             </p>
-            <p className="mt-0.5 text-[11px] text-muted/70">Buy • Sell • Rent • Connect</p>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-400">Buy • Sell • Rent • Connect</p>
           </div>
-          <div className="hairline mx-5 h-px" />
-          <SideNav user={user} />
+
+          <div className="hairline mx-2 my-2 h-px" />
+
+          {/* Sidebar Navigation */}
+          <div className="thin-scrollbar flex-1 overflow-y-auto">
+            <SideNav user={user} />
+
+            {/* Campus Verified Banner in Sidebar */}
+            <div className="mx-2 my-3 rounded-2xl border border-slate-200/80 bg-white/60 p-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200/70">
+                  <Icon name="university" className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-slate-800">
+                    {user?.university_name || "AASTU Campus"}
+                  </p>
+                  <p className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Verified Campus
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Card in Sidebar */}
+            <div className="mx-2 mb-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3.5 shadow-xs">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Quick Action
+              </p>
+              <p className="mt-1 text-xs text-slate-600">Post items to sell or rent to peers</p>
+              <Link
+                to="/listings/new"
+                className="mt-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-[#1c222c] hover:bg-[#2c3545] px-3 py-2 text-xs font-medium text-white shadow-sm transition"
+              >
+                <span>Create Listing</span>
+                <Icon name="arrowRight" className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* User profile row at bottom of sidebar */}
+          <div className="mt-auto border-t border-slate-200/70 pt-2 px-1">
+            {user ? (
+              <Link
+                to="/profile"
+                className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-white/70 transition"
+              >
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1c222c] text-xs font-bold text-white">
+                    {user.name?.[0]?.toUpperCase() || "U"}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 leading-tight">
+                  <p className="truncate text-xs font-semibold text-slate-800">{user.name}</p>
+                  <p className="truncate text-[10px] text-slate-500">{roleLabel(user.role)}</p>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex flex-col gap-1 p-1">
+                <Link
+                  to="/login"
+                  className="flex items-center justify-center rounded-xl border border-slate-300/80 bg-white/70 py-1.5 text-xs font-medium text-slate-700 hover:bg-white transition"
+                >
+                  Log in
+                </Link>
+              </div>
+            )}
+          </div>
         </aside>
 
-        <main className="min-w-0 flex-1 pb-24 lg:pb-10">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="min-w-0 flex-1 pb-24 lg:pb-12">
+          <div className="mx-auto max-w-7xl py-4 sm:py-6">
             <div key={location.pathname} className="animate-fade">
               {children}
             </div>

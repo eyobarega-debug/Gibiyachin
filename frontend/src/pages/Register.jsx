@@ -79,7 +79,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-primary underline">
+          <Link to="/login" className="font-medium text-ink underline decoration-slate-300 hover:decoration-slate-500">
             Log in
           </Link>
         </>
@@ -129,7 +129,7 @@ export default function Register() {
             </option>
           ))}
         </Select>
-        <p className="text-xs text-slate">
+        <p className="text-xs text-muted">
           Using your university email auto-verifies you (FR-002). Otherwise an admin reviews your account.
         </p>
 

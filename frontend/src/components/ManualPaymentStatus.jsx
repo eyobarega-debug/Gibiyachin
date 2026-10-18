@@ -8,7 +8,7 @@ export default function ManualPaymentStatus({ paymentId, status, provider, rejec
   if (status !== "pending" && status !== "under_review") return null;
 
   return (
-    <div className="mt-3 w-full rounded-lg bg-paper p-3">
+    <div className="mt-3 w-full rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {status === "pending" ? (
           <div>
@@ -16,13 +16,13 @@ export default function ManualPaymentStatus({ paymentId, status, provider, rejec
             {rejectReason ? (
               <p className="mt-1 text-xs text-danger">The seller rejected your last proof: {rejectReason}</p>
             ) : (
-              <p className="mt-1 text-xs text-slate">Send the money to the seller, then upload your screenshot.</p>
+              <p className="mt-1 text-xs text-muted">Send the money to the seller, then upload your screenshot.</p>
             )}
           </div>
         ) : (
           <div>
             <Badge tone="accent">Waiting for the seller to approve</Badge>
-            <p className="mt-1 text-xs text-slate">You'll be notified as soon as they confirm your payment.</p>
+            <p className="mt-1 text-xs text-muted">You'll be notified as soon as they confirm your payment.</p>
           </div>
         )}
         <Button as={Link} to={`/pay/manual/${paymentId}`} state={{ returnTo, label }} variant={status === "pending" ? "accent" : "outline"}>

@@ -17,10 +17,10 @@ export default function ProfileStats({ stats, role = "student" }) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((it) => (
-          <Card key={it.label} className="p-4 text-center transition hover:border-navy/30">
+          <Card key={it.label} className="p-4 text-center transition hover:border-white/20">
             <Icon name={it.icon} className="mx-auto h-6 w-6 text-muted" />
-            <p className="mt-1 text-2xl font-bold text-navy">{it.value}</p>
-            <p className="text-xs font-medium text-slate">{it.label}</p>
+            <p className="mt-1 text-2xl font-bold text-ink">{it.value}</p>
+            <p className="text-xs font-medium text-muted">{it.label}</p>
           </Card>
         ))}
       </div>
@@ -34,7 +34,7 @@ export default function ProfileStats({ stats, role = "student" }) {
       { label: "Completed Orders", value: stats.completedOrders || 0, icon: "checkCircle" },
       {
         label: "Total Revenue",
-        value: `$${Number(stats.totalRevenue || 0).toFixed(2)}`,
+        value: `${Number(stats.totalRevenue || 0).toFixed(2)} ETB`,
         icon: "sales",
       },
       {
@@ -52,10 +52,10 @@ export default function ProfileStats({ stats, role = "student" }) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((it) => (
-          <Card key={it.label} className="p-4 text-center transition hover:border-navy/30">
+          <Card key={it.label} className="p-4 text-center transition hover:border-white/20">
             <Icon name={it.icon} className="mx-auto h-6 w-6 text-muted" />
-            <p className="mt-1 text-xl font-bold text-navy">{it.value}</p>
-            <p className="text-xs font-medium text-slate">{it.label}</p>
+            <p className="mt-1 text-xl font-bold text-ink">{it.value}</p>
+            <p className="text-xs font-medium text-muted">{it.label}</p>
           </Card>
         ))}
       </div>
@@ -75,10 +75,10 @@ export default function ProfileStats({ stats, role = "student" }) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((it) => (
-          <Card key={it.label} className="p-4 text-center transition hover:border-navy/30">
+          <Card key={it.label} className="p-4 text-center transition hover:border-white/20">
             <Icon name={it.icon} className="mx-auto h-6 w-6 text-muted" />
-            <p className="mt-1 text-2xl font-bold text-navy">{it.value}</p>
-            <p className="text-xs font-medium text-slate">{it.label}</p>
+            <p className="mt-1 text-2xl font-bold text-ink">{it.value}</p>
+            <p className="text-xs font-medium text-muted">{it.label}</p>
           </Card>
         ))}
       </div>
@@ -94,7 +94,7 @@ export default function ProfileStats({ stats, role = "student" }) {
       { label: "Platform Orders", value: stats.totalOrders || 0, icon: "marketplace" },
       {
         label: "Platform Revenue",
-        value: `$${Number(stats.platformRevenue || 0).toFixed(2)}`,
+        value: `${Number(stats.platformRevenue || 0).toFixed(2)} ETB`,
         icon: "sales",
       },
     ];
@@ -102,10 +102,10 @@ export default function ProfileStats({ stats, role = "student" }) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((it) => (
-          <Card key={it.label} className="p-4 text-center transition hover:border-navy/30">
+          <Card key={it.label} className="p-4 text-center transition hover:border-white/20">
             <Icon name={it.icon} className="mx-auto h-6 w-6 text-muted" />
-            <p className="mt-1 text-xl font-bold text-navy">{it.value}</p>
-            <p className="text-xs font-medium text-slate">{it.label}</p>
+            <p className="mt-1 text-xl font-bold text-ink">{it.value}</p>
+            <p className="text-xs font-medium text-muted">{it.label}</p>
           </Card>
         ))}
       </div>

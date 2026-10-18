@@ -6,21 +6,20 @@ import Icon from "./Icon";
 /* ------------------------------------------------------------------ */
 
 const BUTTON_VARIANTS = {
-  // `primary` and `accent` intentionally resolve to the same silver accent
-  // so the platform has a single, consistent premium accent throughout.
+  // Primary dark charcoal pill button matching the reference design
   primary:
-    "bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11] shadow-[0_10px_30px_-14px_rgba(255,255,255,0.5)] hover:to-white",
+    "bg-[#1c222c] hover:bg-[#2c3545] text-white shadow-sm shadow-slate-900/10 active:scale-[0.99]",
   accent:
-    "bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11] shadow-[0_10px_30px_-14px_rgba(255,255,255,0.5)] hover:to-white",
+    "bg-[#1c222c] hover:bg-[#2c3545] text-white shadow-sm shadow-slate-900/10 active:scale-[0.99]",
   secondary:
-    "border border-white/12 bg-white/5 text-ink hover:bg-white/10 hover:border-white/20",
+    "border border-white/90 bg-white/80 text-slate-800 hover:bg-white hover:border-slate-300 shadow-sm shadow-slate-900/5",
   outline:
-    "border border-white/15 bg-transparent text-ink hover:bg-white/8",
-  ghost: "text-muted hover:bg-white/8 hover:text-ink",
+    "border border-slate-300/80 bg-white/50 text-slate-700 hover:bg-white/90 hover:text-slate-900 hover:border-slate-400",
+  ghost: "text-muted hover:bg-slate-200/50 hover:text-ink",
   danger:
-    "border border-danger/30 bg-danger/15 text-danger hover:bg-danger/25",
+    "border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20",
   success:
-    "border border-ok/30 bg-ok/15 text-ok hover:bg-ok/25",
+    "border border-ok/30 bg-ok/10 text-ok hover:bg-ok/20",
 };
 
 const BUTTON_SIZES = {
@@ -51,7 +50,7 @@ export function Button({
       aria-busy={loading || undefined}
       {...props}
     >
-      {loading && <Spinner className="h-4 w-4 border-white/30 border-t-current" />}
+      {loading && <Spinner className="h-4 w-4 border-slate-300 border-t-current" />}
       {children}
     </As>
   );
@@ -74,14 +73,14 @@ export function Card({ className = "", interactive = false, children, ...props }
 
 export function Badge({ tone = "slate", children, className = "" }) {
   const tones = {
-    slate: "border-white/12 bg-white/6 text-muted",
-    navy: "border-white/12 bg-white/6 text-ink",
-    accent: "border-white/18 bg-white/10 text-ink",
-    primary: "border-white/18 bg-white/10 text-ink",
-    ok: "border-ok/30 bg-ok/12 text-ok",
-    warn: "border-warn/30 bg-warn/12 text-warn",
-    danger: "border-danger/30 bg-danger/12 text-danger",
-    info: "border-info/30 bg-info/12 text-info",
+    slate: "border-slate-200/90 bg-slate-100/90 text-slate-700",
+    navy: "border-slate-300/80 bg-slate-200/80 text-slate-800",
+    accent: "border-slate-300/80 bg-slate-900/5 text-slate-800 font-semibold",
+    primary: "border-slate-300/80 bg-slate-900/5 text-slate-800 font-semibold",
+    ok: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warn: "border-amber-200 bg-amber-50 text-amber-800",
+    danger: "border-red-200 bg-red-50 text-red-700",
+    info: "border-blue-200 bg-blue-50 text-blue-700",
   };
   return (
     <span
@@ -165,7 +164,7 @@ export function Select({ label, error, hint, required, className = "", id, child
         id={fieldId}
         required={required}
         aria-invalid={error ? "true" : undefined}
-        className={`${CONTROL_BASE} ${error ? CONTROL_ERR : CONTROL_OK} appearance-none bg-[#141619] pr-9 ${className}`}
+        className={`${CONTROL_BASE} ${error ? CONTROL_ERR : CONTROL_OK} appearance-none bg-white pr-9 ${className}`}
         {...props}
       >
         {children}
@@ -184,7 +183,7 @@ export function Checkbox({ label, error, hint, required, className = "", id, ...
           id={fieldId}
           type="checkbox"
           required={required}
-          className="mt-0.5 h-4 w-4 rounded border-white/25 bg-white/5 text-primary accent-white focus:ring-2 focus:ring-white/25"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-[#1c222c] accent-[#1c222c] focus:ring-2 focus:ring-slate-400"
           {...props}
         />
         <span>
@@ -209,7 +208,7 @@ export function Checkbox({ label, error, hint, required, className = "", id, ...
 export function Spinner({ className = "" }) {
   return (
     <span
-      className={`inline-block h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white ${className}`}
+      className={`inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800 ${className}`}
       role="status"
       aria-label="Loading"
     />
@@ -217,7 +216,7 @@ export function Spinner({ className = "" }) {
 }
 
 export function Skeleton({ className = "" }) {
-  return <div className={`animate-pulse rounded-lg bg-white/6 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-slate-200/70 ${className}`} />;
 }
 
 export function LoadingState({ label = "Loading…" }) {
@@ -286,9 +285,9 @@ export function SuccessBanner({ message, title, onClose }) {
 export function EmptyState({ title, subtitle, action, icon, className = "" }) {
   return (
     <div
-      className={`glass-soft flex flex-col items-center justify-center gap-2 rounded-2xl border-dashed px-6 py-16 text-center ${className}`}
+      className={`glass-soft flex flex-col items-center justify-center gap-2 rounded-2xl border-dashed border-slate-300 px-6 py-16 text-center ${className}`}
     >
-      <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/6 text-muted">
+      <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-200/60 text-slate-600">
         {icon && typeof icon === "string" ? <Icon name={icon} className="h-6 w-6" /> : icon || <Icon name="sparkles" className="h-6 w-6" />}
       </div>
       <p className="font-semibold text-ink">{title}</p>
@@ -312,9 +311,9 @@ export function Breadcrumbs({ items = [] }) {
                   {item.label}
                 </a>
               ) : (
-                <span className={last ? "font-medium text-muted" : ""}>{item.label}</span>
+                <span className={last ? "font-medium text-slate-800" : ""}>{item.label}</span>
               )}
-              {!last && <span className="text-white/20">/</span>}
+              {!last && <span className="text-slate-400">/</span>}
             </li>
           );
         })}
@@ -345,7 +344,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs, className = "
 export function Tabs({ items = [], value, onChange, className = "" }) {
   return (
     <div
-      className={`flex flex-wrap gap-1.5 rounded-2xl border border-white/8 bg-white/4 p-1.5 ${className}`}
+      className={`flex flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-200/40 p-1.5 ${className}`}
       role="tablist"
     >
       {items.map((t) => {
@@ -359,15 +358,15 @@ export function Tabs({ items = [], value, onChange, className = "" }) {
             onClick={() => onChange?.(t.key)}
             className={`rounded-xl px-3.5 py-2 text-sm font-medium transition duration-200 ${
               active
-                ? "bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11] shadow-sm"
-                : "text-muted hover:bg-white/6 hover:text-ink"
+                ? "bg-white text-slate-900 shadow-sm font-semibold"
+                : "text-muted hover:bg-white/60 hover:text-ink"
             }`}
           >
             {t.label}
             {t.count != null && (
               <span
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
-                  active ? "bg-black/10 text-[#0b0d11]" : "bg-white/8 text-muted"
+                  active ? "bg-slate-100 text-slate-800" : "bg-slate-200/60 text-muted"
                 }`}
               >
                 {t.count}
@@ -386,11 +385,11 @@ export function Tabs({ items = [], value, onChange, className = "" }) {
 
 export function Table({ head = [], children, className = "" }) {
   return (
-    <div className={`thin-scrollbar overflow-x-auto rounded-2xl border border-white/8 ${className}`}>
+    <div className={`thin-scrollbar overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/60 shadow-sm ${className}`}>
       <table className="w-full min-w-[560px] border-collapse text-sm">
         {head.length > 0 && (
           <thead>
-            <tr className="border-b border-white/8 bg-white/4 text-left text-xs font-semibold uppercase tracking-wide text-muted">
+            <tr className="border-b border-slate-200/80 bg-slate-100/70 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
               {head.map((h, i) => (
                 <th key={i} className="px-4 py-3">
                   {h}
@@ -399,7 +398,7 @@ export function Table({ head = [], children, className = "" }) {
             </tr>
           </thead>
         )}
-        <tbody className="divide-y divide-white/6">{children}</tbody>
+        <tbody className="divide-y divide-slate-200/60">{children}</tbody>
       </table>
     </div>
   );
@@ -433,7 +432,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md", cla
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-md sm:items-center"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-md sm:items-center"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
@@ -442,15 +441,15 @@ export function Modal({ open, onClose, title, children, footer, size = "md", cla
     >
       <div
         ref={panelRef}
-        className={`glass-strong animate-rise my-8 w-full ${MODAL_SIZES[size] || MODAL_SIZES.md} overflow-hidden rounded-2xl shadow-2xl ${className}`}
+        className={`glass-panel animate-rise my-8 w-full ${MODAL_SIZES[size] || MODAL_SIZES.md} overflow-hidden rounded-2xl shadow-2xl ${className}`}
       >
         {title && (
-          <div className="flex items-center justify-between gap-4 border-b border-white/8 px-5 py-3.5">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200/80 px-5 py-3.5">
             <h2 className="text-base font-semibold text-ink">{title}</h2>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted transition hover:bg-white/8 hover:text-ink"
+              className="rounded-lg p-1.5 text-muted transition hover:bg-slate-100 hover:text-ink"
               aria-label="Close"
             >
               <Icon name="close" className="h-4 w-4" />
@@ -459,7 +458,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md", cla
         )}
         <div className="px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/8 bg-black/20 px-5 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-slate-50/70 px-5 py-3">
             {footer}
           </div>
         )}

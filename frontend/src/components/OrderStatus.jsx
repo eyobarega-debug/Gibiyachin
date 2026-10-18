@@ -58,28 +58,28 @@ export default function OrderStatus({ status, className = "" }) {
           <div key={step.key} className="flex flex-1 flex-col items-center" role="listitem">
             <div className="flex w-full items-center">
               <span
-                className={`h-px flex-1 ${i === 0 ? "bg-transparent" : done || active ? "bg-white/25" : "bg-white/8"}`}
+                className={`h-0.5 flex-1 ${i === 0 ? "bg-transparent" : done || active ? "bg-slate-300" : "bg-slate-200"}`}
               />
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition ${
                   done
-                    ? "border-white/25 bg-gradient-to-b from-white to-[#cbd5e1] text-[#0b0d11]"
+                    ? "border-slate-800 bg-[#1c222c] text-white shadow-xs"
                     : active
-                      ? "border-white/40 bg-white/12 text-ink shadow-[0_0_0_4px_rgba(255,255,255,0.06)]"
-                      : "border-white/10 bg-white/4 text-muted"
+                      ? "border-slate-800 bg-white text-slate-900 shadow-md ring-4 ring-slate-200/60"
+                      : "border-slate-200 bg-slate-100 text-slate-400"
                 }`}
               >
                 <Icon name={done ? "check" : step.icon} className="h-4 w-4" />
               </span>
               <span
-                className={`h-px flex-1 ${
-                  i === STEPS.length - 1 ? "bg-transparent" : done ? "bg-white/25" : "bg-white/8"
+                className={`h-0.5 flex-1 ${
+                  i === STEPS.length - 1 ? "bg-transparent" : done ? "bg-slate-300" : "bg-slate-200"
                 }`}
               />
             </div>
             <span
               className={`mt-2 px-1 text-center text-[11px] font-medium ${
-                active ? "text-ink" : done ? "text-muted" : "text-muted/60"
+                active ? "text-slate-900 font-semibold" : done ? "text-slate-600" : "text-slate-400"
               }`}
             >
               {step.label}

@@ -85,7 +85,7 @@ export default function Profile() {
             <div className="space-y-6">
               {/* Role-Specific Metrics */}
               <div>
-                <h3 className="mb-3 text-base font-bold text-navy">Platform Statistics</h3>
+                <h3 className="mb-3 text-base font-bold text-ink">Platform Statistics</h3>
                 <ProfileStats stats={stats} role={role} />
               </div>
 
@@ -93,11 +93,11 @@ export default function Profile() {
               {role === "student" && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Card className="p-4">
-                    <p className="flex items-center gap-2 font-semibold text-navy">
-                      <Icon name="marketplace" className="h-4 w-4 text-accent-dark" />
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="marketplace" className="h-4 w-4 text-ink" />
                       Orders &amp; Resale
                     </p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="mt-1 text-xs text-muted">
                       Browse your active purchases and peer-to-peer listings on campus.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -111,11 +111,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="flex items-center gap-2 font-semibold text-navy">
-                      <Icon name="rentals" className="h-4 w-4 text-accent-dark" />
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="rentals" className="h-4 w-4 text-ink" />
                       Rentals &amp; Borrowing
                     </p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="mt-1 text-xs text-muted">
                       Track your equipment, book rentals, and return due dates.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -129,11 +129,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-4">
-                    <p className="flex items-center gap-2 font-semibold text-navy">
-                      <Icon name="events" className="h-4 w-4 text-accent-dark" />
+                    <p className="flex items-center gap-2 font-semibold text-ink">
+                      <Icon name="events" className="h-4 w-4 text-ink" />
                       Campus Events
                     </p>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="mt-1 text-xs text-muted">
                       View your registered event tickets, club workshops, and QR passes.
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -151,11 +151,11 @@ export default function Profile() {
               {role === "merchant" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card className="p-5">
-                    <h4 className="flex items-center gap-2 font-bold text-navy">
-                      <Icon name="store" className="h-4 w-4 text-accent-dark" />
+                    <h4 className="flex items-center gap-2 font-bold text-ink">
+                      <Icon name="store" className="h-4 w-4 text-ink" />
                       Merchant Storefront
                     </h4>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="mt-1 text-xs text-muted">
                       Manage your campus store catalog, upload new products, and configure store policies.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -169,11 +169,11 @@ export default function Profile() {
                   </Card>
 
                   <Card className="p-5">
-                    <h4 className="flex items-center gap-2 font-bold text-navy">
-                      <Icon name="wallet" className="h-4 w-4 text-accent-dark" />
+                    <h4 className="flex items-center gap-2 font-bold text-ink">
+                      <Icon name="wallet" className="h-4 w-4 text-ink" />
                       Payouts &amp; Commissions
                     </h4>
-                    <p className="mt-1 text-xs text-slate">
+                    <p className="mt-1 text-xs text-muted">
                       Track your earnings, commission rates, and linked bank or mobile money payout accounts.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -190,11 +190,11 @@ export default function Profile() {
 
               {role === "organizer" && (
                 <Card className="p-5">
-                  <h4 className="flex items-center gap-2 font-bold text-navy">
-                    <Icon name="calendar" className="h-4 w-4 text-accent-dark" />
+                  <h4 className="flex items-center gap-2 font-bold text-ink">
+                    <Icon name="calendar" className="h-4 w-4 text-ink" />
                     Event Organizer Center
                   </h4>
-                  <p className="mt-1 text-xs text-slate">
+                  <p className="mt-1 text-xs text-muted">
                     Create new student events, manage ticket capacities, and validate attendee entry via QR check-in.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -210,11 +210,11 @@ export default function Profile() {
 
               {(role === "admin" || role === "super_admin") && (
                 <Card className="p-5">
-                  <h4 className="flex items-center gap-2 font-bold text-navy">
-                    <Icon name="shield" className="h-4 w-4 text-accent-dark" />
+                  <h4 className="flex items-center gap-2 font-bold text-ink">
+                    <Icon name="shield" className="h-4 w-4 text-ink" />
                     University Administration
                   </h4>
-                  <p className="mt-1 text-xs text-slate">
+                  <p className="mt-1 text-xs text-muted">
                     Review verification requests, manage student dispute cases, and monitor platform activity.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">

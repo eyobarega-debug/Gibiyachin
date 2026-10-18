@@ -80,15 +80,15 @@ export default function PublicProfile() {
       {profile.role === "merchant" && (
         <div className="space-y-6">
           {roleData.store && (
-            <Card className="p-6">
+            <Card className="glass-panel p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 overflow-hidden rounded-xl border border-slate/15 bg-paper">
+                  <div className="h-16 w-16 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
                     <MediaImage src={roleData.store.logo_url} alt={roleData.store.name} icon="store" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-navy">{roleData.store.name}</h2>
-                    <p className="text-sm text-slate">{roleData.store.description || "Campus Merchant Store"}</p>
+                    <h2 className="text-xl font-bold text-ink">{roleData.store.name}</h2>
+                    <p className="text-sm text-muted">{roleData.store.description || "Campus Merchant Store"}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <Badge tone="accent">
                         <Icon name="star" className="h-3 w-3" />
@@ -108,19 +108,19 @@ export default function PublicProfile() {
 
           {/* Active Products Catalog */}
           <div>
-            <h3 className="mb-3 text-lg font-bold text-navy">Products Available</h3>
+            <h3 className="mb-3 text-lg font-bold text-ink">Products Available</h3>
             {roleData.activeProducts && roleData.activeProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeProducts.map((prod) => (
-                  <Card key={prod.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-36 w-full overflow-hidden bg-slate/10">
+                  <Card key={prod.id} className="glass glass-hover overflow-hidden transition border border-white/80 bg-white/70">
+                    <div className="h-36 w-full overflow-hidden bg-white border-b border-slate-200/60">
                       <MediaImage src={prod.images?.[0]} alt={prod.title} icon="products" />
                     </div>
                     <div className="p-3">
-                      <h4 className="font-semibold text-navy truncate" title={prod.title}>
+                      <h4 className="font-semibold text-ink truncate" title={prod.title}>
                         {prod.title}
                       </h4>
-                      <p className="mt-1 text-sm font-bold text-navy">${prod.price}</p>
+                      <p className="mt-1 text-sm font-bold text-ink">{Number(prod.price).toFixed(2)} ETB</p>
                       <Button
                         as={Link}
                         to={`/marketplace/${prod.id}`}
@@ -143,14 +143,14 @@ export default function PublicProfile() {
       {profile.role === "organizer" && (
         <div className="space-y-6">
           {roleData.club && (
-            <Card className="p-6">
+            <Card className="glass-panel p-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-ok/15 text-ok">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-400">
                   <Icon name="university" className="h-6 w-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-navy">{roleData.club.name}</h2>
-                  <p className="text-xs text-slate">Official Campus Organization / Club</p>
+                  <h2 className="text-xl font-bold text-ink">{roleData.club.name}</h2>
+                  <p className="text-xs text-muted">Official Campus Organization / Club</p>
                   <div className="mt-1">
                     <Badge tone="ok">{roleData.club.status || "Active Club"}</Badge>
                   </div>
@@ -161,19 +161,19 @@ export default function PublicProfile() {
 
           {/* Upcoming Events */}
           <div>
-            <h3 className="mb-3 text-lg font-bold text-navy">Upcoming Campus Events</h3>
+            <h3 className="mb-3 text-lg font-bold text-ink">Upcoming Campus Events</h3>
             {roleData.upcomingEvents && roleData.upcomingEvents.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {roleData.upcomingEvents.map((evt) => (
-                  <Card key={evt.id} className="p-4 transition hover:border-navy/30">
+                  <Card key={evt.id} className="glass glass-hover p-4 transition">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h4 className="font-bold text-navy">{evt.title}</h4>
-                        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate">
+                        <h4 className="font-bold text-ink">{evt.title}</h4>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                           <Icon name="mapPin" className="h-3.5 w-3.5" />
                           {evt.location || "Campus Venue"}
                         </p>
-                        <p className="flex items-center gap-1.5 text-xs text-slate">
+                        <p className="flex items-center gap-1.5 text-xs text-muted">
                           <Icon name="calendar" className="h-3.5 w-3.5" />
                           {new Date(evt.date_time).toLocaleString()}
                         </p>
@@ -181,7 +181,7 @@ export default function PublicProfile() {
                       <Badge tone="ok">Open</Badge>
                     </div>
                     {evt.description && (
-                      <p className="mt-2 text-xs text-navy/80 line-clamp-2">{evt.description}</p>
+                      <p className="mt-2 text-xs text-muted line-clamp-2">{evt.description}</p>
                     )}
                     <div className="mt-3 flex justify-end">
                       <Button as={Link} to={`/events/${evt.id}`} variant="outline" className="text-xs">
@@ -201,8 +201,8 @@ export default function PublicProfile() {
       {profile.role === "student" && (
         <div className="space-y-6">
           {isCrossCampus && (
-            <div className="flex items-center gap-2 rounded-lg border border-navy/15 bg-navy/5 px-4 py-3 text-xs text-slate">
-              <Icon name="shield" className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-4 py-3 text-xs text-muted shadow-xs">
+              <Icon name="shield" className="h-4 w-4 shrink-0 text-slate-600" />
               <span>Some marketplace and rental activity is only visible to members of the same campus.</span>
             </div>
           )}
@@ -210,7 +210,7 @@ export default function PublicProfile() {
           {/* Active P2P Resale Listings */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-navy">Resale Marketplace Items</h3>
+              <h3 className="text-lg font-bold text-ink">Resale Marketplace Items</h3>
               {roleData.sellerRating > 0 && (
                 <Badge tone="accent">
                   <Icon name="star" className="h-3 w-3" />
@@ -222,17 +222,17 @@ export default function PublicProfile() {
             {roleData.activeListings && roleData.activeListings.length > 0 ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeListings.map((item) => (
-                  <Card key={item.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-32 w-full overflow-hidden bg-slate/10">
+                  <Card key={item.id} className="glass glass-hover overflow-hidden transition border border-white/80 bg-white/70">
+                    <div className="h-32 w-full overflow-hidden bg-white border-b border-slate-200/60">
                       <MediaImage src={item.images?.[0]} alt={item.title} icon="listings" />
                     </div>
                     <div className="p-3">
-                      <h4 className="font-semibold text-navy truncate" title={item.title}>
+                      <h4 className="font-semibold text-ink truncate" title={item.title}>
                         {item.title}
                       </h4>
-                      <p className="mt-1 text-sm font-bold text-navy">${item.price}</p>
+                      <p className="mt-1 text-sm font-bold text-ink">{Number(item.price).toFixed(2)} ETB</p>
                       {item.condition && (
-                        <span className="text-[11px] text-slate">Condition: {item.condition}</span>
+                        <span className="text-[11px] text-muted">Condition: {item.condition}</span>
                       )}
                       <Button
                         as={Link}
@@ -254,19 +254,19 @@ export default function PublicProfile() {
           {/* Active Rental Items */}
           {roleData.activeRentals && roleData.activeRentals.length > 0 && (
             <div>
-              <h3 className="mb-3 text-lg font-bold text-navy">Available Equipment for Rent</h3>
+              <h3 className="mb-3 text-lg font-bold text-ink">Available Equipment for Rent</h3>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {roleData.activeRentals.map((rental) => (
-                  <Card key={rental.id} className="overflow-hidden transition hover:shadow-md">
-                    <div className="h-32 w-full overflow-hidden bg-slate/10">
+                  <Card key={rental.id} className="glass glass-hover overflow-hidden transition border border-white/80 bg-white/70">
+                    <div className="h-32 w-full overflow-hidden bg-white border-b border-slate-200/60">
                       <MediaImage src={rental.images?.[0]} alt={rental.title} icon="rentals" />
                     </div>
                     <div className="p-3">
-                      <h4 className="font-semibold text-navy truncate" title={rental.title}>
+                      <h4 className="font-semibold text-ink truncate" title={rental.title}>
                         {rental.title}
                       </h4>
-                      <p className="mt-1 text-sm font-bold text-navy">
-                        ${rental.price_per_day} <span className="text-xs font-normal text-slate">/ day</span>
+                      <p className="mt-1 text-sm font-bold text-ink">
+                        {Number(rental.price_per_day).toFixed(2)} ETB <span className="text-xs font-normal text-muted">/ day</span>
                       </p>
                       <Button
                         as={Link}

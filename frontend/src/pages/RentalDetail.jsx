@@ -84,30 +84,30 @@ export default function RentalDetail() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title={item.title} subtitle={`Owned by ${item.owner_name}`} />
-      <Card className="p-6">
-        <div className="mb-4 h-56 overflow-hidden rounded-lg bg-paper">
+      <Card className="p-6 border border-white/90 bg-white/80 shadow-md">
+        <div className="mb-4 h-64 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
           <MediaImage src={item.images?.[0]} alt={item.title} icon="rentals" className="transition duration-500 hover:scale-[1.03]" />
         </div>
-        <p className="text-sm text-slate">{item.description}</p>
-        <div className="mt-3 flex gap-4 text-sm">
-          <span className="font-semibold text-accent-dark">{Number(item.price_per_day).toFixed(2)} birr/day</span>
-          <span className="text-slate">Refundable deposit: {Number(item.deposit).toFixed(2)} birr</span>
+        <p className="text-sm leading-relaxed text-muted">{item.description}</p>
+        <div className="mt-4 flex flex-wrap gap-4 text-sm">
+          <span className="font-bold text-ink">{Number(item.price_per_day).toFixed(2)} ETB / day</span>
+          <span className="text-muted">Refundable deposit: {Number(item.deposit).toFixed(2)} ETB</span>
         </div>
-        <p className="mt-1 text-xs text-slate">
+        <p className="mt-1 text-xs text-muted">
           Available {item.available_from?.slice(0, 10)} to {item.available_to?.slice(0, 10)}
         </p>
 
         {user?.role === "student" && user.id !== item.owner_id && (
-          <form onSubmit={book} className="mt-6 space-y-3 border-t border-slate/15 pt-4">
+          <form onSubmit={book} className="mt-6 space-y-3 border-t border-slate-200/80 pt-4">
             <ErrorBanner message={error} />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Start date" type="date" required value={dates.startDate} onChange={(e) => setDates({ ...dates, startDate: e.target.value })} />
               <Input label="End date" type="date" required value={dates.endDate} onChange={(e) => setDates({ ...dates, endDate: e.target.value })} />
             </div>
             {days > 0 && (
-              <p className="text-sm text-slate">
+              <p className="text-sm text-muted">
                 {days} day(s) × {Number(item.price_per_day).toFixed(2)} + {Number(item.deposit).toFixed(2)} deposit ={" "}
-                <span className="font-semibold text-navy">{estTotal.toFixed(2)} birr</span>
+                <span className="font-semibold text-ink">{estTotal.toFixed(2)} ETB</span>
               </p>
             )}
             <Button type="submit" variant="accent" disabled={busy}>{busy ? "Booking..." : "Book this item"}</Button>

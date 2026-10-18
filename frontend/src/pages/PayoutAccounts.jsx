@@ -80,12 +80,12 @@ export default function PayoutAccounts() {
       ) : (
         <div className="space-y-3">
           {accounts.map((a) => (
-            <Card key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <Card key={a.id} className="glass glass-hover flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate">{METHOD_LABEL[a.method] || a.method}</p>
-                <p className="text-sm text-navy">{a.accountName}</p>
-                <p className="font-mono text-navy">{a.accountNumber}</p>
-                {a.instructions && <p className="mt-1 text-xs text-slate">Note for buyers: {a.instructions}</p>}
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">{METHOD_LABEL[a.method] || a.method}</p>
+                <p className="text-sm font-medium text-ink">{a.accountName}</p>
+                <p className="font-mono text-ink">{a.accountNumber}</p>
+                {a.instructions && <p className="mt-1 text-xs text-muted">Note for buyers: {a.instructions}</p>}
               </div>
               <div className="flex items-center gap-2">
                 {a.isDefault ? <Badge tone="ok">Default</Badge> : <Button variant="outline" onClick={() => makeDefault(a.id)}>Make default</Button>}
@@ -96,7 +96,7 @@ export default function PayoutAccounts() {
         </div>
       )}
 
-      <Card className="mt-6 p-6">
+      <Card className="glass-panel mt-6 p-6">
         <h2 className="mb-3 font-semibold text-ink">Add an account</h2>
         <form onSubmit={add} className="space-y-4" noValidate>
           <Select label="Bank / wallet" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}>

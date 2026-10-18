@@ -40,7 +40,7 @@ export default function ListingCreate() {
           <Input label="Title" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <TextArea label="Description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <Input
-            label="Price (birr)"
+            label="Price (ETB)"
             type="number"
             min="0"
             required
@@ -53,7 +53,7 @@ export default function ListingCreate() {
             ))}
           </Select>
           <div>
-            <p className="mb-1 text-sm font-medium text-navy">Photos</p>
+            <p className="mb-1 text-sm font-medium text-ink">Photos</p>
             <ImageUploader value={form.images} onChange={(images) => setForm({ ...form, images })} />
           </div>
           <Button type="submit" variant="accent" className="w-full" disabled={busy}>

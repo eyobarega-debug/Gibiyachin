@@ -112,55 +112,55 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
     <div className="grid gap-6 md:grid-cols-2">
       {/* Privacy Settings Card */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-navy">Public Profile Privacy</h3>
-        <p className="mt-1 text-xs text-slate">
+        <h3 className="text-lg font-bold text-ink">Public Profile Privacy</h3>
+        <p className="mt-1 text-xs text-muted">
           Control which contact and activity details appear to others on your public profile.
         </p>
         <form onSubmit={handlePrivacySubmit} className="mt-4 space-y-4">
           <ErrorBanner message={privacyError} />
           <SuccessBanner message={privacySuccess} />
 
-          <div className="space-y-3 rounded-lg border border-slate/15 p-3">
-            <label className="flex items-center justify-between text-sm text-navy">
+          <div className="space-y-3 rounded-lg border border-white/10 p-3">
+            <label className="flex items-center justify-between text-sm text-ink">
               <div>
                 <span className="font-medium">Show email address</span>
-                <p className="text-xs text-slate">Allow campus members to see your email</p>
+                <p className="text-xs text-muted">Allow campus members to see your email</p>
               </div>
               <input
                 type="checkbox"
                 checked={!!privacy.showEmail}
                 onChange={(e) => setPrivacy({ ...privacy, showEmail: e.target.checked })}
-                className="h-4 w-4 accent-primary"
+                className="h-4 w-4 accent-white"
               />
             </label>
 
-            <div className="border-t border-slate/10" />
+            <div className="border-t border-white/8" />
 
-            <label className="flex items-center justify-between text-sm text-navy">
+            <label className="flex items-center justify-between text-sm text-ink">
               <div>
                 <span className="font-medium">Show phone number</span>
-                <p className="text-xs text-slate">Allow campus members to see your phone</p>
+                <p className="text-xs text-muted">Allow campus members to see your phone</p>
               </div>
               <input
                 type="checkbox"
                 checked={!!privacy.showPhone}
                 onChange={(e) => setPrivacy({ ...privacy, showPhone: e.target.checked })}
-                className="h-4 w-4 accent-primary"
+                className="h-4 w-4 accent-white"
               />
             </label>
 
-            <div className="border-t border-slate/10" />
+            <div className="border-t border-white/8" />
 
-            <label className="flex items-center justify-between text-sm text-navy">
+            <label className="flex items-center justify-between text-sm text-ink">
               <div>
                 <span className="font-medium">Show activity & listings</span>
-                <p className="text-xs text-slate">Display your active products, rentals, or events</p>
+                <p className="text-xs text-muted">Display your active products, rentals, or events</p>
               </div>
               <input
                 type="checkbox"
                 checked={privacy.showActivity !== false}
                 onChange={(e) => setPrivacy({ ...privacy, showActivity: e.target.checked })}
-                className="h-4 w-4 accent-primary"
+                className="h-4 w-4 accent-white"
               />
             </label>
           </div>
@@ -173,8 +173,8 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
 
       {/* Security & Password Card */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-navy">Security & Password</h3>
-        <p className="mt-1 text-xs text-slate">
+        <h3 className="text-lg font-bold text-ink">Security & Password</h3>
+        <p className="mt-1 text-xs text-muted">
           Update your password to keep your ግቢያችን account secure.
         </p>
         <form onSubmit={handlePasswordSubmit} className="mt-4 space-y-4">
@@ -215,7 +215,7 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
             required
           />
 
-          <p className="text-xs text-slate">
+          <p className="text-xs text-muted">
             Security notice: Changing your password revokes existing refresh tokens and logs out other devices.
           </p>
 
@@ -227,29 +227,29 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
 
       {/* Notification Preferences (FR-046) */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-navy">Notification Preferences</h3>
-        <p className="mt-1 text-xs text-slate">
+        <h3 className="text-lg font-bold text-ink">Notification Preferences</h3>
+        <p className="mt-1 text-xs text-muted">
           Select which notifications you would like to receive.
         </p>
         <form onSubmit={handleNotifsSubmit} className="mt-4 space-y-4">
           <ErrorBanner message={notifsError} />
           <SuccessBanner message={notifsSuccess} />
 
-          <div className="space-y-3 rounded-lg border border-slate/15 p-3">
+          <div className="space-y-3 rounded-lg border border-white/10 p-3">
             {Object.entries(NOTIF_PREF_LABELS).map(([key, label]) => (
-              <label key={key} className="flex items-center justify-between text-sm text-navy">
+              <label key={key} className="flex items-center justify-between text-sm text-ink">
                 <span>{label}</span>
                 <input
                   type="checkbox"
                   checked={!!notifs[key]}
                   onChange={(e) => setNotifs({ ...notifs, [key]: e.target.checked })}
-                  className="h-4 w-4 accent-primary"
+                  className="h-4 w-4 accent-white"
                 />
               </label>
             ))}
           </div>
 
-          <p className="text-xs text-slate">
+          <p className="text-xs text-muted">
             Note: Security, password recovery, and cancellation notices are always delivered regardless of settings.
           </p>
 
@@ -263,8 +263,8 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
       <Card className="p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-navy">Campus Account Verification</h3>
-            <p className="mt-1 text-xs text-slate">
+            <h3 className="text-lg font-bold text-ink">Campus Account Verification</h3>
+            <p className="mt-1 text-xs text-muted">
               Verification confirms you are an authentic student or faculty member on campus.
             </p>
           </div>
@@ -278,11 +278,11 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
           )}
         </div>
 
-        <div className="mt-4 rounded-lg bg-slate/5 p-4 text-sm text-navy">
+        <div className="mt-4 rounded-lg bg-white/4 border border-white/8 p-4 text-sm text-ink">
           {user?.verified ? (
             <div className="space-y-2">
               <p className="font-medium text-ok">Your account has been officially verified!</p>
-              <p className="text-xs text-slate">
+              <p className="text-xs text-muted">
                 {user.verification_method === "domain"
                   ? "Verified automatically via official university email address domain."
                   : "Verified manually by university campus administration."}
@@ -290,7 +290,7 @@ export default function ProfileSettings({ user, onProfileUpdated }) {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-slate">
+              <p className="text-xs text-muted">
                 Your email domain didn&apos;t automatically verify. You can submit your student ID card or proof of enrollment for administrator review.
               </p>
               <Button as={Link} to="/verify" variant="accent">

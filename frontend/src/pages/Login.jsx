@@ -73,19 +73,19 @@ export default function Login() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-slate">
+      <p className="mt-4 text-center text-sm text-muted">
         No account?{" "}
-        <Link to="/register" className="font-medium text-primary underline">
+        <Link to="/register" className="font-medium text-ink underline decoration-slate-300 hover:decoration-slate-500">
           Sign up
         </Link>
       </p>
-      <p className="mt-1 text-center text-sm text-slate">
-        <Link to="/forgot-password" className="underline">
+      <p className="mt-1 text-center text-sm text-muted">
+        <Link to="/forgot-password" className="underline decoration-slate-300 hover:decoration-slate-500">
           Forgot your password?
         </Link>
       </p>
 
-      <div className="mt-6 rounded-lg border border-line bg-canvas p-3 text-xs text-slate">
+      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white/70 p-3.5 text-xs text-muted shadow-xs">
         <p className="mb-1 font-semibold text-ink">Demo accounts (password: Password123!)</p>
         <p>admin@aastu.edu.et · sara@aastu.edu.et · selam@aastu.edu.et (merchant) · robel@aastu.edu.et (organizer)</p>
       </div>

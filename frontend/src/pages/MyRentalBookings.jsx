@@ -6,7 +6,7 @@ import Icon from "../components/Icon";
 
 const STATUS_TONE = {
   pending_payment: "warn",
-  confirmed_awaiting_pickup: "navy",
+  confirmed_awaiting_pickup: "accent",
   active: "ok",
   overdue: "danger",
   completed: "slate",
@@ -58,18 +58,18 @@ export default function MyRentalBookings() {
           {bookings.map((b) => {
             const iAmBorrower = user.id !== b.owner_id;
             return (
-              <Card key={b.id} className="p-4">
+              <Card key={b.id} className="glass glass-hover p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-navy">
-                      {b.title} <span className="text-xs text-slate">({iAmBorrower ? "borrowing" : "lending"})</span>
+                    <p className="font-semibold text-ink">
+                      {b.title} <span className="text-xs text-muted">({iAmBorrower ? "borrowing" : "lending"})</span>
                     </p>
-                    <p className="flex flex-wrap items-center gap-1 text-xs text-slate">
+                    <p className="flex flex-wrap items-center gap-1 text-xs text-muted">
                       <span>{b.start_date?.slice(0, 10)}</span>
                       <Icon name="arrowRight" className="h-3 w-3" />
                       <span>{b.end_date?.slice(0, 10)}</span>
                       <span>· deposit status: {b.deposit_status}</span>
-                      {Number(b.late_fee) > 0 && <span>· late fee {Number(b.late_fee).toFixed(2)}</span>}
+                      {Number(b.late_fee) > 0 && <span>· late fee {Number(b.late_fee).toFixed(2)} ETB</span>}
                     </p>
                   </div>
                   <Badge tone={STATUS_TONE[b.status] || "slate"}>{b.status.replaceAll("_", " ")}</Badge>
@@ -80,7 +80,7 @@ export default function MyRentalBookings() {
                     <Button variant="accent" onClick={() => act("pickup", b.id)}>Confirm item receipt / pickup</Button>
                   )}
                   {!iAmBorrower && b.status === "confirmed_awaiting_pickup" && (
-                    <span className="text-xs text-slate self-center italic">Waiting for renter to confirm physical pickup</span>
+                    <span className="text-xs text-muted self-center italic">Waiting for renter to confirm physical pickup</span>
                   )}
                   {!iAmBorrower && ["active", "overdue"].includes(b.status) && (
                     <Button variant="accent" onClick={() => act("return", b.id, { condition: "good" })}>
@@ -93,15 +93,15 @@ export default function MyRentalBookings() {
                 </div>
 
                 {(b.owner_confirmed_at || b.renter_confirmed_at) && (
-                  <div className="mt-2 flex flex-wrap gap-4 rounded-lg bg-paper px-3 py-1.5 text-xs text-slate">
+                  <div className="mt-2 flex flex-wrap gap-4 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-1.5 text-xs text-muted shadow-xs">
                     {b.owner_confirmed_at && (
                       <span className="inline-flex items-center gap-1">
-                        <Icon name="check" className="h-3.5 w-3.5" />
+                        <Icon name="check" className="h-3.5 w-3.5 text-emerald-500" />
                         Payment confirmed by owner ({new Date(b.owner_confirmed_at).toLocaleDateString()})
                       </span>
                     )}
                     {b.renter_confirmed_at && (
-                      <span className="inline-flex items-center gap-1 font-medium text-ok">
+                      <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
                         <Icon name="check" className="h-3.5 w-3.5" />
                         Item pickup confirmed by renter ({new Date(b.renter_confirmed_at).toLocaleDateString()})
                       </span>
@@ -110,7 +110,7 @@ export default function MyRentalBookings() {
                 )}
 
                 {disputeFor === b.id && (
-                  <div className="mt-3 space-y-2 border-t border-slate/15 pt-3">
+                  <div className="mt-3 space-y-2 border-t border-slate-200/80 pt-3">
                     <TextArea
                       label="What went wrong?"
                       rows={2}

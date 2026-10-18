@@ -140,44 +140,44 @@ export default function ManualPayment() {
       />
 
       <Card className="mb-4 p-6">
-        <p className="text-sm text-slate">Amount to send</p>
-        <p className="text-3xl font-bold text-accent-dark">{payment.amount.toFixed(2)} birr</p>
+        <p className="text-sm text-muted">Amount to send</p>
+        <p className="text-3xl font-bold text-ink">{payment.amount.toFixed(2)} <span className="text-lg font-medium text-muted">ETB</span></p>
         {payment.status === "pending" && (
-          <p className="mt-2 text-xs text-slate">
+          <p className="mt-2 text-xs text-muted">
             Your items are reserved until {new Date(payment.expiresAt).toLocaleString()}. After that the reservation is released.
           </p>
         )}
       </Card>
 
       {viewerRole !== "payer" && (
-        <Card className="mb-4 p-4 text-sm text-slate">
+        <Card className="mb-4 p-4 text-sm text-muted">
           You're viewing this as {viewerRole === "payee" ? "the seller" : "an admin"}.{" "}
-          <Link className="font-medium text-navy underline" to="/payment-approvals">Go to payment approvals</Link>
+          <Link className="font-medium text-ink underline decoration-slate-300" to="/payment-approvals">Go to payment approvals</Link>
         </Card>
       )}
 
-      <Card className="mb-4 p-6">
-        <h2 className="mb-1 font-semibold text-navy">1. Send {payment.amount.toFixed(2)} birr to {payeeName}</h2>
-        <p className="mb-3 text-sm text-slate">Use any one of these accounts, for exactly this amount.</p>
+      <Card className="mb-4 p-6 border border-white/90 bg-white/80 shadow-md">
+        <h2 className="mb-1 font-semibold text-ink">1. Send {payment.amount.toFixed(2)} ETB to {payeeName}</h2>
+        <p className="mb-3 text-sm text-muted">Use any one of these accounts, for exactly this amount.</p>
         <div className="space-y-3">
           {payeeAccounts.map((a) => (
-            <div key={a.id} className="rounded-lg bg-paper p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate">{METHOD_LABEL[a.method] || a.method}</p>
-              <p className="text-sm text-navy">{a.accountName}</p>
+            <div key={a.id} className="rounded-xl border border-slate-200/80 bg-white/70 p-3.5 shadow-xs">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">{METHOD_LABEL[a.method] || a.method}</p>
+              <p className="text-sm font-semibold text-ink">{a.accountName}</p>
               <div className="flex items-center justify-between">
-                <p className="font-mono text-lg text-navy">{a.accountNumber}</p>
+                <p className="font-mono text-lg font-bold text-ink">{a.accountNumber}</p>
                 <CopyButton value={a.accountNumber} />
               </div>
-              {a.instructions && <p className="mt-1 text-xs text-slate">Note from the seller: {a.instructions}</p>}
+              {a.instructions && <p className="mt-1 text-xs text-muted">Note from the seller: {a.instructions}</p>}
             </div>
           ))}
         </div>
       </Card>
 
       {payment.status === "pending" && viewerRole === "payer" && (
-        <Card className="mb-4 p-6">
-          <h2 className="mb-1 font-semibold text-navy">2. Upload your payment proof</h2>
-          <p className="mb-3 text-sm text-slate">
+        <Card className="mb-4 p-6 border border-white/90 bg-white/80 shadow-md">
+          <h2 className="mb-1 font-semibold text-ink">2. Upload your payment proof</h2>
+          <p className="mb-3 text-sm text-muted">
             A screenshot of the bank / Telebirr confirmation, plus the transaction reference shown on it.
             Edited or reused screenshots and references are rejected.
           </p>
@@ -199,7 +199,7 @@ export default function ManualPayment() {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="block w-full cursor-pointer rounded-lg border border-line glass-soft text-sm text-slate file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-primary-dark focus:outline-none"
+                className="block w-full cursor-pointer rounded-xl border border-slate-200/80 bg-white/70 text-sm text-ink file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-800 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700 focus:outline-none"
               />
               <span className="mt-1 block text-xs text-muted">JPG, PNG or WEBP, max 5MB</span>
             </label>
@@ -226,12 +226,12 @@ export default function ManualPayment() {
 
       {payment.status === "under_review" && (
         <Card className="mb-4 p-6">
-          <h2 className="mb-1 font-semibold text-navy">Proof sent</h2>
+          <h2 className="mb-1 font-semibold text-ink">Proof sent</h2>
           <SuccessBanner message={success} />
-          <p className="mb-3 mt-2 text-sm text-slate">
+          <p className="mb-3 mt-2 text-sm text-muted">
             {payeeName} has been notified. Your ticket / order is confirmed as soon as they approve it. This page updates by itself.
           </p>
-          {lastProof && <p className="mb-3 text-xs text-slate">Reference: <span className="font-mono">{lastProof.referenceNumber}</span></p>}
+          {lastProof && <p className="mb-3 text-xs text-muted">Reference: <span className="font-mono text-ink">{lastProof.referenceNumber}</span></p>}
           <ProofImage paymentId={payment.id} version={imgVersion} />
         </Card>
       )}
@@ -246,7 +246,7 @@ export default function ManualPayment() {
       {payment.status === "failed" && (
         <Card className="mb-4 p-6 text-center">
           <p className="mb-1 font-semibold text-danger">This purchase was cancelled.</p>
-          {lastProof?.status === "rejected" && <p className="mb-3 text-sm text-slate">Reason: {lastProof.rejectReason}</p>}
+          {lastProof?.status === "rejected" && <p className="mb-3 text-sm text-muted">Reason: {lastProof.rejectReason}</p>}
           <Button as={Link} to="/payment-approvals" variant="outline">My payments</Button>
         </Card>
       )}

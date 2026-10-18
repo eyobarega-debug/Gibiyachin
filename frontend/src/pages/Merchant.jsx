@@ -135,8 +135,8 @@ function ProductsTab({ storeId }) {
               {p.featured_until && new Date(p.featured_until) > new Date() && (
                 <Badge tone="accent">Featured until {new Date(p.featured_until).toLocaleDateString()}</Badge>
               )}
-              <p className="mt-1 text-lg font-bold text-primary">{Number(p.price).toFixed(2)} birr</p>
-              <p className="text-xs text-slate">{p.stock} in stock</p>
+              <p className="mt-1 text-lg font-bold text-ink">{Number(p.price).toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span></p>
+              <p className="text-xs text-muted">{p.stock} in stock</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setEditing(p)}>Edit</Button>
                 <Button
@@ -172,7 +172,7 @@ function ProductsTab({ storeId }) {
         }
       >
         <form id="promote-form" onSubmit={startPromotion} className="space-y-4">
-          <p className="text-sm text-slate">
+          <p className="text-sm text-muted">
             Feature <span className="font-semibold text-ink">{promoteFor?.title}</span> on the marketplace homepage.
           </p>
           <Input
@@ -182,7 +182,7 @@ function ProductsTab({ storeId }) {
             required
             value={promoDays}
             onChange={(e) => setPromoDays(e.target.value)}
-            hint="20 birr per day — you'll confirm payment on the next step."
+            hint="20 ETB per day — you'll confirm payment on the next step."
             placeholder="7"
           />
         </form>
@@ -238,7 +238,7 @@ function ProductForm({ product, onCancel, onSaved, onError }) {
           onChange={(e) => setForm({ ...form, title: e.target.value })}
         />
         <Input
-          label="Price (birr)"
+          label="Price (ETB)"
           type="number"
           min="0"
           step="0.01"
@@ -319,8 +319,8 @@ function OrdersTab() {
           {orders.map((o) => (
             <Card key={o.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-medium text-navy">Order #{o.id.slice(0, 8)} — {o.buyer_name}</p>
-                <p className="text-xs text-slate">{Number(o.total_amount).toFixed(2)} birr · {new Date(o.created_at).toLocaleString()}</p>
+                <p className="font-semibold text-ink">Order #{o.id.slice(0, 8)} — {o.buyer_name}</p>
+                <p className="text-xs text-muted">{Number(o.total_amount).toFixed(2)} ETB · {new Date(o.created_at).toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={ORDER_STATUS_TONE[o.status] || "slate"}>{o.status.replaceAll("_", " ")}</Badge>
@@ -367,7 +367,7 @@ function StoreTab({ store, onSaved }) {
   return (
     <Card className="max-w-lg p-5">
       <div className="mb-3 flex justify-end">
-        <Link to={`/seller/${store.id}`} className="inline-flex items-center gap-1 text-sm text-primary underline">
+        <Link to={`/seller/${store.id}`} className="inline-flex items-center gap-1 text-sm text-ink underline decoration-slate-300 hover:decoration-slate-500">
           View public profile
           <Icon name="arrowRight" className="h-3.5 w-3.5" />
         </Link>
@@ -423,20 +423,20 @@ function AnalyticsTab({ storeId }) {
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-5">
-          <p className="text-sm text-slate">Completed orders revenue</p>
-          <p className="text-3xl font-bold text-accent-dark">{stats.revenue.toFixed(2)} birr</p>
-          <p className="mt-1 text-xs text-slate">{stats.orderCount} total orders</p>
+          <p className="text-sm text-muted">Completed orders revenue</p>
+          <p className="text-3xl font-bold text-ink">{stats.revenue.toFixed(2)} <span className="text-base font-semibold text-muted">ETB</span></p>
+          <p className="mt-1 text-xs text-muted">{stats.orderCount} total orders</p>
         </Card>
         <Card className="p-5">
-          <p className="mb-2 text-sm font-medium text-navy">Top products</p>
+          <p className="mb-2 text-sm font-semibold text-ink">Top products</p>
           {stats.topProducts.length === 0 ? (
-            <p className="text-sm text-slate">No sales yet.</p>
+            <p className="text-sm text-muted">No sales yet.</p>
           ) : (
             <ul className="space-y-1 text-sm">
               {stats.topProducts.map((p) => (
                 <li key={p.id} className="flex justify-between">
-                  <span>{p.title}</span>
-                  <span className="font-medium text-navy">{p.units_sold} sold</span>
+                  <span className="text-muted">{p.title}</span>
+                  <span className="font-medium text-ink">{p.units_sold} sold</span>
                 </li>
               ))}
             </ul>

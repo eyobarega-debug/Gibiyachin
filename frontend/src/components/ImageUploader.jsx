@@ -48,7 +48,7 @@ export default function ImageUploader({ value = [], onChange, max = 4 }) {
           </div>
         ))}
         {value.length < max && (
-          <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate/30 text-xs text-slate hover:border-navy hover:text-navy">
+          <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 text-xs text-muted hover:border-white/40 hover:text-ink">
             {uploading ? "..." : "+ Add"}
             <input
               type="file"

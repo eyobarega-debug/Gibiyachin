@@ -33,10 +33,12 @@ export default function Favorites() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
-            <Card key={p.id} className="p-4">
-              <Link to={`/marketplace/${p.id}`} className="font-medium text-navy hover:underline">{p.title}</Link>
-              <p className="mt-1 text-lg font-bold text-accent-dark">{Number(p.price).toFixed(2)} birr</p>
-              <p className="text-xs text-slate">{p.status === "active" ? `${p.stock} in stock` : p.status.replaceAll("_", " ")}</p>
+            <Card key={p.id} className="p-4 border border-white/80 bg-white/70">
+              <Link to={`/marketplace/${p.id}`} className="font-medium text-ink hover:underline decoration-slate-300">{p.title}</Link>
+              <p className="mt-1 text-lg font-bold text-ink">
+                {Number(p.price).toFixed(2)} <span className="text-xs font-medium text-muted">ETB</span>
+              </p>
+              <p className="text-xs text-muted">{p.status === "active" ? `${p.stock} in stock` : p.status.replaceAll("_", " ")}</p>
               <Button variant="outline" className="mt-3 w-full" onClick={() => unfavorite(p.id)}>Remove from favorites</Button>
             </Card>
           ))}

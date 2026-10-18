@@ -83,25 +83,25 @@ export default function Orders() {
       ) : (
         <div className="space-y-4">
           {orders.map((o) => (
-            <Card key={o.id} className="overflow-hidden p-5">
+            <Card key={o.id} className="overflow-hidden p-5 border border-white/90 bg-white/80 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-ink">
+                    <h3 className="font-semibold text-slate-900">
                       Order #{o.id.slice(0, 8)}
                     </h3>
                     <Badge tone={STATUS_TONE[o.status] || "slate"}>
                       {STATUS_LABEL[o.status] || o.status.replaceAll("_", " ")}
                     </Badge>
                   </div>
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
-                      <Icon name="store" className="h-3.5 w-3.5" /> {o.store_name}
+                      <Icon name="store" className="h-3.5 w-3.5 text-slate-400" /> {o.store_name}
                     </span>
                     <span>·</span>
                     <span>{new Date(o.created_at).toLocaleString()}</span>
                     <span>·</span>
-                    <span className="font-semibold text-ink">{Number(o.total_amount).toFixed(2)} ETB</span>
+                    <span className="font-bold text-slate-900">{Number(o.total_amount).toFixed(2)} ETB</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export default function Orders() {
                 </div>
               </div>
 
-              <div className="mt-5 border-t border-white/8 pt-5">
+              <div className="mt-5 border-t border-slate-200/80 pt-5">
                 <OrderStatus status={o.status} />
               </div>
 

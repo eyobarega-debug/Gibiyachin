@@ -4,7 +4,7 @@ import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner } from "../components/ui";
 import { LedgerTable, SummaryCards } from "./Commissions";
 
-const birr = (n) => `${Number(n).toFixed(2)} birr`;
+const birr = (n) => `${Number(n).toFixed(2)} ETB`;
 const ROLE_LABEL = { merchant: "Merchant", organizer: "Event organizer", student: "Student (rentals / P2P)" };
 
 // The admin's ledger for ONE seller: their own sales, what they owe, and the settle buttons.
@@ -115,12 +115,12 @@ export default function AdminCommissions() {
           </p>
           <div className="space-y-3">
             {sellers.map((s) => (
-              <Card key={s.userId} className="p-4">
+              <Card key={s.userId} className="glass glass-hover p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-navy">{s.name}</p>
-                    <p className="text-xs text-slate">{s.email}</p>
-                    <div className="mt-1"><Badge tone="navy">{ROLE_LABEL[s.role] || s.role}</Badge></div>
+                    <p className="font-semibold text-ink">{s.name}</p>
+                    <p className="text-xs text-muted">{s.email}</p>
+                    <div className="mt-1"><Badge tone="accent">{ROLE_LABEL[s.role] || s.role}</Badge></div>
                   </div>
                   <div className="text-right text-sm">
                     <p className="text-slate">{s.salesCount} sale{s.salesCount === 1 ? "" : "s"} · {birr(s.grossSales)}</p>

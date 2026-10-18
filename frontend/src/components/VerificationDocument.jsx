@@ -35,12 +35,12 @@ export default function VerificationDocument({ url }) {
   if (mime.startsWith("image/")) {
     return (
       <a href={blobUrl} target="_blank" rel="noreferrer" title="Open full size">
-        <img src={blobUrl} alt="Verification document" className="max-h-80 rounded-lg border border-slate/20 object-contain" />
+        <img src={blobUrl} alt="Verification document" className="max-h-80 rounded-xl border border-white/10 object-contain" />
       </a>
     );
   }
   return (
-    <a href={blobUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-navy underline">
+    <a href={blobUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-ink underline decoration-white/30 hover:decoration-white">
       Open document{mime === "application/pdf" ? " (PDF)" : ""}
     </a>
   );

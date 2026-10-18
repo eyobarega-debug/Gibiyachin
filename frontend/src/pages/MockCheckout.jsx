@@ -31,9 +31,9 @@ export default function MockCheckout() {
       <PageHeader title="Mock Checkout" subtitle="Standing in for a real Ethiopian payment provider (SRS Section 16)." />
       <Card className="p-6 text-center">
         <ErrorBanner message={error} />
-        <p className="mb-1 text-sm text-slate">You're paying for</p>
-        <p className="mb-1 text-lg font-semibold text-navy">{label || "Gibiyachin order"}</p>
-        {amount != null && <p className="mb-6 text-3xl font-bold text-accent">{Number(amount).toFixed(2)} birr</p>}
+        <p className="mb-1 text-sm text-muted">You're paying for</p>
+        <p className="mb-1 text-lg font-semibold text-ink">{label || "Gibiyachin order"}</p>
+        {amount != null && <p className="mb-6 text-3xl font-bold text-ink">{Number(amount).toFixed(2)} <span className="text-base font-semibold text-muted">ETB</span></p>}
         <div className="flex flex-col gap-3">
           <Button variant="accent" disabled={loading} onClick={() => complete("success")}>
             <Icon name="checkCircle" className="h-4 w-4" />

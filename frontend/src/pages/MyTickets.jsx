@@ -146,13 +146,13 @@ export default function MyTickets() {
 
       {waitlist && waitlist.length > 0 && (
         <div className="no-print mt-10">
-          <h2 className="mb-3 font-semibold text-navy">My Waitlist Status</h2>
+          <h2 className="mb-3 font-semibold text-ink">My Waitlist Status</h2>
           <div className="space-y-2">
             {waitlist.map((w) => (
-              <Card key={w.id} className="flex items-center justify-between p-4">
+              <Card key={w.id} className="glass glass-hover flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium text-navy">{w.event_title}</p>
-                  <p className="text-xs text-slate">
+                  <p className="font-semibold text-ink">{w.event_title}</p>
+                  <p className="text-xs text-muted">
                     {w.ticket_type} · {new Date(w.date_time).toLocaleString()}
                   </p>
                 </div>

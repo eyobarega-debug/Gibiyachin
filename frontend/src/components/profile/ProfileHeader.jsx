@@ -121,7 +121,7 @@ export default function ProfileHeader({
     : null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate/15 glass-soft shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-white/12 glass shadow-sm">
       {/* Cover / Wallpaper Banner */}
       <div className="relative h-44 sm:h-56 w-full overflow-hidden bg-gradient-to-r from-[#1c2128] via-[#12161c] to-[#0b0e12]">
         {user.cover_image_url ? (
@@ -183,7 +183,7 @@ export default function ProfileHeader({
                 onChange={handleAvatarUpload}
                 className="hidden"
               />
-              <div className="relative h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-full border-4 border-[#15181d] bg-white/5 shadow-md">
+              <div className="relative h-28 w-28 sm:h-32 sm:w-32 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-xl">
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
@@ -191,7 +191,7 @@ export default function ProfileHeader({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-white to-[#c3ccd8] text-3xl sm:text-4xl font-bold text-[#0b0d11]">
+                  <div className="flex h-full w-full items-center justify-center bg-[#1c222c] text-3xl sm:text-4xl font-bold text-white">
                     {user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}
@@ -226,7 +226,7 @@ export default function ProfileHeader({
 
             <div className="mb-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-navy">{user.name}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-ink">{user.name}</h1>
                 <Badge tone={roleTone}>{roleLabel}</Badge>
                 {user.verified ? (
                   <Badge tone="ok">
@@ -236,7 +236,7 @@ export default function ProfileHeader({
                   <Badge tone="warn">Unverified</Badge>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-slate">
+              <p className="mt-0.5 text-xs text-muted">
                 {user.university_name || "ግቢያችን Community"}
                 {joinedDate && ` · Joined ${joinedDate}`}
               </p>
@@ -275,38 +275,38 @@ export default function ProfileHeader({
         {/* Bio & Academic Details */}
         <div className="mt-5 space-y-3">
           {user.bio ? (
-            <p className="max-w-3xl text-sm leading-relaxed text-navy/90">{user.bio}</p>
+            <p className="max-w-3xl text-sm leading-relaxed text-ink/90">{user.bio}</p>
           ) : (
             isOwner && (
-              <p className="text-sm italic text-slate">
+              <p className="text-sm italic text-muted">
                 No bio added yet. Click &quot;Edit Profile&quot; to introduce yourself to your campus.
               </p>
             )
           )}
 
           {/* Metadata Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate">
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted">
             {user.department && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-navy">
-                <Icon name="university" className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-ink">
+                <Icon name="university" className="h-3.5 w-3.5 text-muted" />
                 {user.department}
               </span>
             )}
             {user.year && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-navy">
-                <Icon name="graduation" className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-ink">
+                <Icon name="graduation" className="h-3.5 w-3.5 text-muted" />
                 {user.year}
               </span>
             )}
             {user.email && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-slate">
-                <Icon name="mail" className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-muted">
+                <Icon name="mail" className="h-3.5 w-3.5 text-muted" />
                 {user.email}
               </span>
             )}
             {user.phone && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-slate/5 px-2.5 py-1 font-medium text-slate">
-                <Icon name="phone" className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-white/5 px-2.5 py-1 font-medium text-muted">
+                <Icon name="phone" className="h-3.5 w-3.5 text-muted" />
                 {user.phone}
               </span>
             )}

@@ -98,7 +98,7 @@ export default function Marketplace() {
             />
           </div>
 
-          <div className="hidden h-9 w-px shrink-0 bg-white/10 lg:block" />
+          <div className="hidden h-9 w-px shrink-0 bg-slate-200/80 lg:block" />
 
           <Select
             aria-label="Filter by category"
@@ -112,7 +112,7 @@ export default function Marketplace() {
             ))}
           </Select>
 
-          <div className="hidden h-9 w-px shrink-0 bg-white/10 lg:block" />
+          <div className="hidden h-9 w-px shrink-0 bg-slate-200/80 lg:block" />
 
           <div className="flex items-center gap-1.5">
             <input
@@ -122,9 +122,9 @@ export default function Marketplace() {
               aria-label="Minimum price"
               value={minPrice}
               onChange={(e) => updateParams({ minPrice: e.target.value })}
-              className="glass-input w-full rounded-xl px-3 py-2.5 text-sm outline-none transition focus:border-white/35 focus:ring-2 focus:ring-white/15 lg:w-24"
+              className="glass-input w-full rounded-xl px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 lg:w-24"
             />
-            <span className="text-muted">–</span>
+            <span className="text-slate-400">–</span>
             <input
               type="number"
               min="0"
@@ -132,7 +132,7 @@ export default function Marketplace() {
               aria-label="Maximum price"
               value={maxPrice}
               onChange={(e) => updateParams({ maxPrice: e.target.value })}
-              className="glass-input w-full rounded-xl px-3 py-2.5 text-sm outline-none transition focus:border-white/35 focus:ring-2 focus:ring-white/15 lg:w-24"
+              className="glass-input w-full rounded-xl px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 lg:w-24"
             />
           </div>
 
@@ -150,9 +150,9 @@ export default function Marketplace() {
           )}
         </div>
         {storeId && (
-          <div className="mt-2.5 flex items-center justify-between rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-sm text-muted">
+          <div className="mt-2.5 flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-sm text-slate-600">
             <span>Showing products from a single seller.</span>
-            <Link to="/marketplace" className="font-medium text-ink underline decoration-white/30">
+            <Link to="/marketplace" className="font-semibold text-slate-800 underline decoration-slate-300">
               Clear filter
             </Link>
           </div>

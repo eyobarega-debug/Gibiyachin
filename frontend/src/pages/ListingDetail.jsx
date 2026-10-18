@@ -107,15 +107,18 @@ export default function ListingDetail() {
         subtitle={`Sold by ${listing.seller_name} · ${listing.condition || "—"}`}
         action={<Badge tone={listing.status === "active" ? "ok" : "slate"}>{listing.status}</Badge>}
       />
-      <Card className="p-6">
-        <div className="mb-4 h-56 overflow-hidden rounded-lg bg-paper">
+      <Card className="p-6 border border-white/90 bg-white/80 shadow-md">
+        <div className="mb-4 h-64 overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
           <MediaImage src={listing.images?.[0]} alt={listing.title} icon="products" className="transition duration-500 hover:scale-[1.03]" />
         </div>
-        <p className="text-2xl font-bold text-accent-dark">{Number(listing.price).toFixed(2)} birr</p>
-        <p className="mt-2 text-sm text-slate">{listing.description || "No description provided."}</p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-extrabold tracking-tight text-ink">{Number(listing.price).toFixed(2)}</span>
+          <span className="text-base font-semibold text-muted">ETB</span>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-muted">{listing.description || "No description provided."}</p>
 
         {!isOwner && user?.role === "student" && listing.status === "active" && !myRequest?.request && (
-          <form onSubmit={sendRequest} className="mt-6 space-y-2 border-t border-slate/15 pt-4">
+          <form onSubmit={sendRequest} className="mt-6 space-y-2 border-t border-slate-200/80 pt-4">
             <ErrorBanner message={error} />
             <SuccessBanner message={success} />
             <TextArea label="Message to seller (optional)" rows={2} value={message} onChange={(e) => setMessage(e.target.value)} />
@@ -124,17 +127,17 @@ export default function ListingDetail() {
         )}
 
         {!isOwner && myRequest?.request && (
-          <div className="mt-6 border-t border-slate/15 pt-4">
+          <div className="mt-6 border-t border-slate-200/80 pt-4">
             <ErrorBanner message={error} />
-            <p className="mb-2 text-sm text-slate">
+            <p className="mb-2 text-sm text-muted">
               Your request: <Badge tone={myRequest.request.status === "accepted" ? "ok" : myRequest.request.status === "declined" ? "danger" : "warn"}>{myRequest.request.status}</Badge>
             </p>
             {myRequest.order && myRequest.order.status === "pending_payment" && (
               <div>
-                <p className="mb-2 text-sm text-slate">
+                <p className="mb-2 text-sm text-muted">
                   The seller accepted — pay in-app now, or arrange an off-platform handover directly with them (Phase 1 default).
                 </p>
-                <Button variant="accent" onClick={payInApp}>Pay {Number(myRequest.order.amount).toFixed(2)} birr in-app</Button>
+                <Button variant="accent" onClick={payInApp}>Pay {Number(myRequest.order.amount).toFixed(2)} ETB in-app</Button>
               </div>
             )}
             {myRequest.order?.status === "paid" && <Badge tone="ok">Paid — arrange pickup with the seller</Badge>}
@@ -142,22 +145,22 @@ export default function ListingDetail() {
         )}
 
         {isOwner && (
-          <div className="mt-6 border-t border-slate/15 pt-4">
+          <div className="mt-6 border-t border-slate-200/80 pt-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-medium text-navy">Buy requests</p>
+              <p className="font-semibold text-ink">Buy requests</p>
               {listing.status === "active" && <Button variant="outline" onClick={markSold}>Mark as sold</Button>}
             </div>
             {!requests ? (
               <Spinner />
             ) : requests.length === 0 ? (
-              <p className="text-sm text-slate">No requests yet.</p>
+              <p className="text-sm text-muted">No requests yet.</p>
             ) : (
               <div className="space-y-2">
                 {requests.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between rounded-lg bg-paper p-3 text-sm">
+                  <div key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white/70 p-3 text-sm shadow-xs">
                     <div>
-                      <p className="font-medium text-navy">{r.buyer_name}</p>
-                      {r.message && <p className="text-slate">{r.message}</p>}
+                      <p className="font-semibold text-ink">{r.buyer_name}</p>
+                      {r.message && <p className="text-muted">{r.message}</p>}
                     </div>
                     {r.status === "pending" ? (
                       <div className="flex gap-2">

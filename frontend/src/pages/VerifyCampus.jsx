@@ -108,9 +108,9 @@ export default function VerifyCampus() {
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge tone="warn">pending</Badge>
-                <span className="text-sm font-medium text-navy">Your verification is under review</span>
+                <span className="text-sm font-medium text-ink">Your verification is under review</span>
               </div>
-              <p className="text-sm text-slate">
+              <p className="text-sm text-muted">
                 Submitted {fmt(status.pendingRequest?.createdAt)}
                 {status.pendingRequest?.documentType
                   ? ` · ${DOC_TYPES.find((d) => d.value === status.pendingRequest.documentType)?.label || status.pendingRequest.documentType}`
@@ -119,11 +119,11 @@ export default function VerifyCampus() {
               </p>
               {status.pendingRequest?.hasDocument && (
                 <div className="mt-3">
-                  <p className="mb-1 text-sm font-medium text-navy">Your submitted document</p>
+                  <p className="mb-1 text-sm font-medium text-ink">Your submitted document</p>
                   <VerificationDocument url={`/verifications/me/requests/${status.pendingRequest.id}/document`} />
                 </div>
               )}
-              <p className="mt-3 text-xs text-slate">
+              <p className="mt-3 text-xs text-muted">
                 A university administrator will review it. You'll get a notification once it's approved or rejected.
               </p>
             </div>
@@ -131,7 +131,7 @@ export default function VerifyCampus() {
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Badge tone="warn">unverified</Badge>
-                <span className="text-sm font-medium text-navy">Your university email couldn't verify you automatically</span>
+                <span className="text-sm font-medium text-ink">Your university email couldn't verify you automatically</span>
               </div>
               {status.latestRequest?.status === "rejected" && (
                 <div className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -163,7 +163,7 @@ export default function VerifyCampus() {
                     required
                     accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="block w-full cursor-pointer rounded-lg border border-line glass-soft text-sm text-slate file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-primary-dark focus:outline-none"
+                    className="block w-full cursor-pointer rounded-xl border border-slate-200/80 bg-white/70 text-sm text-ink file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-800 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700 focus:outline-none"
                   />
                   <span className="mt-1 block text-xs text-muted">
                     JPEG, PNG, WEBP, GIF or PDF — up to 10MB. Your file is stored privately.
@@ -186,16 +186,16 @@ export default function VerifyCampus() {
         </Card>
 
         {history && history.length > 0 && (
-          <Card className="p-6">
-            <h2 className="mb-3 font-semibold text-navy">Request history</h2>
+          <Card className="glass-panel p-6">
+            <h2 className="mb-3 font-semibold text-ink">Request history</h2>
             <div className="space-y-2">
               {history.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate/15 px-3 py-2">
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 shadow-xs">
                   <div>
-                    <p className="text-sm text-navy">
+                    <p className="text-sm font-medium text-ink">
                       {DOC_TYPES.find((d) => d.value === r.documentType)?.label || r.documentType}
                     </p>
-                    <p className="text-xs text-slate">Submitted {fmt(r.createdAt)}{r.reviewedAt ? ` · reviewed ${fmt(r.reviewedAt)}` : ""}</p>
+                    <p className="text-xs text-muted">Submitted {fmt(r.createdAt)}{r.reviewedAt ? ` · reviewed ${fmt(r.reviewedAt)}` : ""}</p>
                     {r.status === "rejected" && r.rejectionReason && (
                       <p className="text-xs text-danger">Reason: {r.rejectionReason}</p>
                     )}

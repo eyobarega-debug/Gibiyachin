@@ -167,7 +167,7 @@ export default function EditProfileModal({ user, isOpen, onClose, onSaved }) {
                   {form.avatarUrl ? (
                     <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-primary text-lg font-bold text-[#0b0d11]">
+                    <div className="flex h-full w-full items-center justify-center bg-[#1c222c] text-lg font-bold text-white">
                       {form.name?.[0]?.toUpperCase() || "U"}
                     </div>
                   )}

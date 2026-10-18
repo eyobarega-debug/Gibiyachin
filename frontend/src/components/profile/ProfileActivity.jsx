@@ -53,25 +53,25 @@ export default function ProfileActivity({ activities = [] }) {
         return (
           <Card
             key={`${item.type}-${item.id || index}`}
-            className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:border-navy/30"
+            className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:border-white/20"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/6 text-muted">
                 <Icon name={icon} className="h-5 w-5" />
               </div>
               <div>
-                <p className="font-medium text-navy">{item.title}</p>
-                <p className="text-xs text-slate">{item.subtitle}</p>
+                <p className="font-medium text-ink">{item.title}</p>
+                <p className="text-xs text-muted">{item.subtitle}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               {item.status && <Badge tone={tone}>{item.status}</Badge>}
-              <span className="text-xs text-slate">{formattedDate}</span>
+              <span className="text-xs text-muted">{formattedDate}</span>
               {item.link && (
                 <Link
                   to={item.link}
-                  className="rounded-lg bg-slate/10 px-3 py-1 text-xs font-medium text-navy transition hover:bg-slate/20"
+                  className="rounded-lg border border-white/10 bg-white/6 px-3 py-1 text-xs font-medium text-ink transition hover:bg-white/12"
                 >
                   View
                 </Link>
