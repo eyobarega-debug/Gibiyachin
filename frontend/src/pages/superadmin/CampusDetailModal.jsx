@@ -20,7 +20,7 @@ export default function CampusDetailModal({ open, universityId, onClose, onChang
   const [busy, setBusy] = useState(false);
   const [promoteId, setPromoteId] = useState("");
 
-  const [edit, setEdit] = useState({ name: "", domain: "", permittedDomains: "" });
+  const [edit, setEdit] = useState({ name: "", domain: "", permittedDomains: "", code: "", city: "", region: "" });
 
   async function load() {
     if (!universityId) return;
@@ -32,10 +32,13 @@ export default function CampusDetailModal({ open, universityId, onClose, onChang
         client.get("/admin/users", { headers: { "X-University-Id": universityId } }),
       ]);
       const uni = uniRes.data.university;
-      setDetail({ university: uni, admins: uniRes.data.admins || [] });
+      setDetail({ university: uni, admins: uniRes.data.admins || [], stats: uniRes.data.stats || {} });
       setCampusUsers(usersRes.data.users || []);
       setEdit({
         name: uni.name || "",
+        code: uni.code || "",
+        city: uni.city || "",
+        region: uni.region || "",
         domain: uni.domain || "",
         permittedDomains: (uni.permitted_domains || []).join(", "),
       });
@@ -83,7 +86,14 @@ export default function CampusDetailModal({ open, universityId, onClose, onChang
       .map((d) => d.trim())
       .filter(Boolean);
     await patchCampus(
-      { name: edit.name.trim(), domain: edit.domain.trim() || null, permittedDomains: domains },
+      {
+        name: edit.name.trim(),
+        code: edit.code.trim().toUpperCase() || null,
+        city: edit.city.trim() || null,
+        region: edit.region.trim() || null,
+        domain: edit.domain.trim() || null,
+        permittedDomains: domains,
+      },
       "Campus details saved."
     );
   }
@@ -189,17 +199,42 @@ export default function CampusDetailModal({ open, universityId, onClose, onChang
                 <span className="text-xs text-muted">Created {fmtDate(uni.created_at)}</span>
               </div>
 
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 text-center">
+                  <p className="text-xs text-muted">Students</p>
+                  <p className="text-lg font-bold text-ink">{detail?.stats?.student_count ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 text-center">
+                  <p className="text-xs text-muted">Merchants</p>
+                  <p className="text-lg font-bold text-ink">{detail?.stats?.merchant_count ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 text-center">
+                  <p className="text-xs text-muted">Organizers</p>
+                  <p className="text-lg font-bold text-ink">{detail?.stats?.organizer_count ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 text-center">
+                  <p className="text-xs text-muted">Orders</p>
+                  <p className="text-lg font-bold text-ink">{detail?.stats?.order_count ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 text-center col-span-2 sm:col-span-1">
+                  <p className="text-xs text-muted">Events</p>
+                  <p className="text-lg font-bold text-ink">{detail?.stats?.event_count ?? 0}</p>
+                </div>
+              </div>
+
               <form onSubmit={saveBasics} className="grid gap-4 rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 sm:grid-cols-2">
                 <Input label="Name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                <Input label="Short Code / Acronym" value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value })} placeholder="e.g. AAU" />
+                <Input label="City" value={edit.city} onChange={(e) => setEdit({ ...edit, city: e.target.value })} placeholder="e.g. Addis Ababa" />
+                <Input label="Region" value={edit.region} onChange={(e) => setEdit({ ...edit, region: e.target.value })} placeholder="e.g. Addis Ababa" />
                 <Input label="Domain" value={edit.domain} onChange={(e) => setEdit({ ...edit, domain: e.target.value })} placeholder="campus.edu.et" />
                 <Input
                   label="Permitted domains"
-                  className="sm:col-span-2"
                   value={edit.permittedDomains}
                   onChange={(e) => setEdit({ ...edit, permittedDomains: e.target.value })}
                   hint="Comma separated. Emails from these domains can auto-verify."
                 />
-                <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <div className="flex flex-wrap gap-2 sm:col-span-2 pt-1">
                   <Button type="submit" loading={busy}>
                     Save details
                   </Button>

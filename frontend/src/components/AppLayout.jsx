@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthPrompt } from "../context/AuthPromptContext";
 import { client } from "../api/client";
 import { Badge } from "./ui";
 import Icon from "./Icon";
@@ -40,6 +41,8 @@ function navItemClass({ isActive }) {
 }
 
 function SideNav({ user, onNavigate }) {
+  const { promptAuth } = useAuthPrompt();
+  const location = useLocation();
   const tabs = useMemo(() => visibleTabs(user), [user]);
   const sections = useMemo(() => {
     const order = [];
@@ -64,7 +67,21 @@ function SideNav({ user, onNavigate }) {
           </p>
           <div className="flex flex-col gap-1">
             {section.tabs.map((t) => (
-              <NavLink key={t.key} to={t.to} end={t.end ?? t.to === "/"} className={navItemClass} onClick={onNavigate}>
+              <NavLink
+                key={t.key}
+                to={t.to}
+                end={t.end ?? t.to === "/"}
+                className={navItemClass}
+                onClick={(e) => {
+                  if (!user && location.pathname === "/" && t.to !== "/") {
+                    e.preventDefault();
+                    onNavigate?.();
+                    promptAuth({ to: t.to, badge: t.label });
+                    return;
+                  }
+                  onNavigate?.();
+                }}
+              >
                 <Icon name={t.icon || t.key} className="h-[18px] w-[18px] shrink-0" />
                 <span className="truncate">{t.label}</span>
               </NavLink>
@@ -469,6 +486,8 @@ function MobileDrawer({ open, onClose, user, unread, onLogout, onboarding }) {
 }
 
 function BottomNav({ user }) {
+  const { promptAuth } = useAuthPrompt();
+  const location = useLocation();
   const items = [
     { to: "/", label: "Home", icon: "home", end: true },
     { to: "/marketplace", label: "Shop", icon: "marketplace" },
@@ -485,6 +504,12 @@ function BottomNav({ user }) {
           key={it.to}
           to={it.to}
           end={it.end}
+          onClick={(e) => {
+            if (!user && location.pathname === "/" && it.to !== "/" && it.to !== "/login") {
+              e.preventDefault();
+              promptAuth({ to: it.to, badge: it.label });
+            }
+          }}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition ${
               isActive ? "text-slate-900 font-semibold" : "text-slate-500 hover:text-slate-800"
@@ -506,6 +531,7 @@ export { roleLabel };
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
+  const { promptAuth } = useAuthPrompt();
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -622,6 +648,17 @@ export default function AppLayout({ children }) {
               <p className="mt-1 text-xs text-slate-600">Post items to sell or rent to peers</p>
               <Link
                 to="/listings/new"
+                onClick={(e) => {
+                  if (!user && location.pathname === "/") {
+                    e.preventDefault();
+                    promptAuth({
+                      to: "/listings/new",
+                      badge: "Create Listing",
+                      description:
+                        "Log in or sign up with your campus account to list items for sale or rent.",
+                    });
+                  }
+                }}
                 className="mt-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-[#1c222c] hover:bg-[#2c3545] px-3 py-2 text-xs font-medium text-white shadow-sm transition"
               >
                 <span>Create Listing</span>

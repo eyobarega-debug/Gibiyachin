@@ -19,6 +19,7 @@ const db = require("../src/db");
 const paymentsService = require("../src/services/payments");
 const chapaProvider = require("../src/services/providers/chapa");
 const { signAccessToken } = require("../src/utils/jwt");
+const { hashPassword } = require("../src/utils/hash");
 
 let server;
 let baseUrl;
@@ -39,6 +40,21 @@ before(async () => {
   assert.ok(rows[0], "AASTU university must exist in DB");
   aastuUniversityId = rows[0].id;
 
+  // Ensure test users exist for phase 1 tests
+  const testPw = await hashPassword("Password123!");
+  await db.query(
+    `INSERT INTO users (university_id, name, email, phone, password_hash, role, verified, verification_method, email_verified)
+     VALUES ($1, 'Sara Tesfaye', 'sara@aastu.edu.et', '+251900000000', $2, 'student', true, 'domain', true)
+     ON CONFLICT (email) DO NOTHING`,
+    [aastuUniversityId, testPw]
+  );
+  await db.query(
+    `INSERT INTO users (university_id, name, email, phone, password_hash, role, verified, verification_method, email_verified)
+     VALUES ($1, 'Dawit Alemu', 'dawit@aastu.edu.et', '+251900000000', $2, 'student', true, 'domain', true)
+     ON CONFLICT (email) DO NOTHING`,
+    [aastuUniversityId, testPw]
+  );
+
   // Register a test transaction finalizer
   paymentsService.registerFinalizer("test_payable", {
     onConfirmed: async (txId) => {
@@ -52,6 +68,12 @@ before(async () => {
 
 after(async () => {
   chapaProvider._clearMockVerifier();
+  try {
+    await db.query("DELETE FROM payments WHERE payer_id IN (SELECT id FROM users WHERE email IN ('sara@aastu.edu.et', 'dawit@aastu.edu.et'))");
+    await db.query("DELETE FROM users WHERE email IN ('sara@aastu.edu.et', 'dawit@aastu.edu.et')");
+  } catch (_) {
+    // ignore cleanup errors on shutdown
+  }
   if (server) {
     await new Promise((resolve) => server.close(resolve));
   }

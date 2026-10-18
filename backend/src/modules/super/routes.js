@@ -40,18 +40,28 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await db.query("SELECT * FROM universities WHERE id = $1", [req.params.id]);
     if (!rows[0]) throw notFound("University not found");
-    const admins = await db.query(
-      "SELECT id, name, email, suspended FROM users WHERE university_id = $1 AND role = 'admin' ORDER BY created_at",
-      [req.params.id]
-    );
-    res.json({ university: rows[0], admins: admins.rows });
+    const [admins, stats] = await Promise.all([
+      db.query(
+        "SELECT id, name, email, phone, suspended, created_at FROM users WHERE university_id = $1 AND role = 'admin' ORDER BY created_at",
+        [req.params.id]
+      ),
+      db.query(
+        `SELECT
+           (SELECT count(*)::int FROM users WHERE university_id = $1 AND role = 'student') AS student_count,
+           (SELECT count(*)::int FROM users WHERE university_id = $1 AND role = 'merchant') AS merchant_count,
+           (SELECT count(*)::int FROM users WHERE university_id = $1 AND role = 'organizer') AS organizer_count,
+           (SELECT count(*)::int FROM orders WHERE university_id = $1) AS order_count,
+           (SELECT count(*)::int FROM events WHERE university_id = $1) AS event_count`,
+        [req.params.id]
+      ),
+    ]);
+    res.json({ university: rows[0], admins: admins.rows, stats: stats.rows[0] });
   })
 );
 
-// University onboarding workflow: one atomic call creates the tenant, its
-// first University Administrator and (optionally) its initial clubs — no
-// engineering involvement. Merchants onboard themselves through the normal
-// merchant-application flow, which the new admin then approves.
+// University onboarding workflow: atomic call creates the tenant, its
+// optional initial University Administrator and optional initial clubs.
+// Merchants and organizers onboard themselves through formal application flows.
 router.post(
   "/universities",
   validate({
@@ -60,44 +70,73 @@ router.post(
       domain: z.string().regex(domainRe, "Must look like campus.edu.et").optional(),
       permittedDomains: z.array(z.string().regex(domainRe)).optional(),
       slug: z.string().regex(/^[a-z0-9-]{2,60}$/).optional(),
+      code: z.string().trim().max(20).optional(),
+      city: z.string().trim().max(100).optional(),
+      region: z.string().trim().max(100).optional(),
+      institutionType: z.enum(["public", "private"]).optional(),
       featureFlags: z.record(z.string(), z.boolean()).optional(),
-      admin: z.object({ name: z.string().min(2), email: z.string().email(), password: z.string().min(8), phone: z.string().optional() }),
+      admin: z
+        .object({
+          name: z.string().min(2),
+          email: z.string().email(),
+          password: z.string().min(8),
+          phone: z.string().optional(),
+        })
+        .optional(),
       initialClubs: z.array(z.string().min(2)).max(50).optional(),
     }),
   }),
   asyncHandler(async (req, res) => {
-    const { name, domain, permittedDomains, featureFlags, admin, initialClubs } = req.body;
+    const { name, domain, permittedDomains, featureFlags, admin, initialClubs, code, city, region, institutionType } =
+      req.body;
     const slug = req.body.slug || slugify(name);
 
-    const dupEmail = await db.query("SELECT 1 FROM users WHERE email = $1", [admin.email.toLowerCase()]);
-    if (dupEmail.rows.length) throw conflict("An account with the admin's email already exists", "EMAIL_TAKEN");
+    if (admin) {
+      const dupEmail = await db.query("SELECT 1 FROM users WHERE lower(email) = lower($1)", [admin.email]);
+      if (dupEmail.rows.length) throw conflict("An account with the admin's email already exists", "EMAIL_TAKEN");
+    }
 
-    const resolvedPermitted = permittedDomains && permittedDomains.length
-      ? permittedDomains.map((d) => d.toLowerCase())
-      : domain
-      ? [domain.toLowerCase()]
-      : [];
+    const resolvedPermitted =
+      permittedDomains && permittedDomains.length
+        ? permittedDomains.map((d) => d.toLowerCase())
+        : domain
+        ? [domain.toLowerCase()]
+        : [];
 
-    const passwordHash = await hashPassword(admin.password);
+    const passwordHash = admin ? await hashPassword(admin.password) : null;
     const result = await db.withTransaction(async (client) => {
       let uni;
       try {
         const r = await client.query(
-          `INSERT INTO universities (name, domain, permitted_domains, slug, feature_flags)
-           VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-          [name, domain ? domain.toLowerCase() : null, resolvedPermitted, slug, JSON.stringify(featureFlags || {})]
+          `INSERT INTO universities (name, domain, permitted_domains, slug, feature_flags, code, city, region, institution_type)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [
+            name,
+            domain ? domain.toLowerCase() : null,
+            resolvedPermitted,
+            slug,
+            JSON.stringify(featureFlags || {}),
+            code || null,
+            city || null,
+            region || null,
+            institutionType || "public",
+          ]
         );
         uni = r.rows[0];
       } catch (e) {
         if (e.code === "23505") throw conflict("A university with that slug or domain already exists", "UNIVERSITY_EXISTS");
         throw e;
       }
-      const a = await client.query(
-        `INSERT INTO users (university_id, name, email, phone, password_hash, role, verified, verification_method)
-         VALUES ($1,$2,$3,$4,$5,'admin',true,'super_admin_provisioned')
-         RETURNING id, name, email, role, university_id`,
-        [uni.id, admin.name, admin.email.toLowerCase(), admin.phone || null, passwordHash]
-      );
+      let adminRow = null;
+      if (admin) {
+        const a = await client.query(
+          `INSERT INTO users (university_id, name, email, phone, password_hash, role, verified, verification_method, email_verified)
+           VALUES ($1,$2,$3,$4,$5,'admin',true,'super_admin_provisioned',true)
+           RETURNING id, name, email, role, university_id`,
+          [uni.id, admin.name, admin.email.toLowerCase(), admin.phone || null, passwordHash]
+        );
+        adminRow = a.rows[0];
+      }
       const clubs = [];
       for (const clubName of initialClubs || []) {
         const c = await client.query(
@@ -106,7 +145,7 @@ router.post(
         );
         clubs.push(c.rows[0]);
       }
-      return { university: uni, admin: a.rows[0], clubs };
+      return { university: uni, admin: adminRow, clubs };
     });
     await audit(req.user.id, "university.onboard", "university", result.university.id, { name, slug, domain });
     res.status(201).json(result);
@@ -120,6 +159,10 @@ router.patch(
       name: z.string().min(2).optional(),
       domain: z.string().regex(domainRe).nullable().optional(),
       permittedDomains: z.array(z.string().regex(domainRe)).optional(),
+      code: z.string().trim().max(20).optional(),
+      city: z.string().trim().max(100).optional(),
+      region: z.string().trim().max(100).optional(),
+      institutionType: z.enum(["public", "private"]).optional(),
       status: z.enum(["active", "suspended"]).optional(),
       isolationMode: z.enum(["shared", "dedicated"]).optional(),
       isolationReason: z.string().min(5).optional(),
@@ -140,18 +183,26 @@ router.patch(
            name = COALESCE($1, name),
            domain = CASE WHEN $2::boolean THEN $3 ELSE domain END,
            permitted_domains = CASE WHEN $4::boolean THEN $5 ELSE permitted_domains END,
-           status = COALESCE($6, status),
-           isolation_mode = COALESCE($7, isolation_mode),
-           isolation_reason = CASE WHEN $7 = 'shared' THEN NULL ELSE COALESCE($8, isolation_reason) END,
-           feature_flags = feature_flags || COALESCE($9::jsonb, '{}'::jsonb),
+           code = COALESCE($6, code),
+           city = COALESCE($7, city),
+           region = COALESCE($8, region),
+           institution_type = COALESCE($9, institution_type),
+           status = COALESCE($10, status),
+           isolation_mode = COALESCE($11, isolation_mode),
+           isolation_reason = CASE WHEN $11 = 'shared' THEN NULL ELSE COALESCE($12, isolation_reason) END,
+           feature_flags = feature_flags || COALESCE($13::jsonb, '{}'::jsonb),
            updated_at = now()
-         WHERE id = $10 RETURNING *`,
+         WHERE id = $14 RETURNING *`,
         [
           b.name ?? null,
           b.domain !== undefined,
           b.domain === undefined ? null : b.domain && b.domain.toLowerCase(),
           b.permittedDomains !== undefined,
           b.permittedDomains ? b.permittedDomains.map((d) => d.toLowerCase()) : null,
+          b.code ?? null,
+          b.city ?? null,
+          b.region ?? null,
+          b.institutionType ?? null,
           b.status ?? null,
           b.isolationMode ?? null,
           b.isolationReason ?? null,

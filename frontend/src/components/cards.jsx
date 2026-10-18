@@ -8,7 +8,7 @@ import { Badge } from "./ui";
 /* ------------------------------------------------------------------ */
 /* Compact glass statistic                                             */
 /* ------------------------------------------------------------------ */
-export function StatCard({ icon = "sparkles", value, label, to, className = "" }) {
+export function StatCard({ icon = "sparkles", value, label, to, onClick, className = "" }) {
   const content = (
     <div
       className={`glass glass-hover group flex flex-col justify-between rounded-2xl border border-white/80 bg-white/75 p-4.5 shadow-xs transition hover:bg-white/95 ${className}`}
@@ -32,7 +32,7 @@ export function StatCard({ icon = "sparkles", value, label, to, className = "" }
 
   if (to) {
     return (
-      <Link to={to} className="block">
+      <Link to={to} onClick={onClick} className="block">
         {content}
       </Link>
     );
@@ -56,7 +56,7 @@ export function CategoryCard({ icon = "marketplace", label, to, onClick, classNa
   const cls = `glass glass-hover group flex items-center gap-3 rounded-2xl border border-white/80 bg-white/75 p-4 text-left shadow-xs transition hover:bg-white/95 ${className}`;
   if (to) {
     return (
-      <Link to={to} className={cls}>
+      <Link to={to} onClick={onClick} className={cls}>
         {inner}
       </Link>
     );
@@ -98,7 +98,7 @@ export function MediaImage({ src, alt, icon = "image", className = "" }) {
 /* ------------------------------------------------------------------ */
 /* Product card                                                        */
 /* ------------------------------------------------------------------ */
-export function ProductCard({ product, className = "" }) {
+export function ProductCard({ product, onClick, className = "" }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [favorited, setFavorited] = useState(false);
@@ -133,6 +133,7 @@ export function ProductCard({ product, className = "" }) {
   return (
     <Link
       to={`/marketplace/${product.id}`}
+      onClick={onClick}
       className={`glass glass-hover group flex h-full flex-col overflow-hidden rounded-[22px] border border-white/80 bg-white/75 shadow-xs transition hover:bg-white/95 ${className}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
@@ -206,7 +207,7 @@ export function ProductCard({ product, className = "" }) {
 /* ------------------------------------------------------------------ */
 /* Event card                                                          */
 /* ------------------------------------------------------------------ */
-export function EventCard({ event, className = "" }) {
+export function EventCard({ event, onClick, className = "" }) {
   const sold = Number(event.capacity_total) > 0 ? Number(event.capacity_sold) : 0;
   const total = Number(event.capacity_total) || 0;
   const pct = total ? Math.min(100, Math.round((sold / total) * 100)) : 0;
@@ -217,6 +218,7 @@ export function EventCard({ event, className = "" }) {
   return (
     <Link
       to={`/events/${event.id}`}
+      onClick={onClick}
       className={`glass glass-hover group flex h-full flex-col overflow-hidden rounded-2xl border border-white/80 bg-white/75 shadow-xs transition hover:bg-white/95 ${className}`}
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100">
@@ -277,10 +279,11 @@ export function EventCard({ event, className = "" }) {
 /* ------------------------------------------------------------------ */
 /* Rental card                                                         */
 /* ------------------------------------------------------------------ */
-export function RentalCard({ rental, className = "" }) {
+export function RentalCard({ rental, onClick, className = "" }) {
   return (
     <Link
       to={`/rentals/${rental.id}`}
+      onClick={onClick}
       className={`glass glass-hover group flex h-full flex-col overflow-hidden rounded-[22px] border border-white/80 bg-white/75 shadow-xs transition hover:bg-white/95 ${className}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
@@ -312,10 +315,11 @@ export function RentalCard({ rental, className = "" }) {
 /* ------------------------------------------------------------------ */
 /* P2P Listing card                                                    */
 /* ------------------------------------------------------------------ */
-export function ListingCard({ listing, className = "" }) {
+export function ListingCard({ listing, onClick, className = "" }) {
   return (
     <Link
       to={`/listings/${listing.id}`}
+      onClick={onClick}
       className={`glass glass-hover group flex h-full flex-col overflow-hidden rounded-[22px] border border-white/80 bg-white/75 shadow-xs transition hover:bg-white/95 ${className}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">

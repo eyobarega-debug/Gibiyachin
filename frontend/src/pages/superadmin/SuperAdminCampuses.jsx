@@ -40,7 +40,9 @@ export default function SuperAdminCampuses() {
     return (list || []).filter((u) => {
       if (status && u.status !== status) return false;
       if (!q) return true;
-      return [u.name, u.slug, u.domain].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      return [u.name, u.code, u.city, u.region, u.slug, u.domain]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q));
     });
   }, [list, search, status]);
 
@@ -57,7 +59,7 @@ export default function SuperAdminCampuses() {
       <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_200px]">
         <Input
           aria-label="Search campuses"
-          placeholder="Search by name, slug or domain…"
+          placeholder="Search by name, code, location or domain…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -82,11 +84,12 @@ export default function SuperAdminCampuses() {
       ) : (
         <>
           <div className="hidden md:block">
-            <Table head={["Campus", "Slug", "Domain", "Status", "Users", "Admins", ""]}>
+            <Table head={["Campus", "Code", "Location", "Domain", "Status", "Users", "Admins", ""]}>
               {filtered.map((u) => (
                 <tr key={u.id} className="text-slate-700">
                   <td className="px-4 py-3 font-medium text-ink">{u.name}</td>
-                  <td className="px-4 py-3 text-muted">{u.slug || "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted">{u.code || u.slug || "—"}</td>
+                  <td className="px-4 py-3 text-muted">{[u.city, u.region].filter(Boolean).join(", ") || "—"}</td>
                   <td className="px-4 py-3 text-muted">{u.domain || "—"}</td>
                   <td className="px-4 py-3">
                     <Badge tone={UNIVERSITY_STATUS_TONE[u.status] || "slate"}>{u.status}</Badge>
@@ -109,7 +112,9 @@ export default function SuperAdminCampuses() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-ink">{u.name}</p>
-                    <p className="truncate text-xs text-muted">{u.slug || u.domain || "No slug"}</p>
+                    <p className="truncate text-xs text-muted">
+                      {[u.code, [u.city, u.region].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || u.domain || "No domain"}
+                    </p>
                   </div>
                   <Badge tone={UNIVERSITY_STATUS_TONE[u.status] || "slate"}>{u.status}</Badge>
                 </div>

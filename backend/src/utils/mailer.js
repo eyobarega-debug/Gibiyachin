@@ -44,14 +44,23 @@ function fromAddress() {
  */
 async function sendMail({ to, subject, text, html }) {
   if (!isEmailConfigured()) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[mailer] Cannot send email to ${to}: EMAIL_HOST is not configured in production.`);
+      return { delivered: false, dev: false, error: new Error("Email service is not configured (EMAIL_HOST is missing)") };
+    }
     // Dev fallback: mirror the existing `[DEV EMAIL]` convention. The full
     // message (including the OTP) lands in the server log only.
     console.log(`[DEV EMAIL] -> ${to} | ${subject}\n${text}`);
     return { delivered: true, dev: true };
   }
 
-  const info = await getTransporter().sendMail({ from: fromAddress(), to, subject, text, html });
-  return { delivered: true, messageId: info && info.messageId };
+  try {
+    const info = await getTransporter().sendMail({ from: fromAddress(), to, subject, text, html });
+    return { delivered: true, messageId: info && info.messageId };
+  } catch (err) {
+    console.error(`[mailer] SMTP send failed to ${to}:`, err.message);
+    return { delivered: false, error: err };
+  }
 }
 
 module.exports = { sendMail, isEmailConfigured };

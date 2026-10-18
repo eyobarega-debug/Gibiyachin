@@ -100,7 +100,7 @@ export default function VerifyEmail() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@aastu.edu.et"
+            placeholder="you@campus.edu.et"
           />
         ) : (
           <p className="rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-slate">

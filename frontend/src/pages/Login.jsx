@@ -34,7 +34,8 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login(form.email.trim(), form.password);
-      const dest = location.state?.from?.pathname || roleHome(user.role);
+      const rawFrom = location.state?.from;
+      const dest = (typeof rawFrom === "string" ? rawFrom : rawFrom?.pathname) || roleHome(user.role);
       navigate(dest, { replace: true });
     } catch (err) {
       setError(errMsg(err, "Could not log in"));
@@ -53,7 +54,7 @@ export default function Login() {
           type="email"
           required
           autoComplete="email"
-          placeholder="you@aastu.edu.et"
+          placeholder="you@campus.edu.et"
           value={form.email}
           error={fieldErrors.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -84,11 +85,6 @@ export default function Login() {
           Forgot your password?
         </Link>
       </p>
-
-      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white/70 p-3.5 text-xs text-muted shadow-xs">
-        <p className="mb-1 font-semibold text-ink">Demo accounts (password: Password123!)</p>
-        <p>admin@aastu.edu.et · sara@aastu.edu.et · selam@aastu.edu.et (merchant) · robel@aastu.edu.et (organizer)</p>
-      </div>
     </AuthCard>
   );
 }

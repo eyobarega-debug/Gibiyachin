@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
+import { AuthPromptProvider } from "./context/AuthPromptContext";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -63,7 +64,8 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
-            <AppLayout>
+            <AuthPromptProvider>
+              <AppLayout>
               <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -71,6 +73,7 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/marketplace/:id" element={<ProductDetail />} />
@@ -138,6 +141,7 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
             </AppLayout>
+            </AuthPromptProvider>
           </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { client } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useAuthPrompt } from "../context/AuthPromptContext";
 import { Button, Card, Skeleton } from "../components/ui";
 import { ProductCard, EventCard, StatCard, CategoryCard, RentalCard, ListingCard } from "../components/cards";
 import Icon from "../components/Icon";
@@ -56,11 +57,25 @@ function quickActionsFor(user) {
 
 export default function Home() {
   const { user } = useAuth();
+  const { promptAuth } = useAuthPrompt();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState(null);
   const [events, setEvents] = useState(null);
   const [listings, setListings] = useState(null);
   const [rentals, setRentals] = useState(null);
+
+  function handleTabClick(e, destination, badge, description) {
+    if (!user) {
+      e.preventDefault();
+      promptAuth({
+        to: destination,
+        badge: badge || "Campus Services",
+        description:
+          description ||
+          "Join your campus community to browse verified listings, borrow & rent equipment, and access QR-verified event tickets.",
+      });
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -129,18 +144,47 @@ export default function Home() {
               secure QR event tickets and trusted campus services.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Button as={Link} to="/marketplace" size="lg">
+              <Button
+                as={Link}
+                to="/marketplace"
+                size="lg"
+                onClick={(e) =>
+                  handleTabClick(
+                    e,
+                    "/marketplace",
+                    "Marketplace",
+                    "Explore verified products from university campus merchants."
+                  )
+                }
+              >
                 Explore Marketplace
                 <Icon name="arrowRight" className="h-4 w-4" />
               </Button>
-              <Button as={Link} to="/events" variant="secondary" size="lg">
+              <Button
+                as={Link}
+                to="/events"
+                variant="secondary"
+                size="lg"
+                onClick={(e) =>
+                  handleTabClick(
+                    e,
+                    "/events",
+                    "Events",
+                    "Find and secure QR-verified passes for campus events and workshops."
+                  )
+                }
+              >
                 Explore Events
               </Button>
             </div>
             {!user && (
               <p className="mt-4 text-sm text-slate-500">
                 New here?{" "}
-                <Link to="/register" className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-800">
+                <Link
+                  to="/register"
+                  onClick={(e) => handleTabClick(e, "/register", "Sign Up", "Create your campus account to buy, sell, and rent on campus.")}
+                  className="font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-800"
+                >
                   Create an account
                 </Link>{" "}
                 to buy, sell and rent on campus.
@@ -150,7 +194,15 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-3.5">
             {stats.map((s) => (
-              <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} to={s.to} className="min-w-0" />
+              <StatCard
+                key={s.label}
+                icon={s.icon}
+                label={s.label}
+                value={s.value}
+                to={s.to}
+                onClick={(e) => handleTabClick(e, s.to, s.label)}
+                className="min-w-0"
+              />
             ))}
           </div>
         </div>
@@ -164,16 +216,50 @@ export default function Home() {
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Browse by category</h2>
               <p className="text-sm text-slate-500">Find exactly what you need, faster.</p>
             </div>
-            <Link to="/marketplace" className="hidden items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900 sm:flex">
+            <Link
+              to="/marketplace"
+              onClick={(e) => handleTabClick(e, "/marketplace", "Categories")}
+              className="hidden items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900 sm:flex"
+            >
               View all <Icon name="arrowRight" className="h-4 w-4" />
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {categories.slice(0, 5).map((c) => (
-              <CategoryCard key={c.id} icon={categoryIcon(c.name)} label={c.name} to={`/marketplace?category=${c.id}`} />
+              <CategoryCard
+                key={c.id}
+                icon={categoryIcon(c.name)}
+                label={c.name}
+                to={`/marketplace?category=${c.id}`}
+                onClick={(e) => handleTabClick(e, `/marketplace?category=${c.id}`, c.name)}
+              />
             ))}
-            <CategoryCard icon="rentals" label="Rentals & Borrowing" to="/rentals" />
-            <CategoryCard icon="events" label="Events & Tickets" to="/events" />
+            <CategoryCard
+              icon="rentals"
+              label="Rentals & Borrowing"
+              to="/rentals"
+              onClick={(e) =>
+                handleTabClick(
+                  e,
+                  "/rentals",
+                  "Rentals & Borrowing",
+                  "Borrow electronics, lab gear, and textbooks from fellow students."
+                )
+              }
+            />
+            <CategoryCard
+              icon="events"
+              label="Events & Tickets"
+              to="/events"
+              onClick={(e) =>
+                handleTabClick(
+                  e,
+                  "/events",
+                  "Events & Tickets",
+                  "Discover upcoming campus happenings and reserve tickets."
+                )
+              }
+            />
           </div>
         </section>
       )}
@@ -187,7 +273,11 @@ export default function Home() {
             </h2>
             <p className="text-sm text-slate-500">Handpicked from verified campus merchants.</p>
           </div>
-          <Link to="/marketplace" className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+          <Link
+            to="/marketplace"
+            onClick={(e) => handleTabClick(e, "/marketplace", "Marketplace")}
+            className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
             View All <Icon name="arrowRight" className="h-4 w-4" />
           </Link>
         </div>
@@ -205,7 +295,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {productShowcase.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                onClick={(e) => handleTabClick(e, `/marketplace/${p.id}`, "Product", p.title)}
+              />
             ))}
           </div>
         )}
@@ -218,7 +312,11 @@ export default function Home() {
             <h2 className="text-xl font-bold tracking-tight text-slate-900">Upcoming Events</h2>
             <p className="text-sm text-slate-500">Secure your spot with QR-verified tickets.</p>
           </div>
-          <Link to="/events" className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+          <Link
+            to="/events"
+            onClick={(e) => handleTabClick(e, "/events", "Events")}
+            className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
             View All <Icon name="arrowRight" className="h-4 w-4" />
           </Link>
         </div>
@@ -236,7 +334,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.map((e) => (
-              <EventCard key={e.id} event={e} />
+              <EventCard
+                key={e.id}
+                event={e}
+                onClick={(e) => handleTabClick(e, `/events/${e.id}`, "Events", e.title)}
+              />
             ))}
           </div>
         )}
@@ -251,7 +353,11 @@ export default function Home() {
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Popular Rentals</h2>
               <p className="text-sm text-slate-500">Gear, books &amp; equipment to borrow.</p>
             </div>
-            <Link to="/rentals" className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+            <Link
+              to="/rentals"
+              onClick={(e) => handleTabClick(e, "/rentals", "Rentals")}
+              className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            >
               Explore Rentals <Icon name="arrowRight" className="h-4 w-4" />
             </Link>
           </div>
@@ -268,7 +374,11 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {popularRentals.map((r) => (
-                <RentalCard key={r.id} rental={r} />
+                <RentalCard
+                  key={r.id}
+                  rental={r}
+                  onClick={(e) => handleTabClick(e, `/rentals/${r.id}`, "Rentals", r.title)}
+                />
               ))}
             </div>
           )}
@@ -281,7 +391,11 @@ export default function Home() {
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Recent P2P Listings</h2>
               <p className="text-sm text-slate-500">Buy directly from fellow students.</p>
             </div>
-            <Link to="/listings" className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+            <Link
+              to="/listings"
+              onClick={(e) => handleTabClick(e, "/listings", "P2P Market")}
+              className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            >
               Explore P2P <Icon name="arrowRight" className="h-4 w-4" />
             </Link>
           </div>
@@ -298,7 +412,11 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {recentListings.map((l) => (
-                <ListingCard key={l.id} listing={l} />
+                <ListingCard
+                  key={l.id}
+                  listing={l}
+                  onClick={(e) => handleTabClick(e, `/listings/${l.id}`, "P2P Market", l.title)}
+                />
               ))}
             </div>
           )}
@@ -368,6 +486,7 @@ export default function Home() {
             <Link
               key={a.label}
               to={a.to}
+              onClick={(e) => handleTabClick(e, a.to, a.label, a.desc)}
               className="glass glass-hover group flex items-start gap-3 rounded-2xl border border-white/80 bg-white/75 p-4 shadow-xs transition hover:bg-white/95"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 border border-slate-200/60 shadow-xs">

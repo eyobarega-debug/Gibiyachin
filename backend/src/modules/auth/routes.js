@@ -89,7 +89,7 @@ function escapeHtml(s) {
 }
 
 async function sendPasswordResetEmail({ email, name, resetToken }) {
-  const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const appUrl = (process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
   const resetLink = `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
   const subject = "Reset your Gibiyachin password";
   const text = [
@@ -438,7 +438,7 @@ router.post(
   rateLimit({ windowMs: 60_000, max: 5, keyFn: (req) => `forgotpw:${req.ip}:${req.body?.email}` }),
   validate({ body: z.object({ email: z.string().email() }) }),
   asyncHandler(async (req, res) => {
-    const email = req.body.email.toLowerCase();
+    const email = req.body.email.toLowerCase().trim();
     const { rows } = await db.query("SELECT id, name, email FROM users WHERE email = $1", [email]);
     if (rows[0]) {
       const resetToken = crypto.randomBytes(32).toString("hex");
@@ -458,12 +458,12 @@ router.post(
 router.post(
   "/reset-password",
   rateLimit({ windowMs: 60_000, max: 10, keyFn: (req) => `resetpw:${req.ip}` }),
-  validate({ body: z.object({ token: z.string().min(1), newPassword: z.string().min(8) }) }),
+  validate({ body: z.object({ token: z.string().min(1, "Reset token is required"), newPassword: z.string().min(8, "Password must be at least 8 characters") }) }),
   asyncHandler(async (req, res) => {
     const { token, newPassword } = req.body;
     const { rows } = await db.query(
       "SELECT id FROM users WHERE password_reset_token = $1 AND password_reset_expires > now()",
-      [hashToken(token)]
+      [hashToken(token.trim())]
     );
     if (!rows[0]) throw badRequest("Invalid or expired reset token");
     const passwordHash = await hashPassword(newPassword);
