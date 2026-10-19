@@ -65,7 +65,7 @@ export default function QrScanner({ onScan }) {
       </div>
       <div className="flex gap-2">
         <Input
-          placeholder="ticketId.signature"
+          placeholder="Ticket # (e.g. GIB-F7A79799) or paste QR"
           value={manualToken}
           onChange={(e) => setManualToken(e.target.value)}
           className="flex-1"

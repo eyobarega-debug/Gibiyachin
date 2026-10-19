@@ -231,6 +231,21 @@ export default function TicketCard({
           </div>
         )}
 
+        {/* Cancelled / Void Notice */}
+        {(status === "cancelled" || status === "expired") && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 text-xs text-rose-800">
+            <Icon name="ban" className="h-4 w-4 shrink-0 text-rose-500 mt-0.5" />
+            <div>
+              <p className="font-semibold text-rose-900">
+                {status === "cancelled" ? "Ticket Voided / Cancelled" : "Ticket Expired"}
+              </p>
+              <p className="mt-0.5 text-rose-700">
+                This ticket is kept as an audit record from a previous cancelled attempt or refund. It cannot be used for admission.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Branding & Anti-Counterfeit Verification Footer */}
         <div className="mt-5 flex items-center justify-between border-t border-slate-200/80 pt-3 text-[11px] text-slate-500">
           <div className="flex items-center gap-1.5">

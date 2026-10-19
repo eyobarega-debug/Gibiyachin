@@ -24,8 +24,12 @@ export default function MyTickets() {
         client.get("/tickets/mine"),
         client.get("/events/waitlist/mine"),
       ]);
-      setTickets(ticketsRes.data.tickets || []);
+      const fetched = ticketsRes.data.tickets || [];
+      setTickets(fetched);
       setWaitlist(waitlistRes.data.entries || []);
+      if (!targetTicketId && fetched.some((t) => t.status === "active")) {
+        setFilter("active");
+      }
     } catch (err) {
       setError(errMsg(err, "Could not load tickets"));
     }
@@ -97,14 +101,23 @@ export default function MyTickets() {
     );
   }
 
-  const filteredTickets = tickets.filter((t) => {
-    if (filter === "all") return true;
-    if (filter === "active") return t.status === "active";
-    if (filter === "reserved") return t.status === "reserved";
-    if (filter === "used") return t.status === "used";
-    if (filter === "cancelled") return t.status === "cancelled" || t.status === "expired";
-    return true;
-  });
+  const STATUS_SORT_ORDER = { active: 1, reserved: 2, used: 3, cancelled: 4, expired: 5 };
+
+  const filteredTickets = tickets
+    .filter((t) => {
+      if (filter === "all") return true;
+      if (filter === "active") return t.status === "active";
+      if (filter === "reserved") return t.status === "reserved";
+      if (filter === "used") return t.status === "used";
+      if (filter === "cancelled") return t.status === "cancelled" || t.status === "expired";
+      return true;
+    })
+    .sort((a, b) => {
+      const orderA = STATUS_SORT_ORDER[a.status] || 99;
+      const orderB = STATUS_SORT_ORDER[b.status] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
 
   return (
     <div>

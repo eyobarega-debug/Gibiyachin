@@ -12,6 +12,8 @@ const RESULT_STYLE = {
   PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
   CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
   EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  WRONG_EVENT: { tone: "danger", icon: "ban", label: "ENTRY DENIED — WRONG EVENT" },
+  NOT_FOUND: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET NOT FOUND" },
   INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
   FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
@@ -31,6 +33,7 @@ export default function OrganizerEventDetail() {
   const [occCount, setOccCount] = useState(4);
   const [generating, setGenerating] = useState(false);
   const [reversingId, setReversingId] = useState(null);
+  const [attendeeSearch, setAttendeeSearch] = useState("");
 
   async function load() {
     try {
@@ -78,34 +81,37 @@ export default function OrganizerEventDetail() {
     const token = extractQrToken(scannedPayload);
     setCurrentQrToken(token);
 
-    const ticketId = token.split(".")[0];
-    if (!ticketId) {
-      setScanResult({ result: "INVALID", reason: "Unreadable QR content" });
+    if (!token) {
+      setScanResult({ result: "INVALID", reason: "Unreadable or empty ticket input" });
       return;
     }
 
+    const ticketId = token.split(".")[0];
+
     if (!online) {
-      setQueue((q) => [...q, { ticketId, qrToken: token, scannedAt: new Date().toISOString() }]);
+      setQueue((q) => [...q, { ticketId: ticketId || token, qrToken: token, ticketNumber: token, scannedAt: new Date().toISOString() }]);
       setScanResult({ result: "QUEUED", reason: "Offline — scan queued. Will verify once back online." });
       return;
     }
 
     try {
       if (autoCheckIn) {
-        // Direct atomic admission
+        // Direct atomic admission with eventId scope matching
         const { data: res } = await client.post("/tickets/scan", {
-          qrToken: token,
+          ticketIdentifier: token,
+          eventId: id,
           action: "check_in",
           deviceInfo: navigator.userAgent?.slice(0, 50),
         });
         setScanResult(res);
         if (res.result === "ADMIT") {
-          setSuccess(`Admitted: ${res.ticket?.holder_name || "Attendee"}`);
+          setSuccess(`Admitted: ${res.attendeeName || res.ticket?.holder_name || "Attendee"}`);
         }
       } else {
         // Inspection mode: show details first, require explicit staff admission click
         const { data: res } = await client.post("/tickets/scan", {
-          qrToken: token,
+          ticketIdentifier: token,
+          eventId: id,
           action: "inspect",
         });
         setScanResult(res);
@@ -132,12 +138,13 @@ export default function OrganizerEventDetail() {
     setSuccess("");
     try {
       const { data: res } = await client.post("/tickets/scan", {
-        qrToken: currentQrToken,
+        ticketIdentifier: currentQrToken,
+        eventId: id,
         action: "check_in",
       });
       setScanResult(res);
       if (res.result === "ADMIT") {
-        setSuccess(`Admitted: ${res.ticket?.holder_name || "Attendee"}`);
+        setSuccess(`Admitted: ${res.attendeeName || res.ticket?.holder_name || "Attendee"}`);
       }
       await load();
     } catch (err) {
@@ -171,7 +178,7 @@ export default function OrganizerEventDetail() {
     setSyncing(true);
     setError("");
     try {
-      const { data: res } = await client.post("/tickets/verify-batch", { scans: queue });
+      const { data: res } = await client.post("/tickets/verify-batch", { scans: queue, eventId: id });
       const admitted = res.results.filter((r) => r.result === "ADMIT").length;
       const rejected = res.results.length - admitted;
       setSuccess(`Synced ${res.results.length} queued scans: ${admitted} admitted, ${rejected} rejected/duplicate.`);
@@ -199,6 +206,16 @@ export default function OrganizerEventDetail() {
   }
 
   if (!data) return null;
+
+  const filteredAttendees = (data?.attendees || []).filter((att) => {
+    if (!attendeeSearch.trim()) return true;
+    const q = attendeeSearch.toLowerCase().trim();
+    const nameMatch = att.holder_name?.toLowerCase().includes(q);
+    const emailMatch = att.holder_email?.toLowerCase().includes(q);
+    const numMatch = att.ticket_number?.toLowerCase().includes(q);
+    const tierMatch = att.ticket_type?.toLowerCase().includes(q);
+    return nameMatch || emailMatch || numMatch || tierMatch;
+  });
 
   return (
     <div>
@@ -458,6 +475,101 @@ export default function OrganizerEventDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Attendee Roster & Manual Gate Lookup */}
+      <Card className="glass-panel mt-6 p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/80 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-ink">Attendee Roster & Manual Gate Lookup</h2>
+            <p className="text-xs text-muted">
+              {data.attendees?.length || 0} registered attendees · Search by ticket # (e.g. GIB-F7A79799), name, or email for quick check-in.
+            </p>
+          </div>
+          <div className="w-full sm:w-72">
+            <Input
+              placeholder="Search by ticket #, name, email..."
+              value={attendeeSearch}
+              onChange={(e) => setAttendeeSearch(e.target.value)}
+              className="w-full text-xs"
+            />
+          </div>
+        </div>
+
+        {filteredAttendees.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted">
+            {attendeeSearch ? "No attendees matched your search query." : "No attendees registered yet for this event."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200/60 text-muted uppercase text-[10px]">
+                  <th className="py-2 pr-3 font-semibold">Attendee</th>
+                  <th className="py-2 px-3 font-semibold">Ticket #</th>
+                  <th className="py-2 px-3 font-semibold">Tier</th>
+                  <th className="py-2 px-3 font-semibold">Status</th>
+                  <th className="py-2 pl-3 text-right font-semibold">Gate Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/40">
+                {filteredAttendees.map((att) => (
+                  <tr key={att.id} className="hover:bg-white/40 transition">
+                    <td className="py-2.5 pr-3">
+                      <p className="font-semibold text-ink">{att.holder_name}</p>
+                      <p className="text-[11px] text-muted">{att.holder_email}</p>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-ink">
+                      {att.ticket_number || att.id.slice(0, 8)}
+                    </td>
+                    <td className="py-2.5 px-3 text-muted">{att.ticket_type}</td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                          att.status === "active"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : att.status === "used"
+                            ? "bg-slate-100 text-slate-800 border border-slate-200"
+                            : att.status === "reserved"
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : "bg-rose-100 text-rose-800 border border-rose-200"
+                        }`}
+                      >
+                        {att.status === "active"
+                          ? "Valid & Ready"
+                          : att.status === "used"
+                          ? "Admitted"
+                          : att.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pl-3 text-right">
+                      {att.status === "active" ? (
+                        <Button
+                          variant="accent"
+                          className="text-xs px-2.5 py-1 font-semibold"
+                          onClick={() => handleScan(att.ticket_number || att.id)}
+                        >
+                          Check In
+                        </Button>
+                      ) : att.status === "used" ? (
+                        <Button
+                          variant="ghost"
+                          className="text-[11px] text-muted hover:text-rose-500"
+                          onClick={() => reverseCheckIn(att.id)}
+                          disabled={reversingId === att.id}
+                        >
+                          {reversingId === att.id ? "..." : "Reverse"}
+                        </Button>
+                      ) : (
+                        <span className="text-[11px] text-muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

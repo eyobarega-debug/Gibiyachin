@@ -13,6 +13,8 @@ const RESULT_STYLE = {
   PAYMENT_NOT_APPROVED: { tone: "warn", icon: "alert", label: "ENTRY DENIED — PAYMENT NOT VERIFIED" },
   CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET CANCELLED" },
   EVENT_CANCELLED: { tone: "danger", icon: "ban", label: "ENTRY DENIED — EVENT CANCELLED" },
+  WRONG_EVENT: { tone: "danger", icon: "ban", label: "ENTRY DENIED — WRONG EVENT" },
+  NOT_FOUND: { tone: "danger", icon: "ban", label: "ENTRY DENIED — TICKET NOT FOUND" },
   INVALID: { tone: "danger", icon: "ban", label: "ENTRY DENIED — INVALID TICKET" },
   FORBIDDEN_CROSS_CAMPUS: { tone: "danger", icon: "ban", label: "CROSS-CAMPUS TICKET NOT ADMITTED" },
 };
@@ -36,7 +38,7 @@ export default function TicketVerifyPage() {
 
     try {
       const { data } = await client.post("/tickets/scan", {
-        qrToken: rawToken,
+        ticketIdentifier: rawToken,
         action: "inspect",
       });
       setScanResult(data);
@@ -69,12 +71,12 @@ export default function TicketVerifyPage() {
     setSuccess("");
     try {
       const { data } = await client.post("/tickets/scan", {
-        qrToken: activeToken,
+        ticketIdentifier: activeToken,
         action: "check_in",
       });
       setScanResult(data);
       if (data.result === "ADMIT") {
-        setSuccess(`Admitted: ${data.ticket?.holder_name || "Attendee"}`);
+        setSuccess(`Admitted: ${data.attendeeName || data.ticket?.holder_name || "Attendee"}`);
       }
     } catch (err) {
       setError(err?.response?.data?.error?.message || "Check-in failed");
