@@ -430,7 +430,7 @@ router.get(
     if (!["admin", "super_admin"].includes(req.user.role) && event.lead_user_id !== req.user.id) throw forbidden();
 
     const attendees = await db.query(
-      `SELECT t.id, t.status, t.used_at, u.name AS holder_name, u.email AS holder_email, tt.name AS ticket_type
+      `SELECT t.id, t.ticket_number, t.status, t.used_at, u.name AS holder_name, u.email AS holder_email, tt.name AS ticket_type
        FROM tickets t JOIN users u ON u.id = t.holder_id JOIN ticket_types tt ON tt.id = t.ticket_type_id
        WHERE t.event_id = $1 ORDER BY t.created_at DESC`,
       [req.params.id]

@@ -16,6 +16,10 @@ const {
   qrPayloadToDataUrl,
 } = require("../../utils/qr");
 const payments = require("../../services/payments");
+const {
+  validateTicketForEntry,
+  resolveTicket,
+} = require("../../services/ticketValidation");
 
 const router = express.Router();
 
@@ -75,7 +79,14 @@ router.get(
            FROM payments p WHERE p.transaction_type = 'ticket' AND p.transaction_id = t.id ORDER BY p.created_at DESC LIMIT 1
        ) lp ON true
        ${isAdmin ? (req.user.role === "admin" ? "WHERE e.university_id = $1" : "WHERE $1::text IS NOT NULL") : "WHERE t.holder_id = $1"}
-       ORDER BY t.created_at DESC`,
+       ORDER BY
+         CASE t.status
+           WHEN 'active' THEN 1
+           WHEN 'reserved' THEN 2
+           WHEN 'used' THEN 3
+           ELSE 4
+         END ASC,
+         t.created_at DESC`,
       [isAdmin ? (req.user.role === "admin" ? req.user.university_id : "all") : req.user.id]
     );
     const withQr = await Promise.all(
@@ -191,235 +202,65 @@ router.post(
   })
 );
 
-// Core ticket resolver: extracts and validates the cryptographic signature and loads authoritative data
-async function resolveScannerTicket(qrToken, expectedTicketId, scannerUser) {
-  const parsed = parseQrPayload(qrToken);
-  if (!parsed || (expectedTicketId && parsed.ticketId !== expectedTicketId)) {
-    await audit(scannerUser.id, "ticket.scan", "ticket", expectedTicketId || null, { result: "INVALID", reason: "malformed_token" });
-    return { errorResult: { result: "INVALID", reason: "Malformed or mismatched QR token", ticketId: expectedTicketId } };
-  }
-  if (!isValidSignature(parsed.ticketId, parsed.signature)) {
-    await audit(scannerUser.id, "ticket.scan", "ticket", parsed.ticketId, { result: "INVALID", reason: "bad_signature" });
-    return { errorResult: { result: "INVALID", reason: "This QR code was not issued by Gibiyachin (signature mismatch)", ticketId: parsed.ticketId } };
-  }
-
-  const { rows } = await db.query(
-    `SELECT t.*,
-            e.title AS event_title, e.date_time, e.end_time, e.location, e.venue_name, e.venue_address,
-            e.poster_url, e.organizer_name, e.club_id, e.status AS event_status,
-            un.name AS university_name,
-            tt.name AS ticket_type, tt.price,
-            u.name AS holder_name, u.email AS holder_email,
-            c.name AS club_name, c.lead_user_id,
-            lp.status AS payment_status
-     FROM tickets t
-     JOIN events e ON e.id = t.event_id
-     LEFT JOIN universities un ON un.id = e.university_id
-     JOIN clubs c ON c.id = e.club_id
-     JOIN users u ON u.id = t.holder_id
-     JOIN ticket_types tt ON tt.id = t.ticket_type_id
-     LEFT JOIN LATERAL (
-       SELECT p.status FROM payments p WHERE p.transaction_type = 'ticket' AND p.transaction_id = t.id ORDER BY p.created_at DESC LIMIT 1
-     ) lp ON true
-     WHERE t.id = $1`,
-    [parsed.ticketId]
-  );
-  const ticket = rows[0];
-  if (!ticket) {
-    return { errorResult: { result: "INVALID", reason: "Ticket does not exist", ticketId: parsed.ticketId } };
-  }
-
-  if (scannerUser.role === "organizer") {
-    if (ticket.lead_user_id !== scannerUser.id) {
-      throw forbidden("You are not authorized to scan tickets for this event");
-    }
-  } else if (scannerUser.role === "admin") {
-    if (ticket.university_id !== scannerUser.university_id) {
-      throw forbidden("You are not authorized to scan tickets for another university");
-    }
-  }
-
-  return { ticket, parsed };
+// Centralized scanner helper functions delegating to ticketValidation service
+async function resolveScannerTicket(qrToken, expectedTicketId, scannerUser, eventId = null) {
+  return resolveTicket({ identifier: qrToken, expectedTicketId, scannerUser, eventId });
 }
 
-// 1. Inspect without check-in: allows staff to preview attendee and check eligibility repeatedly
-async function inspectOneTicket(qrToken, expectedTicketId, scannerUser) {
-  const resolved = await resolveScannerTicket(qrToken, expectedTicketId, scannerUser);
-  if (resolved.errorResult) return resolved.errorResult;
-  const { ticket } = resolved;
-
-  if (ticket.status === "used") {
-    await audit(scannerUser.id, "ticket.inspect", "ticket", ticket.id, { result: "ALREADY_USED" });
-    return {
-      result: "ALREADY_USED",
-      eligible: false,
-      ticket,
-      attendeeName: ticket.holder_name,
-      ticketType: ticket.ticket_type,
-      ticketNumber: ticket.ticket_number,
-      eventTitle: ticket.event_title,
-      previousScanAt: ticket.used_at,
-      reason: "Ticket has already been admitted.",
-    };
-  }
-
-  if (ticket.status === "reserved" || (ticket.payment_status && ticket.payment_status !== "confirmed")) {
-    await audit(scannerUser.id, "ticket.inspect", "ticket", ticket.id, { result: "PAYMENT_NOT_APPROVED" });
-    return {
-      result: "PAYMENT_NOT_APPROVED",
-      eligible: false,
-      ticket,
-      attendeeName: ticket.holder_name,
-      ticketType: ticket.ticket_type,
-      ticketNumber: ticket.ticket_number,
-      eventTitle: ticket.event_title,
-      reason: "Payment is pending verification. This ticket is not yet eligible for admission.",
-    };
-  }
-
-  if (ticket.status === "cancelled") {
-    await audit(scannerUser.id, "ticket.inspect", "ticket", ticket.id, { result: "CANCELLED" });
-    return {
-      result: "CANCELLED",
-      eligible: false,
-      ticket,
-      attendeeName: ticket.holder_name,
-      ticketType: ticket.ticket_type,
-      ticketNumber: ticket.ticket_number,
-      eventTitle: ticket.event_title,
-      reason: "Ticket has been cancelled or refunded.",
-    };
-  }
-
-  if (ticket.event_status === "cancelled") {
-    return {
-      result: "EVENT_CANCELLED",
-      eligible: false,
-      ticket,
-      attendeeName: ticket.holder_name,
-      eventTitle: ticket.event_title,
-      reason: "Event has been cancelled.",
-    };
-  }
-
-  if (ticket.status !== "active") {
-    return {
-      result: "INVALID",
-      eligible: false,
-      ticket,
-      reason: `Ticket status is "${ticket.status}"`,
-    };
-  }
-
-  await audit(scannerUser.id, "ticket.inspect", "ticket", ticket.id, { result: "VALID" });
-  return {
-    result: "VALID",
-    eligible: true,
-    ticket,
-    attendeeName: ticket.holder_name,
-    ticketType: ticket.ticket_type,
-    ticketNumber: ticket.ticket_number,
-    eventTitle: ticket.event_title,
-    dateTime: ticket.date_time,
-    venue: ticket.venue_name || ticket.location,
-  };
-}
-
-// 2. Atomic Check-In: ensures only ONE check-in can succeed across concurrent scans
-async function checkInOneTicket(qrToken, expectedTicketId, scannerUser, deviceInfo = null) {
-  const resolved = await resolveScannerTicket(qrToken, expectedTicketId, scannerUser);
-  if (resolved.errorResult) return resolved.errorResult;
-  const { ticket } = resolved;
-
-  if (ticket.event_status === "cancelled") {
-    await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "EVENT_CANCELLED" });
-    return { result: "EVENT_CANCELLED", reason: "Event has been cancelled. Admissions are closed.", ticketId: ticket.id };
-  }
-  if (ticket.status === "used") {
-    await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "ALREADY_USED" });
-    return { result: "ALREADY_USED", ticket, previousScanAt: ticket.used_at, reason: "Ticket has already been admitted" };
-  }
-  if (ticket.status === "cancelled") {
-    await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "CANCELLED" });
-    return { result: "CANCELLED", reason: "Ticket has been cancelled or refunded", ticketId: ticket.id };
-  }
-  if (ticket.status === "reserved" || (Number(ticket.price) > 0 && ticket.payment_status && ticket.payment_status !== "confirmed")) {
-    await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "PAYMENT_NOT_APPROVED" });
-    return { result: "PAYMENT_NOT_APPROVED", reason: "Payment is pending verification. This ticket is not eligible for admission.", ticketId: ticket.id };
-  }
-  if (ticket.status !== "active") {
-    await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "INVALID", reason: ticket.status });
-    return { result: "INVALID", reason: `Ticket status is "${ticket.status}"`, ticketId: ticket.id };
-  }
-
-  // Atomic UPDATE guard inside transaction: only admits active tickets for non-cancelled events
-  const { updated } = await db.withTransaction(async (client) => {
-    const { rows } = await client.query(
-      `UPDATE tickets SET status = 'used', used_at = now(), used_by = $1
-       WHERE id = $2 AND status = 'active'
-         AND (SELECT status FROM events WHERE id = tickets.event_id) != 'cancelled'
-       RETURNING *`,
-      [scannerUser.id, ticket.id]
-    );
-    if (!rows[0]) return { updated: null };
-
-    await client.query(
-      `INSERT INTO ticket_checkins (ticket_id, event_id, staff_id, device_info)
-       VALUES ($1, $2, $3, $4)`,
-      [ticket.id, ticket.event_id, scannerUser.id, deviceInfo || null]
-    );
-    return { updated: rows[0] };
+async function inspectOneTicket(qrToken, expectedTicketId, scannerUser, eventId = null) {
+  return validateTicketForEntry({
+    identifier: qrToken,
+    expectedTicketId,
+    scannerUser,
+    eventId,
+    action: "inspect",
   });
-
-  if (!updated) {
-    const { rows: reread } = await db.query(
-      `SELECT t.status, t.used_at, e.status AS event_status
-       FROM tickets t JOIN events e ON e.id = t.event_id WHERE t.id = $1`,
-      [ticket.id]
-    );
-    if (reread[0]?.event_status === "cancelled") {
-      await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "EVENT_CANCELLED" });
-      return { result: "EVENT_CANCELLED", reason: "Event has been cancelled. Admissions are closed.", ticketId: ticket.id };
-    }
-    if (reread[0]?.status === "used") {
-      await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "ALREADY_USED", race: true });
-      return { result: "ALREADY_USED", ticket, previousScanAt: reread[0]?.used_at, reason: "Ticket has already been admitted" };
-    }
-    if (reread[0]?.status === "cancelled") {
-      await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "CANCELLED" });
-      return { result: "CANCELLED", reason: "Ticket has been cancelled or refunded", ticketId: ticket.id };
-    }
-    return { result: "INVALID", reason: `Ticket status is "${reread[0]?.status || ticket.status}"`, ticketId: ticket.id };
-  }
-
-  await audit(scannerUser.id, "ticket.checkin", "ticket", ticket.id, { result: "ADMIT", ticket_number: ticket.ticket_number });
-  return { result: "ADMIT", ticket: { ...ticket, ...updated }, checkedInAt: updated.used_at };
 }
 
-// verifyOneTicket continues to execute atomic check-in for full backward compatibility with legacy tests
-async function verifyOneTicket(qrToken, expectedTicketId, scannerUser) {
-  return checkInOneTicket(qrToken, expectedTicketId, scannerUser);
+async function checkInOneTicket(qrToken, expectedTicketId, scannerUser, deviceInfo = null, eventId = null) {
+  return validateTicketForEntry({
+    identifier: qrToken,
+    expectedTicketId,
+    scannerUser,
+    eventId,
+    action: "check_in",
+    deviceInfo,
+  });
 }
 
-// Staff scanner lookup & check-in endpoint (scans from camera or manual entry)
+async function verifyOneTicket(qrToken, expectedTicketId, scannerUser, eventId = null) {
+  return checkInOneTicket(qrToken, expectedTicketId, scannerUser, null, eventId);
+}
+
+// Staff scanner lookup & check-in endpoint (scans from camera or manual entry: QR code, ticket number, or URL)
 router.post(
   "/scan",
   requireAuth(),
   requireRole("organizer", "admin", "super_admin"),
   rateLimit({ windowMs: 60_000, max: 120, keyFn: (req) => `scan:${req.user.id}` }),
   validate({
-    body: z.object({
-      qrToken: z.string().min(1),
-      action: z.enum(["inspect", "check_in"]).default("inspect"),
-      deviceInfo: z.string().optional(),
-    }),
+    body: z
+      .object({
+        qrToken: z.string().optional(),
+        ticketIdentifier: z.string().optional(),
+        ticketNumber: z.string().optional(),
+        eventId: z.string().uuid().optional(),
+        action: z.enum(["inspect", "check_in"]).default("inspect"),
+        deviceInfo: z.string().optional(),
+      })
+      .refine((data) => Boolean(data.qrToken || data.ticketIdentifier || data.ticketNumber), {
+        message: "qrToken, ticketIdentifier, or ticketNumber is required",
+      }),
   }),
   asyncHandler(async (req, res) => {
-    if (req.body.action === "check_in") {
-      const result = await checkInOneTicket(req.body.qrToken, null, req.user, req.body.deviceInfo);
-      return res.json(result);
-    }
-    const result = await inspectOneTicket(req.body.qrToken, null, req.user);
+    const identifier = req.body.ticketIdentifier || req.body.ticketNumber || req.body.qrToken;
+    const result = await validateTicketForEntry({
+      identifier,
+      scannerUser: req.user,
+      eventId: req.body.eventId || null,
+      action: req.body.action,
+      deviceInfo: req.body.deviceInfo,
+    });
     res.json(result);
   })
 );
@@ -432,12 +273,23 @@ router.post(
   rateLimit({ windowMs: 60_000, max: 120, keyFn: (req) => `checkin:${req.user.id}` }),
   validate({
     body: z.object({
-      qrToken: z.string(),
+      qrToken: z.string().optional(),
+      ticketIdentifier: z.string().optional(),
+      ticketNumber: z.string().optional(),
+      eventId: z.string().uuid().optional(),
       deviceInfo: z.string().optional(),
     }),
   }),
   asyncHandler(async (req, res) => {
-    const result = await checkInOneTicket(req.body.qrToken, req.params.id, req.user, req.body.deviceInfo);
+    const identifier = req.body.ticketIdentifier || req.body.ticketNumber || req.body.qrToken || req.params.id;
+    const result = await validateTicketForEntry({
+      identifier,
+      expectedTicketId: req.params.id,
+      scannerUser: req.user,
+      eventId: req.body.eventId || null,
+      action: "check_in",
+      deviceInfo: req.body.deviceInfo,
+    });
     res.json(result);
   })
 );
@@ -539,16 +391,23 @@ router.post(
   rateLimit({ windowMs: 60_000, max: 120, keyFn: (req) => `verify:${req.user.id}` }),
   validate({
     body: z.object({
-      qrToken: z.string(),
+      qrToken: z.string().optional(),
+      ticketIdentifier: z.string().optional(),
+      ticketNumber: z.string().optional(),
+      eventId: z.string().uuid().optional(),
       action: z.enum(["inspect", "check_in"]).optional(),
     }),
   }),
   asyncHandler(async (req, res) => {
-    if (req.body.action === "inspect" || req.query.inspect === "true") {
-      const result = await inspectOneTicket(req.body.qrToken, req.params.id, req.user);
-      return res.json(result);
-    }
-    const result = await checkInOneTicket(req.body.qrToken, req.params.id, req.user);
+    const identifier = req.body.ticketIdentifier || req.body.ticketNumber || req.body.qrToken || req.params.id;
+    const action = req.body.action || (req.query.inspect === "true" ? "inspect" : "check_in");
+    const result = await validateTicketForEntry({
+      identifier,
+      expectedTicketId: req.params.id,
+      scannerUser: req.user,
+      eventId: req.body.eventId || null,
+      action,
+    });
     res.json(result);
   })
 );
@@ -562,17 +421,32 @@ router.post(
   validate({
     body: z.object({
       scans: z
-        .array(z.object({ ticketId: z.string(), qrToken: z.string(), scannedAt: z.string().optional() }))
+        .array(
+          z.object({
+            ticketId: z.string().optional(),
+            qrToken: z.string().optional(),
+            ticketNumber: z.string().optional(),
+            scannedAt: z.string().optional(),
+          })
+        )
         .min(1)
         .max(200),
+      eventId: z.string().uuid().optional(),
     }),
   }),
   asyncHandler(async (req, res) => {
     const ordered = [...req.body.scans].sort((a, b) => new Date(a.scannedAt || 0) - new Date(b.scannedAt || 0));
     const results = [];
     for (const scan of ordered) {
-      const outcome = await checkInOneTicket(scan.qrToken, scan.ticketId, req.user);
-      results.push({ ticketId: scan.ticketId, scannedAt: scan.scannedAt, ...outcome });
+      const identifier = scan.ticketNumber || scan.qrToken || scan.ticketId;
+      const outcome = await validateTicketForEntry({
+        identifier,
+        expectedTicketId: scan.ticketId || null,
+        scannerUser: req.user,
+        eventId: req.body.eventId || null,
+        action: "check_in",
+      });
+      results.push({ ticketId: scan.ticketId || outcome.ticket?.id, scannedAt: scan.scannedAt, ...outcome });
     }
     res.json({ results });
   })

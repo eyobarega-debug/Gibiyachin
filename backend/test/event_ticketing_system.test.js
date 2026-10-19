@@ -1010,6 +1010,200 @@ describe("Complete Event Ticketing System Integration Tests", () => {
       }
     }
   });
+
+  test("33. Manual ticket number entry (GIB-XXXXXXXX) allows inspection and admission of active ticket", async () => {
+    // Create a student and issue an active ticket
+    const stuNum = await makeUser(uniA.id, "Ticket Number Student", "stunum", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuNum.token}` },
+      body: { ticketTypeId: freeTicketType.id },
+    });
+    assert.equal(tRes.status, 201);
+    const issuedTicket = tRes.data.ticket;
+    assert.ok(issuedTicket.ticket_number);
+    assert.match(issuedTicket.ticket_number, /^GIB-[0-9A-F]{8}$/);
+
+    // 1. Inspect using ticket_number in qrToken field
+    const inspectRes = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { qrToken: issuedTicket.ticket_number, action: "inspect" },
+    });
+    assert.equal(inspectRes.status, 200);
+    assert.equal(inspectRes.data.result, "VALID");
+    assert.equal(inspectRes.data.ticketNumber, issuedTicket.ticket_number);
+    assert.equal(inspectRes.data.attendeeName, stuNum.user.name);
+
+    // 2. Check in using ticketNumber field
+    const checkinRes = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: issuedTicket.ticket_number, action: "check_in" },
+    });
+    assert.equal(checkinRes.status, 200);
+    assert.equal(checkinRes.data.result, "ADMIT");
+    assert.equal(checkinRes.data.ticketNumber, issuedTicket.ticket_number);
+
+    // 3. Re-scan by ticket number returns ALREADY_USED
+    const repeatRes = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: issuedTicket.ticket_number, action: "check_in" },
+    });
+    assert.equal(repeatRes.status, 200);
+    assert.equal(repeatRes.data.result, "ALREADY_USED");
+  });
+
+  test("34. Case-insensitivity and whitespace trimming for ticket number entry", async () => {
+    const stuCase = await makeUser(uniA.id, "Case Test Student", "stucase", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuCase.token}` },
+      body: { ticketTypeId: freeTicketType.id },
+    });
+    assert.equal(tRes.status, 201);
+    const issuedTicket = tRes.data.ticket;
+
+    // Test lowercase with leading and trailing whitespace
+    const lowerWithSpaces = `   ${issuedTicket.ticket_number.toLowerCase()}   `;
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { qrToken: lowerWithSpaces, action: "inspect" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "VALID");
+    assert.equal(res.data.ticketNumber, issuedTicket.ticket_number);
+  });
+
+  test("35. Prefix-less ticket number entry (without 'GIB-')", async () => {
+    const stuPref = await makeUser(uniA.id, "Prefix Test Student", "stupref", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuPref.token}` },
+      body: { ticketTypeId: freeTicketType.id },
+    });
+    assert.equal(tRes.status, 201);
+    const issuedTicket = tRes.data.ticket;
+    const rawCode = issuedTicket.ticket_number.replace("GIB-", "");
+
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { qrToken: rawCode.toLowerCase(), action: "inspect" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "VALID");
+    assert.equal(res.data.ticketNumber, issuedTicket.ticket_number);
+  });
+
+  test("36. Non-existent ticket number lookup returns NOT_FOUND", async () => {
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: "GIB-NONEXIST", action: "inspect" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "NOT_FOUND");
+    assert.ok(res.data.reason.includes("does not exist"));
+  });
+
+  test("37. Event scope validation: ticket for Event A checked against Event B returns WRONG_EVENT", async () => {
+    // Create Event B under Club A
+    const evBRes = await apiRequest("/api/events", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: {
+        clubId: clubA.id,
+        title: "Separate Campus Gala B",
+        dateTime: new Date(Date.now() + 86400000 * 3).toISOString(),
+        location: "Gala Hall",
+        capacity: 100,
+        ticketTypes: [{ name: "Standard", price: 0, quantityTotal: 100 }],
+      },
+    });
+    assert.equal(evBRes.status, 201);
+    const eventB = evBRes.data.event;
+    await db.query("UPDATE events SET status = 'published' WHERE id = $1", [eventB.id]);
+
+    // Issue ticket for Event A
+    const stuScope = await makeUser(uniA.id, "Scope Test Student", "stuscope", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuScope.token}` },
+      body: { ticketTypeId: freeTicketType.id },
+    });
+    const ticketA = tRes.data.ticket;
+
+    // Scan ticket for Event A at Event B's gate scanner
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: ticketA.ticket_number, eventId: eventB.id, action: "inspect" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "WRONG_EVENT");
+    assert.equal(res.data.eligible, false);
+    assert.ok(res.data.reason.includes("different event"));
+
+    // Check-in also rejected for WRONG_EVENT
+    const checkinRes = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: ticketA.ticket_number, eventId: eventB.id, action: "check_in" },
+    });
+    assert.equal(checkinRes.status, 200);
+    assert.equal(checkinRes.data.result, "WRONG_EVENT");
+  });
+
+  test("38. Cancelled ticket rejection by ticket number: returns CANCELLED", async () => {
+    const stuCancel = await makeUser(uniA.id, "Cancel Lookup Student", "stucancel", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuCancel.token}` },
+      body: { ticketTypeId: freeTicketType.id },
+    });
+    const cancelTicket = tRes.data.ticket;
+    await db.query("UPDATE tickets SET status = 'cancelled' WHERE id = $1", [cancelTicket.id]);
+
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: cancelTicket.ticket_number, action: "check_in" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "CANCELLED");
+  });
+
+  test("39. Reserved/unpaid ticket inspection by ticket number: returns PAYMENT_NOT_APPROVED", async () => {
+    const stuUnpaid = await makeUser(uniA.id, "Unpaid Lookup Student", "stuunpaid", "student");
+    const tRes = await apiRequest(`/api/events/${createdEvent.id}/tickets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stuUnpaid.token}` },
+      body: { ticketTypeId: paidTicketType.id, paymentMethod: "manual" },
+    });
+    const unpaidTicket = tRes.data.ticket;
+
+    const res = await apiRequest("/api/tickets/scan", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+      body: { ticketNumber: unpaidTicket.ticket_number, action: "inspect" },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.result, "PAYMENT_NOT_APPROVED");
+  });
+
+  test("40. Event attendee list endpoint (GET /api/events/:id/attendees) includes ticket_number", async () => {
+    const res = await apiRequest(`/api/events/${createdEvent.id}/attendees`, {
+      headers: { Authorization: `Bearer ${organizerAToken}` },
+    });
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.data.attendees));
+    const sample = res.data.attendees.find((a) => a.ticket_number);
+    assert.ok(sample, "Attendee records must include ticket_number");
+    assert.match(sample.ticket_number, /^GIB-[0-9A-F]{8}$/);
+  });
 });
 
 
