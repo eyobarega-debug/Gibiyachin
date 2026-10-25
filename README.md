@@ -184,4 +184,4 @@ Before public deployment, configure strong production secrets, set the allowed b
 
 ## Documentation
 
-See the [`docs/`](./docs/) folder for the project's SRS and supporting documentation.
+See the [`pdf/`](./docs/) folder for the project's SRS and supporting documentation.
