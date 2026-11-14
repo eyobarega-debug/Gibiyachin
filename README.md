@@ -1,30 +1,51 @@
-# ግቢያችን (Gibiyachin Platform)
+# ግቢያችን (Gibiyachin)
 
-> **University Marketplace & Campus Services Platform**<br>
-> *Formerly CampusHub. Rebranded to ግቢያችን (English transliteration: Gibiyachin).*
+**University Marketplace and Campus Services Platform**
 
-Gibiyachin Platform (ግቢያችን) is a university marketplace and campus services platform built with a Node.js/Express backend and a React frontend. This is the single merged project: the Phase 1 MVP, the Phase 2 features (Redis, SMS simulation, in-app P2P payment, tiered late fees, recurring events + waitlists, offline scan batches, CSV exports, payment-provider registry) and the Phase 3 multi-university tenancy all live in `backend/` and `frontend/`.
+Gibiyachin is a full-stack web application designed for Ethiopian university communities. It brings campus shopping, student-to-student listings, equipment rentals, and event ticketing into one platform. The project was previously known as CampusHub.
 
-## Project structure
+## Main Features
+
+* **Campus marketplace:** Store profiles, product listings, inventory, and order tracking.
+* **Student-to-student exchange:** Listings for used items and buyer-seller contact requests.
+* **Equipment rentals:** Rental listings, booking, deposits, pickup and return tracking, and late-fee rules.
+* **Events and ticketing:** Event review, ticket types, manual payment-proof review, QR ticket validation, check-in, and admission reversal.
+* **Payments and commissions:** Manual payment workflows and commission records.
+* **Campus administration:** Role-based permissions and university-scoped data.
+* **Profiles and notifications:** User profiles, privacy settings, favorites, and in-app notifications.
+
+Some extended capabilities have shell-script or manual-check evidence rather than automated browser end-to-end tests. See **Verification Status and Known Limitations** below.
+
+## Technology Stack
+
+* **Backend:** Node.js, Express.js, PostgreSQL
+* **Frontend:** React, Vite, React Router, Axios, Tailwind CSS
+* **Validation and security:** Zod, bcryptjs, JWT, Helmet
+* **Other tools:** Sharp for image processing, `html5-qrcode` for QR scanning, and optional Redis support.
+
+## Repository Structure
 
 ```text
-CampusHub/
-├── backend/                 # Express API + PostgreSQL backend
-├── frontend/                # React + Vite frontend
-├── docs/                    # SRS and build prompts
-├── archive/                 # archived legacy copies
-├── README.md                # full-stack project guide
-└── .gitignore               # workspace ignore rules
+Gibiyachin/
+├── backend/                  # Express API, database schema, migrations, and tests
+├── frontend/                 # React and Vite application
+├── docs/                     # Project documentation
+├── .gitattributes            # Git LFS configuration for MP4 files
+├── .gitignore
+├── package.json              # Root development and build scripts
+├── package-lock.json
+├── phase3-plan.md            # Multi-tenancy planning document
+├── Gibiyachen Project video.mp4
+└── README.md
 ```
 
-## Stack
+## Project Walkthrough
 
-- Backend: Node.js, Express, PostgreSQL, JWT auth, Zod validation, Multer uploads
-- Frontend: React, Vite, React Router, Axios
-- Extra features: QR ticket verification, payment abstraction, merchant flows, rental flow, events, admin tools, Redis cache/rate limiting (optional), multi-university tenancy
+A recorded walkthrough is included in the repository:
 
-## Features included
+[Watch or open the Gibiyachin project demo video](./Gibiyachen%20Project%20video.mp4)
 
+<<<<<<< HEAD
 - Smart Global Search (instant debounced live autocomplete, category tabs, recent searches, exact match ranking)
 - Smart Campus Lost & Found (automated weighted matching, privacy-guarded verification claims, dual-handover confirmation)
 - Student marketplace with products and listings
@@ -37,30 +58,81 @@ CampusHub/
 - Image uploads and profile/account setup
 - Phase 2: in-app P2P payment, tiered rental late fees, recurring events, ticket waitlists, offline QR scan sync, admin/merchant CSV exports
 - Phase 3: multiple universities (tenant isolation), Super Admin API, per-university feature flags and fees
+=======
+## Requirements
+>>>>>>> 981cc62fc1b754963ca67443adfdb8e22b69de6f
 
-## Local setup
+Install the following for local development:
 
-### 1) Backend
+* Node.js 20 or later
+* PostgreSQL 15 or later, with the required `pgcrypto` extension
+* npm and Git
+
+Redis is optional. If Redis is not configured or reachable, some features use in-process fallback behavior.
+
+**Windows note:** Some database migration and test scripts use Bash syntax and environment-variable expansion. Git Bash or WSL is recommended for running those scripts.
+
+## Run Locally
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/eyobarega-debug/Gibiyachin.git
+cd Gibiyachin
+```
+
+### 2. Configure the backend
 
 ```bash
 cd backend
 npm install
-copy .env.example .env
+cp .env.example .env
+```
+
+In Windows PowerShell, use this command instead of `cp`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `backend/.env`. Update `DATABASE_URL` to match your local PostgreSQL username, password, host, port, and database. The example configuration uses a database named `campushub`.
+
+Create that database if it does not already exist:
+
+```bash
 createdb campushub
+```
+
+Set unique development values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `TICKET_QR_SECRET`. Do not use example or development secrets in a public deployment.
+
+### 3. Run database migrations and seed local data
+
+Run these commands in **Git Bash or WSL**, from the `backend` directory, so the variables in `.env` are available to the migration scripts:
+
+```bash
+set -a
+source .env
+set +a
+
 npm run db:migrate:all
 npm run db:seed
+```
+
+The seed command adds local sample data. Do not use development seed accounts in production.
+
+### 4. Start the backend
+
+From the `backend` directory:
+
+```bash
 npm run dev
 ```
 
-Redis is optional (`REDIS_URL` in `.env`); without it rate limiting and caching fall back to in-process behavior.
+The API uses port `4000` by default. Leave this terminal running.
 
-The backend runs on:
+### 5. Start the frontend
 
-- http://localhost:4000
-
-### 2) Frontend
-
-In a second terminal:
+Open a second terminal at the repository root:
 
 ```bash
 cd frontend
@@ -68,68 +140,68 @@ npm install
 npm run dev
 ```
 
-The frontend runs on:
+The Vite development server uses `http://localhost:5173` by default.
 
-- http://localhost:5173
+## Local Demo Accounts
 
-## Default demo login
+The database seed script creates sample data for local evaluation. Check `backend/db/seed.js` for the available seed accounts. Seed credentials are for local development only. Do not use them for a public deployment or seed a production database with development accounts.
 
-After seeding the database, log in with one of the seeded demo accounts. The default password is:
+## Useful Commands
 
-```text
-Password123!
-```
-
-For the full list of seeded users, see [backend/README.md](backend/README.md).
-
-## Useful commands
-
-### Backend
+Run backend commands from the `backend` directory.
 
 ```bash
-cd backend
+# Start the API
 npm run dev
+
+# Apply the schema and database migrations
 npm run db:migrate:all
+
+# Add local development data
 npm run db:seed
+
+# Security tests
+npm run test:security:all
+
+# Multi-tenant tests
+npm run test:tenant:all
+
+# Smoke and tenancy scripts
 npm run test:smoke
 npm run test:smoke:phase2
 npm run test:tenancy
+<<<<<<< HEAD
 npm run test:search
 npm run test:lost-found
+=======
+npm run test:tenancy:phase2
+>>>>>>> 981cc62fc1b754963ca67443adfdb8e22b69de6f
 ```
 
-### Frontend
+Run frontend commands from the `frontend` directory.
 
 ```bash
-cd frontend
-npm run dev
+npm run lint
 npm run build
 npm run preview
 ```
 
-## Verification
+Some smoke tests expect a freshly seeded database and matching environment variables. Read each script before running it against a database containing data you need to keep.
 
-To validate the API behavior after changes, use the backend smoke test:
+## Verification Status and Known Limitations
 
-```bash
-cd backend
-set -a; source .env; set +a   # same secrets for the test's QR signing as the server
-bash test/smoke.sh
-bash test/smoke_phase2.sh     # on a freshly seeded database
-bash test/tenancy.sh          # on a freshly seeded database
-bash test/tenancy_phase2.sh   # on a freshly seeded database
-```
+The SRS records **323 automated backend tests passing on 21 October 2026**, against the commit identified in Section 15.1 of the SRS. This is a recorded test result, not a claim that those tests have been rerun for every later commit. Consult the SRS for the test breakdown and scope.
 
-Together these check the main acceptance flows (auth, marketplace, event purchases, rental lifecycle, duplicate ticket rejection), the Phase 2 features, and that no data crosses between universities.
+The project documentation also records these limitations:
 
-## Important notes
+* The Chapa provider has not been validated against the live payment gateway.
+* SMS delivery is simulated; no live SMS gateway is connected.
+* The full frontend does not have browser end-to-end test coverage.
+* Some extended features are checked through shell scripts or manual checks rather than the recorded automated test run.
+* Performance targets and some operational controls still need verification before wider production use.
 
-- The active project code lives in [backend](backend) and [frontend](frontend).
-- Reference documents and prompts are kept in [docs](docs).
-- Older project versions remain in [archive](archive) for safety and historical comparison (the Phase 1+2 copy there is now fully contained in the active app).
-- This is the single main full-stack project for the workspace. See [docs/PHASE3.md](docs/PHASE3.md) for the tenancy design.
-- Frontend caveat: with 2+ universities, anonymous browsing needs an `X-University-Id` header; a Super Admin UI does not exist yet.
+Before public deployment, configure strong production secrets, set the allowed browser origins, configure real email and payment services as needed, and complete appropriate security, integration, and load testing. A local demonstration is not the same as production readiness.
 
-## Next steps
+## Documentation
 
-If you want to continue development, open the backend and frontend folders and work from the active main app. The archived folder is there as a backup reference only.
+See the [`docs`](./docs/) folder for the project's SRS and supporting documentation.
