@@ -54,6 +54,8 @@ app.use("/api/users", require("./modules/auth/users.routes"));
 app.use("/api/merchants", tenant, require("./modules/merchants/routes"));
 app.use("/api/organizers", tenant, require("./modules/organizers/routes"));
 app.use("/api/onboarding", tenant, require("./modules/onboarding/routes"));
+app.use("/api/search", tenant, require("./modules/search/routes"));
+app.use("/api/lost-found", tenant, require("./modules/lostFound/routes"));
 app.use("/api/products", tenant, require("./modules/products/routes"));
 app.use("/api/sellers", tenant, require("./modules/sellers/routes"));
 app.use("/api/orders", tenant, require("./modules/orders/routes"));

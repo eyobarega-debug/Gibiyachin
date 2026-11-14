@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Search from "./pages/Search";
 import Marketplace from "./pages/Marketplace";
 import ProductDetail from "./pages/ProductDetail";
 import SellerProfile from "./pages/SellerProfile";
@@ -24,6 +25,10 @@ import Rentals from "./pages/Rentals";
 import RentalCreate from "./pages/RentalCreate";
 import RentalDetail from "./pages/RentalDetail";
 import MyRentalBookings from "./pages/MyRentalBookings";
+import LostFound from "./pages/LostFound";
+import CreateLostFound from "./pages/CreateLostFound";
+import LostFoundDetails from "./pages/LostFoundDetails";
+import MyLostFound from "./pages/MyLostFound";
 import Events from "./pages/Events";
 import EventDetail from "./pages/EventDetail";
 import MyTickets from "./pages/MyTickets";
@@ -75,6 +80,7 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+            <Route path="/search" element={<Search />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/marketplace/:id" element={<ProductDetail />} />
             <Route path="/seller/:id" element={<SellerProfile />} />
@@ -89,6 +95,11 @@ export default function App() {
             <Route path="/rentals/new" element={<ProtectedRoute><RentalCreate /></ProtectedRoute>} />
             <Route path="/rentals/mine" element={<ProtectedRoute><MyRentalBookings /></ProtectedRoute>} />
             <Route path="/rentals/:id" element={<RentalDetail />} />
+
+            <Route path="/lost-found" element={<LostFound />} />
+            <Route path="/lost-found/new" element={<ProtectedRoute><CreateLostFound /></ProtectedRoute>} />
+            <Route path="/lost-found/my-items" element={<ProtectedRoute><MyLostFound /></ProtectedRoute>} />
+            <Route path="/lost-found/:id" element={<LostFoundDetails />} />
 
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail />} />

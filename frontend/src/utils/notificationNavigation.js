@@ -14,6 +14,7 @@ export const ALLOWED_ROUTE_PREFIXES = [
   "/events",
   "/listings",
   "/rentals",
+  "/lost-found",
   "/admin",
   "/super-admin",
   "/commissions",
@@ -94,6 +95,14 @@ export function resolveNotificationTarget(notification) {
       return "/verify";
     case "report":
       return "/admin?tab=Reports";
+    case "lost_found_match":
+    case "lost_found_claim":
+    case "lost_found_claim_approved":
+    case "lost_found_claim_rejected":
+    case "lost_found_handover_pending":
+    case "lost_found_returned":
+    case "lost_found_dispute":
+      return "/lost-found/my-items";
     case "commission_update":
       return "/commissions";
     case "payout_update":

@@ -25,6 +25,7 @@ CampusHub/
 
 ## Features included
 
+- Smart Global Search (`/api/search` with cross-entity ranking, tenant scoping, and feature flags)
 - Student marketplace with products and listings
 - Event management and ticket purchase flow
 - Rental bookings and tracking
@@ -94,6 +95,7 @@ npm run db:seed
 npm run test:smoke
 npm run test:smoke:phase2
 npm run test:tenancy
+npm run test:search
 ```
 
 ### Frontend

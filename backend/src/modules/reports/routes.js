@@ -13,7 +13,7 @@ router.post(
   requireAuth(),
   validate({
     body: z.object({
-      targetType: z.enum(["product", "listing", "user", "store", "event"]),
+      targetType: z.enum(["product", "listing", "user", "store", "event", "lost_found_item"]),
       targetId: z.string().uuid(),
       reason: z.string().min(2),
       details: z.string().max(2000).optional(),

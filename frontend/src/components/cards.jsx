@@ -357,3 +357,6 @@ export function ListingCard({ listing, onClick, className = "" }) {
     </Link>
   );
 }
+
+export { default as LostFoundCard } from "./LostFoundCard";
+

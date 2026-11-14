@@ -3,10 +3,16 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAuthPrompt } from "../context/AuthPromptContext";
 import { client } from "../api/client";
-import { Badge } from "./ui";
+import { Badge, Spinner } from "./ui";
 import Icon from "./Icon";
 import { visibleTabs } from "../config/roles";
 import NotificationPopover from "./NotificationPopover";
+import {
+  getRecentSearches,
+  addRecentSearch,
+  removeRecentSearch,
+  clearRecentSearches,
+} from "../utils/recentSearches";
 
 /* ------------------------------------------------------------------ */
 /* Brand                                                               */
@@ -336,27 +342,514 @@ function MenuLink({ to, icon, children, onClick, badge, badgeLabel, badgeTone })
 function SearchBox({ className = "", onDone }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resultsData, setResultsData] = useState(null);
+  const [recent, setRecent] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
-  function submit(e) {
-    e.preventDefault();
+  // Load recent searches on dropdown open
+  useEffect(() => {
+    if (isOpen) {
+      setRecent(getRecentSearches());
+    }
+  }, [isOpen]);
+
+  // Click outside listener
+  useEffect(() => {
+    function onDocClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setActiveIndex(-1);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  // Debounced search query (~300ms)
+  useEffect(() => {
     const term = q.trim();
-    navigate(term ? `/marketplace?q=${encodeURIComponent(term)}` : "/marketplace");
-    setQ("");
+    if (term.length < 2) {
+      setResultsData(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await client.get("/search", {
+          params: { q: term, limit: 16 },
+        });
+        if (!cancelled) {
+          setResultsData(data);
+          setActiveIndex(-1);
+        }
+      } catch {
+        if (!cancelled) {
+          setResultsData(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [q]);
+
+  function executeSearch(queryToSearch) {
+    const term = (queryToSearch || q).trim();
+    if (term) {
+      addRecentSearch(term);
+      navigate(`/search?q=${encodeURIComponent(term)}`);
+    } else {
+      navigate("/marketplace");
+    }
+    setIsOpen(false);
+    setActiveIndex(-1);
     onDone?.();
   }
 
+  function handleSelectItem(item) {
+    const term = q.trim();
+    if (term.length >= 2) {
+      addRecentSearch(term);
+    }
+    navigate(item.destinationUrl);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    onDone?.();
+  }
+
+  const term = q.trim();
+
+  // Linear list of selectable items for keyboard navigation
+  const selectableItems = useMemo(() => {
+    if (!isOpen) return [];
+    if (term.length < 2) {
+      return recent.map((item) => ({ kind: "recent", term: item }));
+    }
+    if (!resultsData) return [];
+    const items = [];
+    const grouped = resultsData.grouped || {};
+    for (const p of (grouped.products || []).slice(0, 3)) items.push({ kind: "item", item: p });
+    for (const l of (grouped.listings || []).slice(0, 3)) items.push({ kind: "item", item: l });
+    for (const r of (grouped.rentals || []).slice(0, 3)) items.push({ kind: "item", item: r });
+    for (const e of (grouped.events || []).slice(0, 3)) items.push({ kind: "item", item: e });
+    for (const lf of (grouped.lost_found || []).slice(0, 3)) items.push({ kind: "item", item: lf });
+    if (resultsData.counts?.all > 0) {
+      items.push({ kind: "view_all", query: term });
+    }
+    return items;
+  }, [isOpen, term, recent, resultsData]);
+
+  function handleKeyDown(e) {
+    if (!isOpen) {
+      if (e.key === "ArrowDown") {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!selectableItems.length) return;
+      setActiveIndex((prev) => (prev + 1) % selectableItems.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!selectableItems.length) return;
+      setActiveIndex((prev) => (prev <= 0 ? selectableItems.length - 1 : prev - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (activeIndex >= 0 && selectableItems[activeIndex]) {
+        const selected = selectableItems[activeIndex];
+        if (selected.kind === "recent") {
+          executeSearch(selected.term);
+        } else if (selected.kind === "item") {
+          handleSelectItem(selected.item);
+        } else if (selected.kind === "view_all") {
+          executeSearch(selected.query);
+        }
+      } else {
+        executeSearch(q);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setIsOpen(false);
+      setActiveIndex(-1);
+      inputRef.current?.blur();
+    }
+  }
+
+  // Helper index tracker for rendering highlight
+  let currentSelectIndex = 0;
+
   return (
-    <form onSubmit={submit} role="search" className={`relative ${className}`}>
-      <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-      <input
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search products, events, rentals…"
-        aria-label="Search the marketplace"
-        className="glass-input w-full rounded-full bg-white/80 border border-slate-200/90 py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none shadow-xs transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200"
-      />
-    </form>
+    <div ref={containerRef} className={`relative ${className}`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          executeSearch(q);
+        }}
+        role="search"
+        className="relative"
+      >
+        <Icon
+          name="search"
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+        />
+        <input
+          ref={inputRef}
+          type="search"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search products, events, rentals…"
+          aria-label="Search the marketplace"
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          className="glass-input w-full rounded-full bg-white/80 border border-slate-200/90 py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 outline-none shadow-xs transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {loading && (
+            <Spinner className="h-3.5 w-3.5 border-slate-300 border-t-slate-800" />
+          )}
+          {q && !loading && (
+            <button
+              type="button"
+              onClick={() => {
+                setQ("");
+                setResultsData(null);
+                inputRef.current?.focus();
+              }}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-full"
+              aria-label="Clear search query"
+            >
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </form>
+
+      {/* Autocomplete Dropdown */}
+      {isOpen && (
+        <div className="glass-panel animate-rise absolute left-0 right-0 top-full mt-2 max-h-[75vh] md:max-h-[460px] overflow-y-auto rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-2xl backdrop-blur-xl z-50 thin-scrollbar">
+          {/* State 1: Focused with empty input -> Show recent searches */}
+          {term.length === 0 && (
+            <div>
+              {recent.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="clock" className="h-3.5 w-3.5 text-slate-400" />
+                      Recent Searches
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearRecentSearches();
+                        setRecent([]);
+                      }}
+                      className="text-[11px] font-semibold text-slate-400 hover:text-danger transition"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {recent.map((recentItem, idx) => (
+                      <div
+                        key={recentItem}
+                        className={`group flex items-center justify-between rounded-xl px-3 py-2 text-sm transition cursor-pointer ${
+                          activeIndex === idx
+                            ? "bg-slate-100 text-slate-900 font-medium"
+                            : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                        onClick={() => executeSearch(recentItem)}
+                      >
+                        <span className="flex items-center gap-2.5 truncate">
+                          <Icon name="clock" className="h-4 w-4 text-slate-400 shrink-0" />
+                          <span className="truncate">{recentItem}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecentSearch(recentItem);
+                            setRecent(getRecentSearches());
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-700 rounded-md opacity-70 group-hover:opacity-100"
+                          aria-label={`Remove ${recentItem} from recent searches`}
+                        >
+                          <Icon name="close" className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 text-center text-xs text-slate-400">
+                  <p>Type to search products, student listings, rentals & campus events.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* State 2: Query has 1 character */}
+          {term.length === 1 && (
+            <div className="p-3 text-center text-xs text-slate-400">
+              Type at least 2 characters to search…
+            </div>
+          )}
+
+          {/* State 3: Active query >= 2 chars */}
+          {term.length >= 2 && (
+            <div>
+              {loading && !resultsData && (
+                <div className="flex items-center justify-center gap-2 p-6 text-xs text-slate-500">
+                  <Spinner className="h-4 w-4 border-slate-300 border-t-slate-800" />
+                  <span>Searching campus marketplace…</span>
+                </div>
+              )}
+
+              {/* Suggestions grouped by result type */}
+              {resultsData && resultsData.counts?.all > 0 && (
+                <div className="space-y-3">
+                  {/* Products */}
+                  {resultsData.grouped?.products?.length > 0 && (
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Products</span>
+                        <span className="text-[10px] text-slate-400">{resultsData.counts.products}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {resultsData.grouped.products.slice(0, 3).map((item) => {
+                          const itemIndex = currentSelectIndex++;
+                          return (
+                            <SuggestionItem
+                              key={`p-${item.id}`}
+                              item={item}
+                              icon="marketplace"
+                              isActive={activeIndex === itemIndex}
+                              onClick={() => handleSelectItem(item)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Student Market (Listings) */}
+                  {resultsData.grouped?.listings?.length > 0 && (
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Student Market</span>
+                        <span className="text-[10px] text-slate-400">{resultsData.counts.listings}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {resultsData.grouped.listings.slice(0, 3).map((item) => {
+                          const itemIndex = currentSelectIndex++;
+                          return (
+                            <SuggestionItem
+                              key={`l-${item.id}`}
+                              item={item}
+                              icon="listings"
+                              isActive={activeIndex === itemIndex}
+                              onClick={() => handleSelectItem(item)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rentals */}
+                  {resultsData.grouped?.rentals?.length > 0 && (
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Rentals</span>
+                        <span className="text-[10px] text-slate-400">{resultsData.counts.rentals}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {resultsData.grouped.rentals.slice(0, 3).map((item) => {
+                          const itemIndex = currentSelectIndex++;
+                          return (
+                            <SuggestionItem
+                              key={`r-${item.id}`}
+                              item={item}
+                              icon="rentals"
+                              isActive={activeIndex === itemIndex}
+                              onClick={() => handleSelectItem(item)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Events */}
+                  {resultsData.grouped?.events?.length > 0 && (
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Events</span>
+                        <span className="text-[10px] text-slate-400">{resultsData.counts.events}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {resultsData.grouped.events.slice(0, 3).map((item) => {
+                          const itemIndex = currentSelectIndex++;
+                          return (
+                            <SuggestionItem
+                              key={`e-${item.id}`}
+                              item={item}
+                              icon="events"
+                              isActive={activeIndex === itemIndex}
+                              onClick={() => handleSelectItem(item)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lost & Found */}
+                  {resultsData.grouped?.lost_found?.length > 0 && (
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Lost & Found</span>
+                        <span className="text-[10px] text-slate-400">{resultsData.counts.lost_found}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {resultsData.grouped.lost_found.slice(0, 3).map((item) => {
+                          const itemIndex = currentSelectIndex++;
+                          return (
+                            <SuggestionItem
+                              key={`lf-${item.id}`}
+                              item={item}
+                              icon="lost_found"
+                              isActive={activeIndex === itemIndex}
+                              onClick={() => handleSelectItem(item)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* View All Footer */}
+                  {(() => {
+                    const footerIndex = currentSelectIndex++;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => executeSearch(term)}
+                        className={`mt-2 flex w-full items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 text-xs font-semibold transition ${
+                          activeIndex === footerIndex
+                            ? "bg-[#1c222c] text-white"
+                            : "text-slate-800 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>
+                          View all {resultsData.counts?.all} results for "{term}"
+                        </span>
+                        <Icon name="arrowRight" className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* No Results Message */}
+              {resultsData && resultsData.counts?.all === 0 && !loading && (
+                <div className="p-4 text-center">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 mb-2">
+                    <Icon name="search" className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-800">No matches found for "{term}"</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Try checking for spelling errors, using more general keywords, or browsing categories.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SuggestionItem({ item, icon, isActive, onClick }) {
+  const isRental = item.type === "rental";
+  const isEvent = item.type === "event";
+
+  return (
+    <div
+      onClick={onClick}
+      role="option"
+      aria-selected={isActive}
+      className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition cursor-pointer ${
+        isActive ? "bg-slate-100 text-slate-900" : "hover:bg-slate-50 text-slate-700"
+      }`}
+    >
+      {/* Thumbnail or fallback icon */}
+      {item.image ? (
+        <img
+          src={item.image}
+          alt=""
+          className="h-9 w-9 shrink-0 rounded-xl object-cover bg-slate-100 border border-slate-200/60"
+        />
+      ) : (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 border border-slate-200/60">
+          <Icon name={icon} className="h-4 w-4" />
+        </span>
+      )}
+
+      {/* Main & Secondary info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs font-semibold text-slate-900">{item.title}</p>
+          {item.price != null && !isEvent && (
+            <span className="shrink-0 text-xs font-bold text-slate-900">
+              {Number(item.price).toFixed(isRental ? 0 : 2)} {item.priceUnit || "ETB"}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
+          {item.type === "product" && <span>{item.store_name || "Campus Store"}</span>}
+          {item.type === "listing" && (
+            <span>{item.condition ? `${item.condition} · ` : ""}by {item.seller_name}</span>
+          )}
+          {item.type === "rental" && <span>deposit: {Number(item.deposit || 0).toFixed(0)} ETB</span>}
+          {item.type === "event" && (
+            <span>
+              {item.date
+                ? new Date(item.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                : "Upcoming"}
+              {item.venue ? ` · ${item.venue}` : ""}
+            </span>
+          )}
+          {item.type === "lost_found" && (
+            <span>
+              <span className={`inline-block mr-1 font-semibold ${item.reportType === "lost" ? "text-amber-700" : "text-emerald-700"}`}>
+                [{item.reportType === "lost" ? "LOST" : "FOUND"}]
+              </span>
+              {item.category ? `${item.category}` : ""}
+              {item.location ? ` · ${item.location}` : ""}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

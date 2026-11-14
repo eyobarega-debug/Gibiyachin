@@ -32,6 +32,14 @@ const PATHS = {
       <path d="M8 8V6a4 4 0 0 1 8 0v2" />
     </>
   ),
+  lost_found: (
+    <>
+      <circle cx="10" cy="10" r="6" />
+      <path d="m14.5 14.5 5.5 5.5" />
+      <path d="M9.5 8a1.8 1.8 0 0 1 2.2 1.4c0 .8-.9 1.2-1.2 1.8" />
+      <circle cx="10.5" cy="12.5" r=".5" fill="currentColor" />
+    </>
+  ),
   events: (
     <>
       <rect x="3" y="4" width="18" height="17" rx="2" />

@@ -25,6 +25,8 @@ CampusHub/
 
 ## Features included
 
+- Smart Global Search (instant debounced live autocomplete, category tabs, recent searches, exact match ranking)
+- Smart Campus Lost & Found (automated weighted matching, privacy-guarded verification claims, dual-handover confirmation)
 - Student marketplace with products and listings
 - Event management and ticket purchase flow
 - Rental bookings and tracking
@@ -92,6 +94,8 @@ npm run db:seed
 npm run test:smoke
 npm run test:smoke:phase2
 npm run test:tenancy
+npm run test:search
+npm run test:lost-found
 ```
 
 ### Frontend

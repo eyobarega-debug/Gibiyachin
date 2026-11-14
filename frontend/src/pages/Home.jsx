@@ -21,11 +21,11 @@ const QUICK_ACTIONS = {
     { to: "/register", icon: "user", label: "Create account", desc: "Join your campus marketplace" },
     { to: "/marketplace", icon: "marketplace", label: "Browse marketplace", desc: "Explore verified merchants" },
     { to: "/events", icon: "events", label: "Explore events", desc: "Find tickets to campus happenings" },
-    { to: "/rentals", icon: "rentals", label: "Borrow & rent", desc: "Gear, books and equipment" },
+    { to: "/lost-found", icon: "lost_found", label: "Lost & Found", desc: "Report & discover items" },
   ],
   student: [
     { to: "/marketplace", icon: "marketplace", label: "Browse marketplace", desc: "Buy from verified merchants" },
-    { to: "/rentals/new", icon: "rentals", label: "Request rental", desc: "Borrow what you need" },
+    { to: "/lost-found", icon: "lost_found", label: "Lost & Found", desc: "Report or reclaim items" },
     { to: "/orders", icon: "orders", label: "My orders", desc: "Track purchases & pickup" },
     { to: "/tickets", icon: "tickets", label: "My tickets", desc: "Your QR event passes" },
   ],
@@ -474,6 +474,35 @@ export default function Home() {
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
               0% commission on peer equipment rentals — borrow and lend without middleman fees.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Campus Lost & Found Banner ------------------------------------ */}
+      <section className="glass relative overflow-hidden rounded-3xl border border-white/90 bg-gradient-to-r from-white/95 via-white/80 to-slate-100/80 p-6 sm:p-8 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1c222c] text-white shadow-sm">
+              <Icon name="lost_found" className="h-6 w-6" />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Campus Lost &amp; Found</h2>
+              <p className="text-xs text-slate-500">
+                Misplaced your belongings or found an item on campus? Report it now and let our smart matching reconnect you.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Button
+              as={Link}
+              to="/lost-found"
+              variant="primary"
+              size="sm"
+              onClick={(e) => handleTabClick(e, "/lost-found", "Lost & Found")}
+            >
+              Open Lost &amp; Found
+              <Icon name="arrowRight" className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </section>
