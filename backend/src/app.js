@@ -55,6 +55,7 @@ app.use("/api/merchants", tenant, require("./modules/merchants/routes"));
 app.use("/api/organizers", tenant, require("./modules/organizers/routes"));
 app.use("/api/onboarding", tenant, require("./modules/onboarding/routes"));
 app.use("/api/search", tenant, require("./modules/search/routes"));
+app.use("/api/lost-found/evidence", require("./modules/lostFound/evidence.routes"));
 app.use("/api/lost-found", tenant, require("./modules/lostFound/routes"));
 app.use("/api/products", tenant, require("./modules/products/routes"));
 app.use("/api/sellers", tenant, require("./modules/sellers/routes"));
@@ -69,6 +70,8 @@ app.use("/api/events", tenant,requireFeature("events"), require("./modules/ticke
 app.use("/api/reviews", tenant, require("./modules/reviews/routes"));
 app.use("/api/reports", tenant, require("./modules/reports/routes"));
 app.use("/api/notifications", tenant, require("./modules/notifications/routes"));
+app.use("/api/messages", tenant, require("./modules/messaging/routes"));
+app.use("/api/dating", tenant, require("./modules/dating/routes"));
 // External payment gateway webhooks (server-to-server POST, unauthenticated by JWT, tenant resolved per payment)
 app.use("/api/payments/webhook", require("./modules/payments/webhook.routes"));
 // Manual payment-with-proof routes must come first: the generic payments router below has GET /:id.

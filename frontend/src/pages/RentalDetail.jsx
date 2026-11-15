@@ -50,6 +50,30 @@ export default function RentalDetail() {
       : 0;
   const estTotal = item ? days * Number(item.price_per_day) + Number(item.deposit) : 0;
 
+  async function messageOwner() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!item.owner_id) return;
+    try {
+      const { data } = await client.post("/messages/conversations", {
+        recipientId: item.owner_id,
+        type: "rental",
+        contextType: "rental",
+        contextId: item.id,
+        contextData: {
+          title: item.title,
+          dailyRate: item.price_per_day,
+          image: item.images?.[0] || null,
+        },
+      });
+      navigate(`/messages/${data.id}`);
+    } catch (err) {
+      setError(errMsg(err, "Could not start chat with owner"));
+    }
+  }
+
   async function book(e) {
     e.preventDefault();
     setError("");
@@ -110,7 +134,12 @@ export default function RentalDetail() {
                 <span className="font-semibold text-ink">{estTotal.toFixed(2)} ETB</span>
               </p>
             )}
-            <Button type="submit" variant="accent" disabled={busy}>{busy ? "Booking..." : "Book this item"}</Button>
+            <div className="flex gap-2">
+              <Button type="submit" variant="accent" disabled={busy}>{busy ? "Booking..." : "Book this item"}</Button>
+              <Button type="button" variant="outline" onClick={messageOwner}>
+                Message Owner
+              </Button>
+            </div>
           </form>
         )}
       </Card>

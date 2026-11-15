@@ -112,10 +112,10 @@ before(async () => {
   uniB = uniBRes.rows[0];
   cleanupUniIds.push(uniB.id);
 
-  // 3. Create Uni C (with p2p, rentals, events disabled in feature_flags)
+  // 3. Create Uni C (with p2p, rentals, events, lost_found disabled in feature_flags)
   const uniCRes = await db.query(
     `INSERT INTO universities (name, slug, domain, permitted_domains, status, feature_flags)
-     VALUES ($1, $2, $3, $4, 'active', '{"p2p":false,"rentals":false,"events":false}') RETURNING *`,
+     VALUES ($1, $2, $3, $4, 'active', '{"p2p":false,"rentals":false,"events":false,"lost_found":false}') RETURNING *`,
     ["GlobalSearch Uni C", `search-uni-c-${ts}`, `search-c-${ts}.edu.et`, [`search-c-${ts}.edu.et`]]
   );
   uniCDisabled = uniCRes.rows[0];
@@ -302,6 +302,34 @@ before(async () => {
     `INSERT INTO events (club_id, university_id, title, description, date_time, venue_name, category, capacity, status)
      VALUES ($1, $2, 'Uni B Laptop Bootcamp', 'Uni B event', now() + interval '5 days', 'Hall B', 'tech', 80, 'published')`,
     [clubB.id, uniB.id]
+  );
+
+  // ------------------------------------------------------------------
+  // Seed Lost & Found Items
+  // ------------------------------------------------------------------
+  // Uni A: Active Lost report
+  await db.query(
+    `INSERT INTO lost_found_items (university_id, reporter_id, type, title, category, description, location, reward_amount, private_details, status)
+     VALUES ($1, $2, 'lost', 'Lost HP Laptop In Library', 'Laptops', 'Silver HP laptop lost on 2nd floor', 'Main Library', 500, 'SECRET_SERIAL_XYZ_999', 'open')`,
+    [uniA.id, studentAUser.id]
+  );
+  // Uni A: Active Found report
+  await db.query(
+    `INSERT INTO lost_found_items (university_id, reporter_id, type, title, category, description, location, private_details, status)
+     VALUES ($1, $2, 'found', 'Found Dell Laptop Charger In Cafe', 'Electronics', 'Black Dell laptop charger left at counter', 'Campus Cafe', 'SECRET_INITIALS_ENGRAVED', 'open')`,
+    [uniA.id, studentAUser.id]
+  );
+  // Uni A: Removed report (MUST NOT APPEAR)
+  await db.query(
+    `INSERT INTO lost_found_items (university_id, reporter_id, type, title, category, description, location, status)
+     VALUES ($1, $2, 'lost', 'Removed Broken Laptop Report', 'Laptops', 'Should not appear', 'Hall', 'removed')`,
+    [uniA.id, studentAUser.id]
+  );
+  // Uni B: Report in Uni B (MUST NOT APPEAR FOR UNI A)
+  await db.query(
+    `INSERT INTO lost_found_items (university_id, reporter_id, type, title, category, description, location, private_details, status)
+     VALUES ($1, $2, 'lost', 'Uni B Lost Lenovo Laptop', 'Laptops', 'Lenovo Thinkpad lost in Uni B', 'Dorm 3', 'UNI_B_PRIVATE_DETAILS', 'open')`,
+    [uniB.id, studentBUser.id]
   );
 });
 
@@ -559,7 +587,7 @@ describe("Smart Global Search API (/api/search)", () => {
   // 11. Feature-flag behavior
   // ------------------------------------------------------------------
   test("11. Feature-flag behavior: disabled features are excluded from all, and return 403 on direct queries", async () => {
-    // Uni C has p2p: false, rentals: false, events: false
+    // Uni C has p2p: false, rentals: false, events: false, lost_found: false
     const resAllC = await apiRequest("/api/search?q=laptop&type=all", {
       headers: { Authorization: `Bearer ${studentCToken}` },
     });
@@ -567,6 +595,7 @@ describe("Smart Global Search API (/api/search)", () => {
     assert.equal(resAllC.body.counts.listings, 0);
     assert.equal(resAllC.body.counts.rentals, 0);
     assert.equal(resAllC.body.counts.events, 0);
+    assert.equal(resAllC.body.counts.lost_found, 0);
     assert.ok(resAllC.body.counts.products >= 1);
     for (const item of resAllC.body.results) {
       assert.equal(item.type, "product");
@@ -590,6 +619,12 @@ describe("Smart Global Search API (/api/search)", () => {
     });
     assert.equal(resEventsC.status, 403);
     assert.equal(resEventsC.body.error.code, "FEATURE_DISABLED");
+
+    const resLostFoundC = await apiRequest("/api/search?q=laptop&type=lost_found", {
+      headers: { Authorization: `Bearer ${studentCToken}` },
+    });
+    assert.equal(resLostFoundC.status, 403);
+    assert.equal(resLostFoundC.body.error.code, "FEATURE_DISABLED");
   });
 
   // ------------------------------------------------------------------
@@ -623,5 +658,64 @@ describe("Smart Global Search API (/api/search)", () => {
 
     // Draft event must be excluded
     assert.ok(!titles.includes("Draft Laptop Meetup"));
+
+    // Removed lost/found report must be excluded
+    assert.ok(!titles.includes("Removed Broken Laptop Report"));
+  });
+
+  // ------------------------------------------------------------------
+  // 13. Lost & Found Search Integration
+  // ------------------------------------------------------------------
+  test("13. Lost & Found Search: returns active lost and found reports, correct category/destination, zero leakage of private details, and tenant scoping", async () => {
+    // 1. Direct lost_found search for Student A
+    const res = await apiRequest("/api/search?q=laptop&type=lost_found", {
+      headers: { Authorization: `Bearer ${studentAToken}` },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.type, "lost_found");
+    assert.ok(res.body.results.length >= 2);
+    assert.ok(res.body.counts.lost_found >= 2);
+
+    const titles = res.body.results.map((r) => r.title);
+    assert.ok(titles.includes("Lost HP Laptop In Library"));
+    assert.ok(titles.includes("Found Dell Laptop Charger In Cafe"));
+
+    // Verify found and lost reports properties
+    const lostItem = res.body.results.find((r) => r.title === "Lost HP Laptop In Library");
+    assert.ok(lostItem);
+    assert.equal(lostItem.type, "lost_found");
+    assert.equal(lostItem.reportType, "lost");
+    assert.equal(lostItem.category, "Laptops");
+    assert.equal(lostItem.destinationUrl, `/lost-found/${lostItem.id}`);
+    assert.equal(lostItem.price, 500); // Reward amount
+
+    const foundItem = res.body.results.find((r) => r.title === "Found Dell Laptop Charger In Cafe");
+    assert.ok(foundItem);
+    assert.equal(foundItem.type, "lost_found");
+    assert.equal(foundItem.reportType, "found");
+    assert.equal(foundItem.category, "Electronics");
+    assert.equal(foundItem.destinationUrl, `/lost-found/${foundItem.id}`);
+
+    // Critical Security: Private verification details must NEVER appear in search response
+    const rawResponseBody = JSON.stringify(res.body);
+    assert.ok(!rawResponseBody.includes("SECRET_SERIAL_XYZ_999"));
+    assert.ok(!rawResponseBody.includes("SECRET_INITIALS_ENGRAVED"));
+    for (const r of res.body.results) {
+      assert.equal(r.private_details, undefined);
+    }
+
+    // Tenant Isolation: Uni A student must NOT see Uni B lost items
+    assert.ok(!titles.includes("Uni B Lost Lenovo Laptop"));
+
+    // Student B searching sees Uni B item, but NOT Uni A items
+    const resB = await apiRequest("/api/search?q=laptop&type=lost_found", {
+      headers: { Authorization: `Bearer ${studentBToken}` },
+    });
+    assert.equal(resB.status, 200);
+    const bTitles = resB.body.results.map((r) => r.title);
+    assert.ok(bTitles.includes("Uni B Lost Lenovo Laptop"));
+    assert.ok(!bTitles.includes("Lost HP Laptop In Library"));
+    assert.ok(!bTitles.includes("Found Dell Laptop Charger In Cafe"));
+    assert.ok(!JSON.stringify(resB.body).includes("UNI_B_PRIVATE_DETAILS"));
   });
 });

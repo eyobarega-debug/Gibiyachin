@@ -178,11 +178,13 @@ function calculateMatchScore(lostItem, foundItem) {
  * records recommendations in lost_found_matches, and sends real-time notifications.
  */
 async function findAndSaveMatches(item, universityId) {
-  if (!item || !universityId) return [];
+  if (!item || !universityId || ["returned", "closed", "removed", "expired"].includes(item.status)) {
+    return [];
+  }
 
   const oppositeType = item.type === "lost" ? "found" : "lost";
 
-  // Query candidate opposite active items in the same university
+  // Query candidate opposite active items in the same university (ignore closed/returned/removed)
   const { rows: candidates } = await db.query(
     `SELECT * FROM lost_found_items
      WHERE university_id = $1
@@ -210,15 +212,18 @@ async function findAndSaveMatches(item, universityId) {
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (lost_item_id, found_item_id)
          DO UPDATE SET score = EXCLUDED.score, reasons = EXCLUDED.reasons, updated_at = now()
+         WHERE lost_found_matches.status <> 'dismissed'
          RETURNING *`,
         [universityId, lostItem.id, foundItem.id, score, JSON.stringify(reasons)]
       );
 
       const matchRow = rows[0];
+      if (!matchRow) continue; // Match exists but is dismissed; keep it dismissed
+
       matchedRecords.push({ match: matchRow, lostItem, foundItem, score });
 
-      // Notify owners if not yet notified for this pair
-      if (!matchRow.notified_lost_owner) {
+      // Notify owners if match is not dismissed and not yet notified for this pair
+      if (matchRow.status !== "dismissed" && !matchRow.notified_lost_owner) {
         await notify(
           lostItem.reporter_id,
           "lost_found_match",
@@ -232,7 +237,7 @@ async function findAndSaveMatches(item, universityId) {
         await db.query("UPDATE lost_found_matches SET notified_lost_owner = true WHERE id = $1", [matchRow.id]).catch(() => {});
       }
 
-      if (!matchRow.notified_found_finder) {
+      if (matchRow.status !== "dismissed" && !matchRow.notified_found_finder) {
         await notify(
           foundItem.reporter_id,
           "lost_found_match",
@@ -249,6 +254,7 @@ async function findAndSaveMatches(item, universityId) {
   }
 
   // Update item statuses to 'matched' if any matches were found and status is 'open'
+  // Note: 'matched' items remain fully active and browsable in search and catalog
   if (matchedRecords.length > 0) {
     if (item.status === "open") {
       await db.query("UPDATE lost_found_items SET status = 'matched', updated_at = now() WHERE id = $1", [item.id]).catch(() => {});

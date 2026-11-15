@@ -423,6 +423,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Gibiyachin Connect ❤️ Campus Social & Dating Banner ---------------- */}
+      <section className="relative overflow-hidden rounded-3xl border border-rose-200 bg-linear-to-r from-rose-500 via-pink-500 to-rose-600 p-8 sm:p-10 text-white shadow-xl">
+        <div className="relative z-10 max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
+            <Icon name="heart" className="h-3.5 w-3.5 fill-white" />
+            New Campus Feature • 18+ Verified
+          </span>
+          <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+            Gibiyachin Connect ❤️
+          </h2>
+          <p className="mt-2 text-sm text-rose-100 leading-relaxed">
+            Real-time student messaging, campus friendships, and opt-in university dating. Discover students from your campus in a safe, verified community.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              to="/dating"
+              className="rounded-2xl bg-white px-5 py-2.5 text-xs font-bold text-rose-600 shadow-md transition hover:bg-rose-50 hover:scale-105 active:scale-95"
+            >
+              Explore Connect
+            </Link>
+            <Link
+              to="/messages"
+              className="rounded-2xl bg-white/10 px-5 py-2.5 text-xs font-bold text-white border border-white/30 backdrop-blur-xs transition hover:bg-white/20"
+            >
+              Open Messenger
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Why Gibiyachin? Value Proposition Banner ------------------------ */}
       <section className="glass-panel rounded-3xl border border-white/90 p-8 sm:p-10">
         <div className="text-center">

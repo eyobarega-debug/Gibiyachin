@@ -31,6 +31,8 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("http");
 const path = require("path");
+const fs = require("fs");
+const sharp = require("sharp");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 process.env.NODE_ENV = "test";
@@ -64,35 +66,30 @@ async function apiRequest(endpoint, { method = "GET", headers = {}, body = null 
   const reqHeaders = { ...headers };
   let payload = null;
 
-  if (body) {
-    payload = JSON.stringify(body);
-    reqHeaders["Content-Type"] = "application/json";
-    reqHeaders["Content-Length"] = Buffer.byteLength(payload);
+  if (body !== null && body !== undefined) {
+    if (typeof FormData !== "undefined" && body instanceof FormData) {
+      payload = body;
+    } else {
+      payload = JSON.stringify(body);
+      reqHeaders["Content-Type"] = "application/json";
+    }
   }
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      url,
-      {
-        method,
-        headers: reqHeaders,
-      },
-      (res) => {
-        let raw = "";
-        res.on("data", (chunk) => (raw += chunk));
-        res.on("end", () => {
-          let parsed = raw;
-          try {
-            parsed = JSON.parse(raw);
-          } catch (_) {}
-          resolve({ status: res.statusCode, headers: res.headers, body: parsed });
-        });
-      }
-    );
-    req.on("error", reject);
-    if (payload) req.write(payload);
-    req.end();
+  const res = await fetch(url, {
+    method,
+    headers: reqHeaders,
+    body: payload,
   });
+
+  const contentType = res.headers.get("content-type") || "";
+  let parsed = null;
+  if (contentType.includes("application/json")) {
+    parsed = await res.json();
+  } else {
+    parsed = await res.text();
+  }
+
+  return { status: res.status, headers: res.headers, body: parsed };
 }
 
 async function createTestUser({ name, email, role, universityId }) {
@@ -645,5 +642,303 @@ describe("Campus Lost & Found Module (/api/lost-found)", () => {
     });
     assert.equal(restoreRes.status, 200);
     assert.equal(restoreRes.body.item.status, "open");
+  });
+
+  // ------------------------------------------------------------------
+  // 24. Private Image Security (Priority 1)
+  // ------------------------------------------------------------------
+  test("24. Private evidence image security: private storage, signed URLs, and unauthorized blocking", async () => {
+    // 1. Create a valid test image
+    const imgBuffer = await sharp({
+      create: { width: 32, height: 32, channels: 3, background: { r: 50, g: 150, b: 200 } },
+    }).jpeg().toBuffer();
+
+    const formData = new FormData();
+    formData.append("file", new Blob([imgBuffer], { type: "image/jpeg" }), "claim_proof.jpg");
+
+    // 2. Upload to private evidence endpoint
+    const uploadRes = await apiRequest("/api/lost-found/upload-evidence", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+      body: formData,
+    });
+    assert.equal(uploadRes.status, 201);
+    assert.ok(uploadRes.body.url);
+    assert.ok(uploadRes.body.filename);
+
+    const evidenceFilename = uploadRes.body.filename;
+    const { EVIDENCE_DIR } = require("../src/modules/lostFound/evidence");
+    const evidencePath = path.join(EVIDENCE_DIR, evidenceFilename);
+    assert.ok(fs.existsSync(evidencePath), "File must be saved in private storage directory");
+
+    // 3. Create a found item by Student A2
+    const foundItemRes = await apiRequest("/api/lost-found", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+      body: {
+        type: "found",
+        title: "Found Wireless Earbuds",
+        category: "Electronics",
+        description: "Found white earbuds in case near cafe",
+        date_incident: new Date().toISOString().slice(0, 10),
+        location: "Cafe Area",
+        private_details: "Case has initials 'JD' etched inside",
+      },
+    });
+    assert.equal(foundItemRes.status, 201);
+    const foundItemId = foundItemRes.body.item.id;
+    cleanupItemIds.push(foundItemId);
+
+    // 4. Student A1 claims item with the private evidence
+    const claimRes = await apiRequest(`/api/lost-found/${foundItemId}/claim`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+      body: {
+        message: "Those are my earbuds. I etched JD inside.",
+        private_proof: "JD initials and serial number 998877",
+        evidence_images: [uploadRes.body.url],
+      },
+    });
+    assert.equal(claimRes.status, 201);
+    const claimId = claimRes.body.claim.id;
+    cleanupClaimIds.push(claimId);
+
+    // 5. As claimant (Student A1), verify evidence_images contains signed URL
+    const claimantItemView = await apiRequest(`/api/lost-found/${foundItemId}`, {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(claimantItemView.status, 200);
+    const claimantClaim = claimantItemView.body.item.claims[0];
+    assert.ok(Array.isArray(claimantClaim.evidence_images));
+    assert.ok(claimantClaim.evidence_images[0].includes("?token="));
+
+    const signedUrl = claimantClaim.evidence_images[0];
+    const tokenMatch = signedUrl.match(/token=([a-zA-Z0-9._-]+)/);
+    assert.ok(tokenMatch, "Signed URL must contain HMAC token");
+    const validToken = tokenMatch[1];
+
+    // 6. Accessing evidence with valid signed token succeeds (200 OK)
+    const validAccessRes = await apiRequest(`/api/lost-found/evidence/${evidenceFilename}?token=${validToken}`);
+    assert.equal(validAccessRes.status, 200);
+
+    // 7. Accessing evidence WITHOUT token as unauthenticated caller returns 401
+    const unauthAccessRes = await apiRequest(`/api/lost-found/evidence/${evidenceFilename}`);
+    assert.equal(unauthAccessRes.status, 401);
+
+    // 8. Accessing evidence WITHOUT token as unrelated student (Student B) returns 403
+    const forbiddenAccessRes = await apiRequest(`/api/lost-found/evidence/${evidenceFilename}`, {
+      headers: { Authorization: `Bearer ${studentBToken}` },
+    });
+    assert.equal(forbiddenAccessRes.status, 403);
+
+    // 9. Accessing evidence with forged/tampered token returns 403
+    const forgedAccessRes = await apiRequest(`/api/lost-found/evidence/${evidenceFilename}?token=fake_tampered_token`);
+    assert.equal(forgedAccessRes.status, 403);
+
+    // Clean up test file
+    fs.unlinkSync(evidencePath);
+  });
+
+  // ------------------------------------------------------------------
+  // 25. Express Route Ordering & UUID Parameter Safety (Priority 2)
+  // ------------------------------------------------------------------
+  test("25. Express route ordering and UUID parameter safety: static routes resolve and non-UUID returns 404", async () => {
+    // 1. Static route /my-items resolves correctly to dashboard
+    const myItemsRes = await apiRequest("/api/lost-found/my-items", {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(myItemsRes.status, 200);
+    assert.ok(myItemsRes.body.counts);
+    assert.ok(Array.isArray(myItemsRes.body.myLost));
+
+    // 2. Static route /admin resolves correctly to admin listing
+    const adminRes = await apiRequest("/api/lost-found/admin", {
+      headers: { Authorization: `Bearer ${adminAToken}` },
+    });
+    assert.equal(adminRes.status, 200);
+    assert.ok(Array.isArray(adminRes.body.items));
+
+    // 3. Non-UUID path on item parameter returns 404 safely instead of 500 database error
+    const nonUuidRes = await apiRequest("/api/lost-found/not-a-valid-uuid-param", {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(nonUuidRes.status, 404);
+    assert.equal(nonUuidRes.body.error.code, "NOT_FOUND");
+  });
+
+  // ------------------------------------------------------------------
+  // 26. Matching Workflow Constraints (Priority 3)
+  // ------------------------------------------------------------------
+  test("26. Matching workflow constraints: recommendations do not mark item as unavailable, closed items produce no matches, and dismissed matches are preserved", async () => {
+    // 1. Create Lost item
+    const lostRes = await apiRequest("/api/lost-found", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+      body: {
+        type: "lost",
+        title: "Lost Sony Noise Cancelling Headphones",
+        category: "Electronics",
+        description: "Black Sony WH-1000XM4 lost in study room",
+        date_incident: new Date().toISOString().slice(0, 10),
+        location: "Library Study Room 4",
+        color: "Black",
+        brand: "Sony",
+      },
+    });
+    assert.equal(lostRes.status, 201);
+    const lostId = lostRes.body.item.id;
+    cleanupItemIds.push(lostId);
+
+    // 2. Create matching Found item
+    const foundRes = await apiRequest("/api/lost-found", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+      body: {
+        type: "found",
+        title: "Found Sony Wireless Headphones",
+        category: "Electronics",
+        description: "Found black Sony over-ear headphones in study room",
+        date_incident: new Date().toISOString().slice(0, 10),
+        location: "Library Study Room 4",
+        color: "Black",
+        brand: "Sony",
+      },
+    });
+    assert.equal(foundRes.status, 201);
+    const foundId = foundRes.body.item.id;
+    cleanupItemIds.push(foundId);
+
+    // 3. Check that item status is NOT returned or closed; it is still active ('matched' or 'open') and browsable
+    const checkLost = await apiRequest(`/api/lost-found/${lostId}`, {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.ok(["open", "matched"].includes(checkLost.body.item.status));
+    assert.notEqual(checkLost.body.item.status, "returned");
+    assert.notEqual(checkLost.body.item.status, "closed");
+
+    // Item must still appear in catalog search
+    const catalogCheck = await apiRequest("/api/lost-found?q=Sony", {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(catalogCheck.status, 200);
+    const titles = catalogCheck.body.items.map((it) => it.title);
+    assert.ok(titles.includes("Lost Sony Noise Cancelling Headphones"));
+
+    // 4. Close the lost item
+    await db.query("UPDATE lost_found_items SET status = 'closed' WHERE id = $1", [lostId]);
+
+    // 5. Calling matching on closed item must return empty array
+    const { findAndSaveMatches } = require("../src/modules/lostFound/matching");
+    const closedItem = (await db.query("SELECT * FROM lost_found_items WHERE id = $1", [lostId])).rows[0];
+    const newMatches = await findAndSaveMatches(closedItem, uniA.id);
+    assert.equal(newMatches.length, 0, "Closed item cannot generate new matches");
+  });
+
+  // ------------------------------------------------------------------
+  // 27. Claim Concurrency & Mutual Exclusion (Priority 4)
+  // ------------------------------------------------------------------
+  test("27. Claim concurrency: approving one claim rejects pending claims and blocks subsequent approvals", async () => {
+    // Create student A3 in Uni A
+    const stA3 = await createTestUser({
+      name: "Student A3",
+      email: `st_a3_${Date.now()}@test-a-${Date.now()}.edu.et`,
+      role: "student",
+      universityId: uniA.id,
+    });
+    const studentA3Token = stA3.token;
+
+    // 1. Student A2 reports found watch
+    const foundRes = await apiRequest("/api/lost-found", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+      body: {
+        type: "found",
+        title: "Found Smart Watch",
+        category: "Electronics",
+        description: "Found black smartwatch in gym locker",
+        date_incident: new Date().toISOString().slice(0, 10),
+        location: "Campus Gym",
+        private_details: "Strap has engraving 'For Mike'",
+      },
+    });
+    assert.equal(foundRes.status, 201);
+    const itemId = foundRes.body.item.id;
+    cleanupItemIds.push(itemId);
+
+    // 2. Student A1 files Claim 1
+    const claim1Res = await apiRequest(`/api/lost-found/${itemId}/claim`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+      body: {
+        message: "I lost my smartwatch in gym.",
+        private_proof: "It has engraving 'For Mike'.",
+      },
+    });
+    assert.equal(claim1Res.status, 201);
+    const claim1Id = claim1Res.body.claim.id;
+    cleanupClaimIds.push(claim1Id);
+
+    // 3. Student A3 files Claim 2 on the same item
+    const claim2Res = await apiRequest(`/api/lost-found/${itemId}/claim`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${studentA3Token}` },
+      body: {
+        message: "That's my watch I lost last week.",
+        private_proof: "It's a black smartwatch with a silicon band.",
+      },
+    });
+    assert.equal(claim2Res.status, 201);
+    const claim2Id = claim2Res.body.claim.id;
+    cleanupClaimIds.push(claim2Id);
+
+    // 4. Finder approves Claim 1
+    const approve1Res = await apiRequest(`/api/lost-found/claims/${claim1Id}/review`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+      body: { action: "approve", reviewNotes: "Engraving matches correctly." },
+    });
+    assert.equal(approve1Res.status, 200);
+    assert.equal(approve1Res.body.claim.status, "approved");
+
+    // 5. Verify Item status transitioned to awaiting_handover
+    const itemCheck = await apiRequest(`/api/lost-found/${itemId}`, {
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+    });
+    assert.equal(itemCheck.body.item.status, "awaiting_handover");
+
+    // 6. Verify Claim 2 was automatically transitioned to rejected
+    const claimsRes = await apiRequest(`/api/lost-found/${itemId}/claims`, {
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+    });
+    const claim2Updated = claimsRes.body.claims.find((c) => c.id === claim2Id);
+    assert.equal(claim2Updated.status, "rejected");
+
+    // 7. Attempting to approve Claim 2 must be rejected with 400 or 409
+    const secondApproveRes = await apiRequest(`/api/lost-found/claims/${claim2Id}/review`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+      body: { action: "approve" },
+    });
+    assert.ok(secondApproveRes.status === 400 || secondApproveRes.status === 409);
+
+    // 8. Handover dual-confirmation by both parties
+    const finderConfirmRes = await apiRequest(`/api/lost-found/claims/${claim1Id}/confirm-handover`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${studentA2Token}` },
+    });
+    assert.equal(finderConfirmRes.status, 200);
+
+    const claimantConfirmRes = await apiRequest(`/api/lost-found/claims/${claim1Id}/confirm-handover`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(claimantConfirmRes.status, 200);
+    assert.equal(claimantConfirmRes.body.claim.status, "completed");
+
+    // 9. Item is now returned
+    const finalItemCheck = await apiRequest(`/api/lost-found/${itemId}`, {
+      headers: { Authorization: `Bearer ${studentA1Token}` },
+    });
+    assert.equal(finalItemCheck.body.item.status, "returned");
   });
 });

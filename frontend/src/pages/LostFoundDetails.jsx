@@ -78,6 +78,32 @@ export default function LostFoundDetails() {
   const isFound = item?.type === "found";
   const isLost = item?.type === "lost";
 
+  async function messageReporter() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!item.reporter_id) return;
+    try {
+      const { data } = await client.post("/messages/conversations", {
+        recipientId: item.reporter_id,
+        type: "lost_found",
+        contextType: "lost_found",
+        contextId: item.id,
+        contextData: {
+          title: item.title,
+          itemType: item.type,
+          category: item.category,
+          campus: item.location,
+          image: item.images?.[0] || null,
+        },
+      });
+      navigate(`/messages/${data.id}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || "Could not start chat");
+    }
+  }
+
   // Check if current user already submitted a claim
   const userClaim = item?.claims?.find((c) => c.claimant_id === user?.id);
 
@@ -515,6 +541,18 @@ export default function LostFoundDetails() {
               <span>I Found Something Matching This</span>
             </Button>
           )}
+
+          {!isReporter && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full py-3 mt-2"
+              onClick={messageReporter}
+            >
+              <Icon name="messages" className="h-5 w-5" />
+              <span>{isFound ? "Message Finder Privately" : "Message Owner Privately"}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -719,7 +757,12 @@ export default function LostFoundDetails() {
             <label className="block text-xs font-semibold text-slate-700">
               Supporting Proof Images (Receipt, Old Photo with item)
             </label>
-            <ImageUploader value={claimEvidence} onChange={setClaimEvidence} max={2} />
+            <ImageUploader
+              value={claimEvidence}
+              onChange={setClaimEvidence}
+              max={2}
+              uploadEndpoint="/lost-found/upload-evidence"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">

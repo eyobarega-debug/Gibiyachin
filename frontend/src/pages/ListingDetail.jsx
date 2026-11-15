@@ -4,6 +4,7 @@ import { client } from "../api/client";
 import { useAuth, errMsg } from "../context/AuthContext";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, SuccessBanner, TextArea } from "../components/ui";
 import { MediaImage } from "../components/cards";
+import Icon from "../components/Icon";
 import { PAYMENT_METHOD, startCheckout } from "../api/checkout";
 
 export default function ListingDetail() {
@@ -20,6 +21,30 @@ export default function ListingDetail() {
   const [success, setSuccess] = useState("");
 
   const isOwner = user && listing && user.id === listing.seller_id;
+
+  async function messageSeller() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!listing.seller_id) return;
+    try {
+      const { data } = await client.post("/messages/conversations", {
+        recipientId: listing.seller_id,
+        type: "marketplace",
+        contextType: "listing",
+        contextId: listing.id,
+        contextData: {
+          title: listing.title,
+          price: listing.price,
+          image: listing.image_url || null,
+        },
+      });
+      navigate(`/messages/${data.id}`);
+    } catch (err) {
+      setError(errMsg(err, "Could not start chat with seller"));
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -122,7 +147,13 @@ export default function ListingDetail() {
             <ErrorBanner message={error} />
             <SuccessBanner message={success} />
             <TextArea label="Message to seller (optional)" rows={2} value={message} onChange={(e) => setMessage(e.target.value)} />
-            <Button type="submit" variant="accent">Request to buy</Button>
+            <div className="flex gap-2">
+              <Button type="submit" variant="accent">Request to buy</Button>
+              <Button type="button" variant="outline" onClick={messageSeller}>
+                <Icon name="messages" className="h-4 w-4" />
+                Message Seller
+              </Button>
+            </div>
           </form>
         )}
 

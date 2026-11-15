@@ -2,6 +2,7 @@ const db = require("../../db");
 const { ApiError, notFound, forbidden, badRequest } = require("../../utils/errors");
 const { notify, audit } = require("../../utils/notify");
 const { findAndSaveMatches } = require("./matching");
+const { signEvidenceUrl } = require("./evidence");
 
 function assertSameTenant(tenant, rowUniversityId, what = "Lost & Found item") {
   const t = tenant && tenant.universityId;
@@ -34,6 +35,11 @@ function sanitizeClaim(claim, user, itemReporterId) {
   if (!isClaimant && !isItemReporter && !isAdmin) {
     delete sanitized.private_proof;
     delete sanitized.evidence_images;
+  } else {
+    // Authorized parties: sign evidence image URLs with short-lived HMAC tokens
+    if (Array.isArray(sanitized.evidence_images) && sanitized.evidence_images.length > 0) {
+      sanitized.evidence_images = sanitized.evidence_images.map((img) => signEvidenceUrl(img));
+    }
   }
   return sanitized;
 }
@@ -580,31 +586,46 @@ async function reviewClaim(claimId, reviewData, user, tenant) {
   if (!isValidUuid(claimId)) throw notFound("Claim not found");
   const { action, reviewNotes = null } = reviewData;
 
-  const claimRes = await db.query(
-    `SELECT c.*, i.reporter_id AS item_reporter_id, i.title AS item_title, i.status AS item_status
-     FROM lost_found_claims c
-     JOIN lost_found_items i ON i.id = c.item_id
-     WHERE c.id = $1`,
-    [claimId]
-  );
+  return await db.withTransaction(async (client) => {
+    // 1. Fetch claim with FOR UPDATE lock
+    const claimRes = await client.query(
+      `SELECT c.*, i.reporter_id AS item_reporter_id, i.title AS item_title, i.status AS item_status
+       FROM lost_found_claims c
+       JOIN lost_found_items i ON i.id = c.item_id
+       WHERE c.id = $1
+       FOR UPDATE`,
+      [claimId]
+    );
 
-  const claim = claimRes.rows[0];
-  if (!claim) throw notFound("Claim not found");
-  assertSameTenant(tenant, claim.university_id);
+    const claim = claimRes.rows[0];
+    if (!claim) throw notFound("Claim not found");
+    assertSameTenant(tenant, claim.university_id);
 
-  const isItemReporter = user.id === claim.item_reporter_id;
-  const isAdmin = user.role === "admin" || user.role === "super_admin";
+    const isItemReporter = user.id === claim.item_reporter_id;
+    const isAdmin = user.role === "admin" || user.role === "super_admin";
 
-  if (!isItemReporter && !isAdmin) {
-    throw forbidden("You are not authorized to review this claim");
-  }
+    if (!isItemReporter && !isAdmin) {
+      throw forbidden("You are not authorized to review this claim");
+    }
 
-  if (claim.status !== "pending") {
-    throw badRequest(`This claim has already been ${claim.status}`);
-  }
+    if (claim.status !== "pending") {
+      throw badRequest(`This claim has already been ${claim.status}`);
+    }
 
-  if (action === "approve") {
-    return await db.withTransaction(async (client) => {
+    // 2. Lock item row FOR UPDATE to strictly serialize concurrent approvals across claims
+    const itemLockRes = await client.query(
+      `SELECT id, status FROM lost_found_items WHERE id = $1 FOR UPDATE`,
+      [claim.item_id]
+    );
+    const item = itemLockRes.rows[0];
+    if (!item) throw notFound("Item not found");
+
+    if (action === "approve") {
+      // If item is already awaiting handover or closed/returned, reject conflicting approval
+      if (["awaiting_handover", "returned", "closed", "removed"].includes(item.status)) {
+        throw new ApiError(409, `Cannot approve claim: item is already ${item.status}`, "CLAIM_CONFLICT");
+      }
+
       // 1. Approve this claim
       const updatedClaimRes = await client.query(
         `UPDATE lost_found_claims
@@ -643,80 +664,86 @@ async function reviewClaim(claimId, reviewData, user, tenant) {
       await audit(user.id, "lost_found_claim_approve", "lost_found_claim", claimId, { itemId: claim.item_id });
 
       return sanitizeClaim(updatedClaimRes.rows[0], user, claim.item_reporter_id);
-    });
-  } else {
-    // Reject claim
-    const updatedClaimRes = await db.query(
-      `UPDATE lost_found_claims
-       SET status = 'rejected', review_notes = $1, updated_at = now()
-       WHERE id = $2 RETURNING *`,
-      [reviewNotes, claimId]
-    );
+    } else {
+      // Reject claim
+      const updatedClaimRes = await client.query(
+        `UPDATE lost_found_claims
+         SET status = 'rejected', review_notes = $1, updated_at = now()
+         WHERE id = $2 RETURNING *`,
+        [reviewNotes, claimId]
+      );
 
-    // If no remaining pending claims, revert item to 'open' or 'matched'
-    const remainingPending = await db.query(
-      `SELECT id FROM lost_found_claims WHERE item_id = $1 AND status = 'pending'`,
-      [claim.item_id]
-    );
-    if (remainingPending.rows.length === 0) {
-      const matchCheck = await db.query(
-        `SELECT id FROM lost_found_matches WHERE (lost_item_id = $1 OR found_item_id = $1) AND status <> 'dismissed' LIMIT 1`,
+      // If no remaining pending claims, revert item to 'open' or 'matched'
+      const remainingPending = await client.query(
+        `SELECT id FROM lost_found_claims WHERE item_id = $1 AND status = 'pending'`,
         [claim.item_id]
       );
-      const newStatus = matchCheck.rows.length > 0 ? "matched" : "open";
-      await db.query(`UPDATE lost_found_items SET status = $1, updated_at = now() WHERE id = $2`, [newStatus, claim.item_id]);
+      if (remainingPending.rows.length === 0 && item.status === "claim_pending") {
+        const matchCheck = await client.query(
+          `SELECT id FROM lost_found_matches WHERE (lost_item_id = $1 OR found_item_id = $1) AND status <> 'dismissed' LIMIT 1`,
+          [claim.item_id]
+        );
+        const newStatus = matchCheck.rows.length > 0 ? "matched" : "open";
+        await client.query(`UPDATE lost_found_items SET status = $1, updated_at = now() WHERE id = $2`, [newStatus, claim.item_id]);
+      }
+
+      // Notify claimant
+      await notify(
+        claim.claimant_id,
+        "lost_found_claim_rejected",
+        "Claim Update",
+        `The finder reviewed your claim for "${claim.item_title}" but was unable to verify ownership.${reviewNotes ? ` Note: ${reviewNotes}` : ""}`,
+        `/lost-found/${claim.item_id}`,
+        "lost_found_claim",
+        claimId
+      ).catch(() => {});
+
+      await audit(user.id, "lost_found_claim_reject", "lost_found_claim", claimId, { itemId: claim.item_id });
+
+      return sanitizeClaim(updatedClaimRes.rows[0], user, claim.item_reporter_id);
     }
-
-    // Notify claimant
-    await notify(
-      claim.claimant_id,
-      "lost_found_claim_rejected",
-      "Claim Update",
-      `The finder reviewed your claim for "${claim.item_title}" but was unable to verify ownership.${reviewNotes ? ` Note: ${reviewNotes}` : ""}`,
-      `/lost-found/${claim.item_id}`,
-      "lost_found_claim",
-      claimId
-    ).catch(() => {});
-
-    await audit(user.id, "lost_found_claim_reject", "lost_found_claim", claimId, { itemId: claim.item_id });
-
-    return sanitizeClaim(updatedClaimRes.rows[0], user, claim.item_reporter_id);
-  }
+  });
 }
 
 async function confirmHandover(claimId, user, tenant) {
   if (!isValidUuid(claimId)) throw notFound("Claim not found");
-  const claimRes = await db.query(
-    `SELECT c.*, i.reporter_id AS item_reporter_id, i.title AS item_title, i.status AS item_status
-     FROM lost_found_claims c
-     JOIN lost_found_items i ON i.id = c.item_id
-     WHERE c.id = $1`,
-    [claimId]
-  );
-
-  const claim = claimRes.rows[0];
-  if (!claim) throw notFound("Claim not found");
-  assertSameTenant(tenant, claim.university_id);
-
-  const isFinder = user.id === claim.item_reporter_id;
-  const isClaimant = user.id === claim.claimant_id;
-  const isAdmin = user.role === "admin" || user.role === "super_admin";
-
-  if (!isFinder && !isClaimant && !isAdmin) {
-    throw forbidden("You are not a participant in this claim handover");
-  }
-
-  if (claim.status !== "approved") {
-    throw badRequest(`Cannot confirm handover for claim with status: ${claim.status}`);
-  }
-
-  let finderConfirmed = claim.handover_confirmed_by_finder;
-  let claimantConfirmed = claim.handover_confirmed_by_claimant;
-
-  if (isFinder || isAdmin) finderConfirmed = true;
-  if (isClaimant || isAdmin) claimantConfirmed = true;
 
   return await db.withTransaction(async (client) => {
+    const claimRes = await client.query(
+      `SELECT c.*, i.reporter_id AS item_reporter_id, i.title AS item_title, i.status AS item_status
+       FROM lost_found_claims c
+       JOIN lost_found_items i ON i.id = c.item_id
+       WHERE c.id = $1
+       FOR UPDATE`,
+      [claimId]
+    );
+
+    const claim = claimRes.rows[0];
+    if (!claim) throw notFound("Claim not found");
+    assertSameTenant(tenant, claim.university_id);
+
+    const isFinder = user.id === claim.item_reporter_id;
+    const isClaimant = user.id === claim.claimant_id;
+    const isAdmin = user.role === "admin" || user.role === "super_admin";
+
+    if (!isFinder && !isClaimant && !isAdmin) {
+      throw forbidden("You are not a participant in this claim handover");
+    }
+
+    if (claim.status === "completed") {
+      return sanitizeClaim(claim, user, claim.item_reporter_id);
+    }
+
+    if (claim.status !== "approved") {
+      throw badRequest(`Cannot confirm handover for claim with status: ${claim.status}`);
+    }
+
+    let finderConfirmed = claim.handover_confirmed_by_finder;
+    let claimantConfirmed = claim.handover_confirmed_by_claimant;
+
+    if (isFinder || isAdmin) finderConfirmed = true;
+    if (isClaimant || isAdmin) claimantConfirmed = true;
+
     // Both confirmed -> mark as returned and completed
     if (finderConfirmed && claimantConfirmed) {
       const updatedClaimRes = await client.query(

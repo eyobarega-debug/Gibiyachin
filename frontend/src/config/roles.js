@@ -17,6 +17,8 @@ export const TABS = [
   { key: "rentals", label: "Rentals", to: "/rentals", icon: "rentals", section: "Main" },
   { key: "listings", label: "P2P Market", to: "/listings", icon: "listings", section: "Main" },
   { key: "lost_found", label: "Lost & Found", to: "/lost-found", icon: "lost_found", section: "Main" },
+  { key: "messages", label: "Messages", to: "/messages", icon: "messages", section: "Main" },
+  { key: "dating", label: "Connect ❤️", to: "/dating", icon: "heart", section: "Main" },
 
   // Personal activity (Students / Common)
   { key: "orders", label: "My Orders", to: "/orders", icon: "orders", section: "My Activity", roles: ["student"] },

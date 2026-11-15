@@ -22,6 +22,8 @@ const safeImageUrl = z
     (val) => {
       if (!val) return true;
       if (/^\/uploads\/[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|webp|gif)$/i.test(val)) return true;
+      if (/^\/api\/lost-found\/evidence\/[a-zA-Z0-9_\-\.]+(\?.*)?$/i.test(val)) return true;
+      if (/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|webp|gif)$/i.test(val)) return true;
       try {
         const u = new URL(val);
         return u.protocol === "http:" || u.protocol === "https:";
@@ -29,7 +31,7 @@ const safeImageUrl = z
         return false;
       }
     },
-    { message: "Image URL must be a valid upload path (/uploads/...) or safe http/https URL" }
+    { message: "Image URL must be a valid upload path (/uploads/... or /api/lost-found/evidence/...) or safe http/https URL" }
   );
 
 const createItemRawSchema = z.object({

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
 import { ToastProvider } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { AuthPromptProvider } from "./context/AuthPromptContext";
@@ -50,6 +51,11 @@ import MockCheckout from "./pages/MockCheckout";
 import NotFound from "./pages/NotFound";
 import Commissions from "./pages/Commissions";
 import AdminCommissions from "./pages/AdminCommissions";
+import Messages from "./pages/Messages";
+import Dating from "./pages/Dating";
+import DatingMatches from "./pages/DatingMatches";
+import DatingProfile from "./pages/DatingProfile";
+import DatingSettings from "./pages/DatingSettings";
 import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SuperAdminApplications from "./pages/superadmin/SuperAdminApplications";
@@ -67,10 +73,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ToastProvider>
-          <ConfirmProvider>
-            <AuthPromptProvider>
-              <AppLayout>
+        <SocketProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <AuthPromptProvider>
+                <AppLayout>
               <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -137,6 +144,13 @@ export default function App() {
             </Route>
 
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/messages/:id" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+
+            <Route path="/dating" element={<ProtectedRoute><Dating /></ProtectedRoute>} />
+            <Route path="/dating/matches" element={<ProtectedRoute><DatingMatches /></ProtectedRoute>} />
+            <Route path="/dating/profile" element={<ProtectedRoute><DatingProfile /></ProtectedRoute>} />
+            <Route path="/dating/settings" element={<ProtectedRoute><DatingSettings /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/:id" element={<PublicProfile />} />
             <Route path="/verify" element={<ProtectedRoute><VerifyCampus /></ProtectedRoute>} />
@@ -155,6 +169,7 @@ export default function App() {
             </AuthPromptProvider>
           </ConfirmProvider>
         </ToastProvider>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

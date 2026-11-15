@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { client } from "../api/client";
-import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import ImageUploader from "../components/ImageUploader";
 import { Input, TextArea, Select, Button, Alert } from "../components/ui";
@@ -22,7 +21,6 @@ const CATEGORIES = [
 ];
 
 export default function CreateLostFound() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const toast = useToast();

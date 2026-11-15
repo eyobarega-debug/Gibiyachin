@@ -26,6 +26,8 @@ export const ALLOWED_ROUTE_PREFIXES = [
   "/organizer",
   "/organizer-apply",
   "/notifications",
+  "/messages",
+  "/dating",
 ];
 
 /**
@@ -103,6 +105,10 @@ export function resolveNotificationTarget(notification) {
     case "lost_found_returned":
     case "lost_found_dispute":
       return "/lost-found/my-items";
+    case "message_new":
+      return "/messages";
+    case "dating_match":
+      return "/dating";
     case "commission_update":
       return "/commissions";
     case "payout_update":

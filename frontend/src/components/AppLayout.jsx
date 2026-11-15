@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAuthPrompt } from "../context/AuthPromptContext";
+import { useSocket } from "../context/SocketContext";
 import { client } from "../api/client";
 import { Badge, Spinner } from "./ui";
 import Icon from "./Icon";
@@ -50,6 +51,8 @@ function navItemClass({ isActive }) {
 function SideNav({ user, onNavigate }) {
   const { promptAuth } = useAuthPrompt();
   const location = useLocation();
+  const socketCtx = useSocket();
+  const unreadMessages = socketCtx?.unreadCount || 0;
   const tabs = useMemo(() => visibleTabs(user), [user]);
   const sections = useMemo(() => {
     const order = [];
@@ -91,6 +94,11 @@ function SideNav({ user, onNavigate }) {
               >
                 <Icon name={t.icon || t.key} className="h-[18px] w-[18px] shrink-0" />
                 <span className="truncate">{t.label}</span>
+                {t.key === "messages" && unreadMessages > 0 && (
+                  <Badge tone="accent" className="ml-auto">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </Badge>
+                )}
               </NavLink>
             ))}
           </div>
@@ -196,6 +204,8 @@ function roleLabel(role) {
 function UserMenu({ user, unread, onLogout, onboarding }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const socketCtx = useSocket();
+  const unreadMessages = socketCtx?.unreadCount || 0;
 
   useEffect(() => {
     function onDocClick(e) {
@@ -270,6 +280,9 @@ function UserMenu({ user, unread, onLogout, onboarding }) {
             </MenuLink>
             <MenuLink to="/favorites" icon="favorites" onClick={() => setOpen(false)}>
               Saved Items
+            </MenuLink>
+            <MenuLink to="/messages" icon="messages" onClick={() => setOpen(false)} badge={unreadMessages}>
+              Messages
             </MenuLink>
             <MenuLink to="/notifications" icon="bell" onClick={() => setOpen(false)} badge={unread}>
               Notifications
@@ -982,10 +995,12 @@ function MobileDrawer({ open, onClose, user, unread, onLogout, onboarding }) {
 function BottomNav({ user }) {
   const { promptAuth } = useAuthPrompt();
   const location = useLocation();
+  const socketCtx = useSocket();
+  const unreadMessages = socketCtx?.unreadCount || 0;
   const items = [
     { to: "/", label: "Home", icon: "home", end: true },
     { to: "/marketplace", label: "Shop", icon: "marketplace" },
-    { to: "/rentals", label: "Rent", icon: "rentals" },
+    { to: "/messages", label: "Chat", icon: "messages", badge: unreadMessages },
     { to: "/events", label: "Events", icon: "events" },
     user
       ? { to: "/profile", label: "Profile", icon: "user" }
@@ -1010,7 +1025,14 @@ function BottomNav({ user }) {
             }`
           }
         >
-          <Icon name={it.icon} className="h-5 w-5" />
+          <span className="relative">
+            <Icon name={it.icon} className="h-5 w-5" />
+            {it.badge > 0 && (
+              <span className="absolute -top-1 -right-2 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-slate-900 px-1 text-[9px] font-bold text-white shadow-xs">
+                {it.badge > 99 ? "99+" : it.badge}
+              </span>
+            )}
+          </span>
           {it.label}
         </NavLink>
       ))}
@@ -1031,6 +1053,8 @@ export default function AppLayout({ children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useUnread(user);
   const onboarding = useOnboardingStatus(user);
+  const socketCtx = useSocket();
+  const unreadMessages = socketCtx?.unreadCount || 0;
 
   async function handleLogout() {
     await logout();
@@ -1064,6 +1088,19 @@ export default function AppLayout({ children }) {
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
             {user ? (
               <>
+                <Link
+                  to="/messages"
+                  className="relative rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                  title="Messages"
+                  aria-label="Messages"
+                >
+                  <Icon name="messages" className="h-5 w-5" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-bold text-white shadow-xs">
+                      {unreadMessages > 99 ? "99+" : unreadMessages}
+                    </span>
+                  )}
+                </Link>
                 <NotificationPopover unreadCount={unread} onUnreadChange={setUnread} />
                 <UserMenu user={user} unread={unread} onLogout={handleLogout} onboarding={onboarding} />
               </>

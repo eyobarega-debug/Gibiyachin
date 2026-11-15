@@ -1,5 +1,16 @@
 const service = require("./service");
-const { asyncHandler } = require("../../utils/errors");
+const { asyncHandler, badRequest } = require("../../utils/errors");
+const { processEvidenceUpload, serveEvidenceFile } = require("./evidence");
+
+const uploadEvidenceFile = asyncHandler(async (req, res) => {
+  if (!req.file) throw badRequest("No file uploaded (expected multipart field 'file')");
+  const result = await processEvidenceUpload(req.file);
+  res.status(201).json({ url: `/api/lost-found/evidence/${result.filename}`, filename: result.filename });
+});
+
+const getEvidenceFile = asyncHandler(async (req, res) => {
+  await serveEvidenceFile(req, res);
+});
 
 const createItem = asyncHandler(async (req, res) => {
   const item = await service.createItem(req.body, req.user, req.tenant);
@@ -92,4 +103,6 @@ module.exports = {
   disputeClaim,
   adminListItems,
   adminModerateItem,
+  uploadEvidenceFile,
+  getEvidenceFile,
 };

@@ -68,7 +68,7 @@ router.get(
   "/:id",
   asyncHandler(async (req, res) => {
     const { rows } = await db.query(
-      `SELECT p.*, s.name AS store_name, s.id AS store_id, s.university_id,
+      `SELECT p.*, s.name AS store_name, s.id AS store_id, s.merchant_id, s.university_id,
               COALESCE(AVG(r.rating),0)::float AS avg_rating, COUNT(r.id) AS review_count,
               (SELECT COALESCE(AVG(r2.rating),0)::float FROM reviews r2
                 WHERE r2.target_type = 'store' AND r2.target_id = s.id) AS store_avg_rating,
@@ -77,7 +77,7 @@ router.get(
        FROM products p JOIN stores s ON s.id = p.store_id
        LEFT JOIN reviews r ON r.target_type = 'product' AND r.target_id = p.id
        WHERE p.id = $1 AND p.status <> 'removed'
-       GROUP BY p.id, s.name, s.id, s.university_id`,
+       GROUP BY p.id, s.name, s.id, s.merchant_id, s.university_id`,
       [req.params.id]
     );
     if (!rows[0]) throw notFound("This product is no longer available");

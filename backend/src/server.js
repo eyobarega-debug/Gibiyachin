@@ -34,11 +34,15 @@ function validateProductionConfig() {
 }
 
 validateProductionConfig();
+const http = require("http");
 const app = require("./app");
+const { initSocketServer } = require("./realtime/socket");
 
 const PORT = process.env.PORT || 4000;
+const server = http.createServer(app);
+initSocketServer(server);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   // Manual payments with no proof uploaded inside their window are failed and
 // their stock / seat / dates released. Skipped under test so scripts stay deterministic.
 if (process.env.NODE_ENV !== "test") {

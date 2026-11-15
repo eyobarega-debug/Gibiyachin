@@ -24,6 +24,7 @@ export function ToastProvider({ children }) {
   const api = useMemo(
     () => ({
       toast: push,
+      showToast: (m, tone = "info", d) => push(m, tone, d),
       success: (m, d) => push(m, "success", d),
       error: (m, d) => push(m, "error", d),
       info: (m, d) => push(m, "info", d),
@@ -82,7 +83,7 @@ export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) {
     // Safe no-op fallback so components can be used without the provider.
-    return { toast() {}, success() {}, error() {}, info() {}, warn() {} };
+    return { toast() {}, showToast() {}, success() {}, error() {}, info() {}, warn() {} };
   }
   return ctx;
 }

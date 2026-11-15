@@ -74,6 +74,30 @@ export default function ProductDetail() {
     }
   }
 
+  async function messageSeller() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!product.merchant_id) return;
+    try {
+      const { data } = await client.post("/messages/conversations", {
+        recipientId: product.merchant_id,
+        type: "marketplace",
+        contextType: "product",
+        contextId: product.id,
+        contextData: {
+          title: product.title,
+          price: product.price,
+          image: product.images?.[0] || null,
+        },
+      });
+      navigate(`/messages/${data.id}`);
+    } catch (err) {
+      setError(errMsg(err, "Could not start chat with seller"));
+    }
+  }
+
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>;
   if (loadError || !product) {
     return (
@@ -150,6 +174,12 @@ export default function ProductDetail() {
                 <Icon name="favorites" className={`h-4 w-4 ${favorited ? "fill-current text-rose-500" : ""}`} />
                 {favorited ? "Saved" : "Save"}
               </Button>
+              {product.merchant_id && product.merchant_id !== user?.id && (
+                <Button variant="outline" onClick={messageSeller}>
+                  <Icon name="messages" className="h-4 w-4" />
+                  Message Seller
+                </Button>
+              )}
             </div>
           )}
           {!user && <p className="mt-6 text-sm text-slate-500 border-t border-slate-200/80 pt-5">Log in as a student to purchase this product.</p>}

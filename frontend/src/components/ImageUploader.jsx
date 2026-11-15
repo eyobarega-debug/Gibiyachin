@@ -2,7 +2,7 @@ import { useState } from "react";
 import { client } from "../api/client";
 import Icon from "./Icon";
 
-export default function ImageUploader({ value = [], onChange, max = 4 }) {
+export default function ImageUploader({ value = [], onChange, max = 4, uploadEndpoint = "/uploads" }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
@@ -16,7 +16,7 @@ export default function ImageUploader({ value = [], onChange, max = 4 }) {
       for (const file of files) {
         const form = new FormData();
         form.append("file", file);
-        const { data } = await client.post("/uploads", form);
+        const { data } = await client.post(uploadEndpoint, form);
         uploaded.push(data.url);
       }
       onChange([...value, ...uploaded]);
