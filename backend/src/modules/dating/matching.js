@@ -81,10 +81,15 @@ async function getDiscoveryCandidates(userId, universityId, limit = 20) {
 
   // Gender preferences
   const interested = Array.isArray(myPref.interested_in) ? myPref.interested_in : ["all"];
-  if (interested.includes("men") && !interested.includes("all")) {
-    conditions.push("dp.gender = 'man'");
-  } else if (interested.includes("women") && !interested.includes("all")) {
-    conditions.push("dp.gender = 'woman'");
+  const wantsAll = interested.includes("all") || interested.includes("everyone") || interested.length === 0;
+  if (!wantsAll) {
+    const wantsMen = interested.some((i) => ["men", "man", "male"].includes(i));
+    const wantsWomen = interested.some((i) => ["women", "woman", "female"].includes(i));
+    if (wantsMen && !wantsWomen) {
+      conditions.push("dp.gender = 'man'");
+    } else if (wantsWomen && !wantsMen) {
+      conditions.push("dp.gender = 'woman'");
+    }
   }
 
   // Exclude already swiped profiles

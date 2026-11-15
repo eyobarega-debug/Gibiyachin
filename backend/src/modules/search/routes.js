@@ -12,7 +12,7 @@ router.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 const searchParamsSchema = z.object({
   q: z.string().max(200).optional().default(""),
-  type: z.enum(["all", "products", "listings", "rentals", "events", "lost_found"]).optional().default("all"),
+  type: z.enum(["all", "products", "listings", "rentals", "events", "lost_found", "communities", "posts"]).optional().default("all"),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
   sort: z.enum(["relevance", "price_asc", "price_desc", "newest"]).optional().default("relevance"),
@@ -56,8 +56,8 @@ router.get(
         query: rawTerm,
         type,
         results: [],
-        grouped: { products: [], listings: [], rentals: [], events: [], lost_found: [] },
-        counts: { all: 0, products: 0, listings: 0, rentals: 0, events: 0, lost_found: 0 },
+        grouped: { products: [], listings: [], rentals: [], events: [], lost_found: [], communities: [], posts: [] },
+        counts: { all: 0, products: 0, listings: 0, rentals: 0, events: 0, lost_found: 0, communities: 0, posts: 0 },
         pagination: { page, limit, total: 0, totalPages: 0 },
       });
     }
@@ -153,8 +153,32 @@ router.get(
       countPromises.push(Promise.resolve(0));
     }
 
-    const [productCount, listingCount, rentalCount, eventCount, lostFoundCount] = await Promise.all(countPromises);
-    const totalAll = productCount + listingCount + rentalCount + eventCount + lostFoundCount;
+    // Communities count
+    const commCountConditions = ["c.type != 'private'"];
+    const commCountParams = [containsPattern];
+    commCountConditions.push(`(c.name ILIKE $1 OR c.description ILIKE $1 OR c.category ILIKE $1)`);
+    scopeTo(req, "c.university_id", commCountConditions, commCountParams);
+    const commCountSql = `
+      SELECT COUNT(c.id)::int AS count
+      FROM communities c
+      WHERE ${commCountConditions.join(" AND ")}
+    `;
+    countPromises.push(db.query(commCountSql, commCountParams).then((r) => r.rows[0]?.count || 0));
+
+    // Posts count (public university-wide posts only)
+    const postCountConditions = ["sp.status = 'published'", "sp.audience = 'university'"];
+    const postCountParams = [containsPattern];
+    postCountConditions.push(`(sp.content ILIKE $1 OR sp.location ILIKE $1)`);
+    scopeTo(req, "sp.university_id", postCountConditions, postCountParams);
+    const postCountSql = `
+      SELECT COUNT(sp.id)::int AS count
+      FROM social_posts sp
+      WHERE ${postCountConditions.join(" AND ")}
+    `;
+    countPromises.push(db.query(postCountSql, postCountParams).then((r) => r.rows[0]?.count || 0));
+
+    const [productCount, listingCount, rentalCount, eventCount, lostFoundCount, communityCount, postCount] = await Promise.all(countPromises);
+    const totalAll = productCount + listingCount + rentalCount + eventCount + lostFoundCount + communityCount + postCount;
 
     const counts = {
       all: totalAll,
@@ -163,6 +187,8 @@ router.get(
       rentals: rentalCount,
       events: eventCount,
       lost_found: lostFoundCount,
+      communities: communityCount,
+      posts: postCount,
     };
 
     // ------------------------------------------------------------------
@@ -451,6 +477,118 @@ router.get(
       return rows.map(formatLostFoundItem);
     }
 
+    async function fetchCommunities(fetchLimit, fetchOffset) {
+      const cConditions = ["c.type != 'private'"];
+      const cParams = [containsPattern];
+      cConditions.push(`(c.name ILIKE $1 OR c.description ILIKE $1 OR c.category ILIKE $1)`);
+      scopeTo(req, "c.university_id", cConditions, cParams);
+
+      const exactIdx = cParams.push(rawTerm);
+      const prefixIdx = cParams.push(prefixPattern);
+      const limitIdx = cParams.push(fetchLimit);
+      const offsetIdx = cParams.push(fetchOffset);
+
+      const sql = `
+        SELECT
+          c.id,
+          'community' AS type,
+          c.name AS title,
+          COALESCE(c.description, '') AS description,
+          c.avatar_url AS image,
+          NULL::float AS price,
+          'ETB' AS price_unit,
+          c.created_at AS date,
+          ('/community/communities/' || c.id::text) AS destination_url,
+          c.category,
+          c.members_count,
+          c.type AS community_type,
+          c.created_at,
+          CASE
+            WHEN LOWER(c.name) = LOWER($${exactIdx}) THEN 1
+            WHEN LOWER(c.name) LIKE LOWER($${prefixIdx}) THEN 2
+            ELSE 3
+          END AS rank_score
+        FROM communities c
+        WHERE ${cConditions.join(" AND ")}
+        ORDER BY rank_score ASC, c.members_count DESC
+        LIMIT $${limitIdx} OFFSET $${offsetIdx}
+      `;
+
+      const { rows } = await db.query(sql, cParams);
+      return rows.map((r) => ({
+        id: r.id,
+        type: "community",
+        title: r.title,
+        description: r.description,
+        image: r.image,
+        price: null,
+        priceUnit: null,
+        date: r.date,
+        destinationUrl: r.destination_url,
+        category: r.category,
+        membersCount: r.members_count,
+        communityType: r.community_type,
+        created_at: r.created_at,
+        rankScore: r.rank_score,
+      }));
+    }
+
+    async function fetchPosts(fetchLimit, fetchOffset) {
+      const pConditions = ["sp.status = 'published'", "sp.audience = 'university'"];
+      const pParams = [containsPattern];
+      pConditions.push(`(sp.content ILIKE $1 OR sp.location ILIKE $1)`);
+      scopeTo(req, "sp.university_id", pConditions, pParams);
+
+      const exactIdx = pParams.push(rawTerm);
+      const prefixIdx = pParams.push(prefixPattern);
+      const limitIdx = pParams.push(fetchLimit);
+      const offsetIdx = pParams.push(fetchOffset);
+
+      const sql = `
+        SELECT
+          sp.id,
+          'post' AS type,
+          SUBSTRING(sp.content FROM 1 FOR 80) AS title,
+          sp.content AS description,
+          (CASE WHEN array_length(sp.images, 1) > 0 THEN sp.images[1] ELSE NULL END) AS image,
+          NULL::float AS price,
+          'ETB' AS price_unit,
+          sp.created_at AS date,
+          ('/confessions?post=' || sp.id::text) AS destination_url,
+          sp.category,
+          sp.likes_count,
+          sp.comments_count,
+          sp.created_at,
+          CASE
+            WHEN LOWER(sp.content) = LOWER($${exactIdx}) THEN 1
+            WHEN LOWER(sp.content) LIKE LOWER($${prefixIdx}) THEN 2
+            ELSE 3
+          END AS rank_score
+        FROM social_posts sp
+        WHERE ${pConditions.join(" AND ")}
+        ORDER BY rank_score ASC, sp.created_at DESC
+        LIMIT $${limitIdx} OFFSET $${offsetIdx}
+      `;
+
+      const { rows } = await db.query(sql, pParams);
+      return rows.map((r) => ({
+        id: r.id,
+        type: "post",
+        title: r.title,
+        description: r.description,
+        image: r.image,
+        price: null,
+        priceUnit: null,
+        date: r.date,
+        destinationUrl: r.destination_url,
+        category: r.category,
+        likesCount: r.likes_count,
+        commentsCount: r.comments_count,
+        created_at: r.created_at,
+        rankScore: r.rank_score,
+      }));
+    }
+
     let results = [];
     const grouped = {
       products: [],
@@ -458,6 +596,8 @@ router.get(
       rentals: [],
       events: [],
       lost_found: [],
+      communities: [],
+      posts: [],
     };
     let total = 0;
 
@@ -481,17 +621,27 @@ router.get(
       results = await fetchLostFound(limit, offset);
       grouped.lost_found = results;
       total = lostFoundCount;
+    } else if (type === "communities") {
+      results = await fetchCommunities(limit, offset);
+      grouped.communities = results;
+      total = communityCount;
+    } else if (type === "posts") {
+      results = await fetchPosts(limit, offset);
+      grouped.posts = results;
+      total = postCount;
     } else {
       // type === "all"
       total = totalAll;
 
       // Grouped previews for dropdown / multi-category view
-      const [prodSample, listSample, rentSample, eventSample, lostFoundSample] = await Promise.all([
+      const [prodSample, listSample, rentSample, eventSample, lostFoundSample, commSample, postSample] = await Promise.all([
         productCount > 0 ? fetchProducts(Math.min(limit, 8), 0) : Promise.resolve([]),
         listingCount > 0 ? fetchListings(Math.min(limit, 8), 0) : Promise.resolve([]),
         rentalCount > 0 ? fetchRentals(Math.min(limit, 8), 0) : Promise.resolve([]),
         eventCount > 0 ? fetchEvents(Math.min(limit, 8), 0) : Promise.resolve([]),
         lostFoundCount > 0 ? fetchLostFound(Math.min(limit, 8), 0) : Promise.resolve([]),
+        communityCount > 0 ? fetchCommunities(Math.min(limit, 8), 0) : Promise.resolve([]),
+        postCount > 0 ? fetchPosts(Math.min(limit, 8), 0) : Promise.resolve([]),
       ]);
 
       grouped.products = prodSample;
@@ -499,9 +649,19 @@ router.get(
       grouped.rentals = rentSample;
       grouped.events = eventSample;
       grouped.lost_found = lostFoundSample;
+      grouped.communities = commSample;
+      grouped.posts = postSample;
 
       // Combine across entities, sort by rank_score & sort criterion, then slice page/limit
-      const combined = [...prodSample, ...listSample, ...rentSample, ...eventSample, ...lostFoundSample];
+      const combined = [
+        ...prodSample,
+        ...listSample,
+        ...rentSample,
+        ...eventSample,
+        ...lostFoundSample,
+        ...commSample,
+        ...postSample,
+      ];
       combined.sort((a, b) => {
         if (a.rankScore !== b.rankScore) return a.rankScore - b.rankScore;
         if (sort === "price_asc") return (a.price ?? 0) - (b.price ?? 0);

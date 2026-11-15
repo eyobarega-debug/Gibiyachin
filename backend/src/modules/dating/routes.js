@@ -24,8 +24,20 @@ router.param("matchId", (req, res, next, matchId) => {
   next();
 });
 
-// Rate limiting: 120 req/min
+// Rate limiting: 120 req/min general, dedicated limiters for swipes & reports
 router.use(rateLimit({ windowMs: 60_000, max: 120 }));
+
+const swipeLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  keyFn: (req) => `${req.user?.id || req.ip}:dating_swipe`,
+});
+
+const reportLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20,
+  keyFn: (req) => `${req.user?.id || req.ip}:dating_report`,
+});
 
 // University Feature Flag: default enabled unless explicitly turned off
 router.use(requireFeature("dating"));
@@ -50,7 +62,7 @@ router.put("/preferences", validate({ body: preferencesSchema }), controller.upd
 // ------------------------------------------------------------------
 
 router.get("/discover", controller.getDiscovery);
-router.post("/swipe", validate({ body: swipeSchema }), controller.swipe);
+router.post("/swipe", swipeLimiter, validate({ body: swipeSchema }), controller.swipe);
 
 // ------------------------------------------------------------------
 // 3. Matches & Unmatching
@@ -63,6 +75,6 @@ router.post("/matches/:matchId/unmatch", controller.unmatch);
 // 4. Safety & Reporting
 // ------------------------------------------------------------------
 
-router.post("/report", validate({ body: reportDatingSchema }), controller.report);
+router.post("/report", reportLimiter, validate({ body: reportDatingSchema }), controller.report);
 
 module.exports = router;

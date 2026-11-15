@@ -22,6 +22,7 @@ function formatConversation(row, currentUserId) {
     isArchived: Boolean(row.is_archived),
     isMuted: Boolean(row.is_muted),
     unreadCount: parseInt(row.unread_count || "0", 10),
+    isDatingUnmatched: Boolean(row.is_dating_unmatched),
     participant: row.other_user_id
       ? {
           id: row.other_user_id,
@@ -75,7 +76,13 @@ async function getConversations(userId, universityId, { type, search, archived =
         SELECT 1 FROM user_blocks ub
         WHERE (ub.blocker_id = $1 AND ub.blocked_id = other_u.id)
            OR (ub.blocker_id = other_u.id AND ub.blocked_id = $1)
-      ) as is_blocked
+      ) as is_blocked,
+      CASE 
+        WHEN c.type = 'dating' AND c.context_id IS NOT NULL THEN COALESCE((
+          SELECT status != 'active' FROM dating_matches WHERE id::text = c.context_id
+        ), false)
+        ELSE false
+      END as is_dating_unmatched
     FROM conversations c
     JOIN conversation_participants cp ON cp.conversation_id = c.id
     LEFT JOIN conversation_participants other_cp ON other_cp.conversation_id = c.id AND other_cp.user_id != $1
@@ -149,6 +156,17 @@ async function getOrCreateConversation({ recipientId, type = "general", contextT
       LIMIT 1
     `;
     findParams = [userId, recipientId, contextType, contextId];
+  } else if (type === "dating") {
+    findQuery = `
+      SELECT c.id 
+      FROM conversations c
+      JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
+      JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
+      WHERE c.type = 'dating'
+      ORDER BY c.created_at DESC
+      LIMIT 1
+    `;
+    findParams = [userId, recipientId];
   } else {
     findQuery = `
       SELECT c.id 
@@ -215,7 +233,13 @@ async function getConversationById(conversationId, userId, universityId) {
         SELECT 1 FROM user_blocks ub
         WHERE (ub.blocker_id = $1 AND ub.blocked_id = other_u.id)
            OR (ub.blocker_id = other_u.id AND ub.blocked_id = $1)
-      ) as is_blocked
+      ) as is_blocked,
+      CASE 
+        WHEN c.type = 'dating' AND c.context_id IS NOT NULL THEN COALESCE((
+          SELECT status != 'active' FROM dating_matches WHERE id::text = c.context_id
+        ), false)
+        ELSE false
+      END as is_dating_unmatched
     FROM conversations c
     JOIN conversation_participants cp ON cp.conversation_id = c.id AND cp.user_id = $1
     LEFT JOIN conversation_participants other_cp ON other_cp.conversation_id = c.id AND other_cp.user_id != $1
@@ -319,7 +343,25 @@ async function sendMessage(conversationId, { content, attachments = [], replyToI
 
   const recipientIds = partRows.map((p) => p.user_id).filter((uid) => uid !== senderId);
 
-  // 2. Block check between participants
+  // 2. Dating unmatch check: ensure match is active if dating conversation
+  const { rows: convRows } = await db.query(
+    "SELECT type, context_type, context_id FROM conversations WHERE id = $1",
+    [conversationId]
+  );
+  if (convRows.length > 0 && convRows[0].type === "dating") {
+    const matchId = convRows[0].context_id;
+    if (matchId) {
+      const { rows: matchRows } = await db.query(
+        "SELECT status FROM dating_matches WHERE id::text = $1",
+        [String(matchId)]
+      );
+      if (matchRows.length > 0 && matchRows[0].status !== "active") {
+        throw forbidden("Messaging is disabled because this match has ended");
+      }
+    }
+  }
+
+  // 3. Block check between participants
   for (const recId of recipientIds) {
     const { rows: blockRows } = await db.query(
       `SELECT 1 FROM user_blocks 

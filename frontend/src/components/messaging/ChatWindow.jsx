@@ -216,17 +216,33 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Composer */}
-      <MessageComposer
-        conversationId={conversation.id}
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(null)}
-        editingMessage={editingMessage}
-        onCancelEdit={() => setEditingMessage(null)}
-        onSendMessage={onSendMessage}
-        onEditMessage={onEditMessage}
-        onTyping={onTyping}
-      />
+      {/* Composer or Disabled Notice */}
+      {conversation.isDatingUnmatched ? (
+        <div className="border-t border-slate-200 bg-slate-100/90 p-4 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600">
+            <Icon name="heart" className="h-4 w-4 text-slate-400" />
+            <span>This match has ended. Messaging is no longer available.</span>
+          </div>
+        </div>
+      ) : participant?.isBlocked ? (
+        <div className="border-t border-slate-200 bg-slate-100/90 p-4 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600">
+            <Icon name="ban" className="h-4 w-4 text-rose-500" />
+            <span>Messaging is unavailable because one or both users have blocked communication.</span>
+          </div>
+        </div>
+      ) : (
+        <MessageComposer
+          conversationId={conversation.id}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          editingMessage={editingMessage}
+          onCancelEdit={() => setEditingMessage(null)}
+          onSendMessage={onSendMessage}
+          onEditMessage={onEditMessage}
+          onTyping={onTyping}
+        />
+      )}
     </div>
   );
 }

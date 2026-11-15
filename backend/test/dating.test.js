@@ -119,6 +119,7 @@ before(async () => {
 });
 
 after(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 60));
   if (server) await new Promise((resolve) => server.close(resolve));
   if (cleanupUserIds.length) {
     await db.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [cleanupUserIds]).catch(() => {});

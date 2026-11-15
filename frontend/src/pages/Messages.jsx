@@ -44,6 +44,23 @@ export default function Messages() {
     loadConversations();
   }, [loadConversations]);
 
+  // If directly navigating to a conversation that is not yet in list, load its metadata
+  useEffect(() => {
+    if (routeConvId && !conversations.some((c) => c.id === routeConvId)) {
+      client
+        .get(`/messages/conversations/${routeConvId}`)
+        .then(({ data }) => {
+          if (data) {
+            setConversations((prev) => {
+              if (prev.some((c) => c.id === data.id)) return prev;
+              return [data, ...prev];
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [routeConvId, conversations]);
+
   // Load messages when active conversation changes
   const loadMessages = useCallback(
     async (convId) => {

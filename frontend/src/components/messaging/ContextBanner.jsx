@@ -14,7 +14,7 @@ export default function ContextBanner({ type, contextType, contextId, contextDat
   if (type === "dating" || contextType === "dating_match") {
     title = "Gibiyachin Connect Match ❤️";
     subtitle = "You matched! Say hello and break the ice.";
-    linkTo = "/dating";
+    linkTo = "/dating/matches";
     tone = "rose";
     iconName = "heart";
   } else if (contextType === "product" || type === "marketplace") {

@@ -72,6 +72,10 @@ app.use("/api/reports", tenant, require("./modules/reports/routes"));
 app.use("/api/notifications", tenant, require("./modules/notifications/routes"));
 app.use("/api/messages", tenant, require("./modules/messaging/routes"));
 app.use("/api/dating", tenant, require("./modules/dating/routes"));
+app.use("/api/confessions", tenant, require("./modules/social/routes"));
+app.use("/api/social", tenant, require("./modules/social/routes"));
+app.use("/api/communities", tenant, require("./modules/communities/routes"));
+app.use("/api/announcements", tenant, require("./modules/announcements/routes"));
 // External payment gateway webhooks (server-to-server POST, unauthenticated by JWT, tenant resolved per payment)
 app.use("/api/payments/webhook", require("./modules/payments/webhook.routes"));
 // Manual payment-with-proof routes must come first: the generic payments router below has GET /:id.

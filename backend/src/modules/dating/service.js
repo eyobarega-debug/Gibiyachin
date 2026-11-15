@@ -238,7 +238,18 @@ async function swipe(userId, universityId, { targetId, action }) {
     throw badRequest("You cannot swipe on your own profile");
   }
 
-  // 1. Verify user has an active dating profile
+  // 1. Block check: ensure users have not blocked each other
+  const { rows: blockRows } = await db.query(
+    `SELECT 1 FROM user_blocks 
+     WHERE (blocker_id = $1 AND blocked_id = $2)
+        OR (blocker_id = $2 AND blocked_id = $1)`,
+    [userId, targetId]
+  );
+  if (blockRows.length > 0) {
+    throw forbidden("Cannot interact with this profile because communication is blocked");
+  }
+
+  // 2. Verify user has an active dating profile
   const { rows: myRows } = await db.query(
     "SELECT id, user_id, display_name, avatar_url, status FROM dating_profiles WHERE user_id = $1",
     [userId]
@@ -248,7 +259,7 @@ async function swipe(userId, universityId, { targetId, action }) {
     throw forbidden("You must have an active Gibiyachin Connect profile to swipe");
   }
 
-  // 2. Verify target has an active dating profile
+  // 3. Verify target has an active dating profile
   const { rows: targetRows } = await db.query(
     `SELECT dp.*, uni.name as university_name 
      FROM dating_profiles dp 
@@ -261,7 +272,17 @@ async function swipe(userId, universityId, { targetId, action }) {
     throw notFound("Profile is no longer available");
   }
 
-  // 3. Record the swipe
+  // 4. Scoping & multi-tenant isolation check
+  const { rows: prefRows } = await db.query(
+    "SELECT same_university_only FROM dating_preferences WHERE user_id = $1",
+    [userId]
+  );
+  const sameUniOnly = prefRows[0] ? prefRows[0].same_university_only : true;
+  if (sameUniOnly && universityId && targetProfile.university_id !== universityId) {
+    throw forbidden("Cannot swipe on profiles from other universities under current preferences");
+  }
+
+  // 5. Record the swipe
   await db.query(
     `INSERT INTO dating_swipes (swiper_id, target_id, action)
      VALUES ($1, $2, $3)
@@ -274,7 +295,7 @@ async function swipe(userId, universityId, { targetId, action }) {
     return { passed: true, targetId };
   }
 
-  // 4. Check if target previously liked current user
+  // 6. Check if target previously liked current user
   const { rows: reverseSwipe } = await db.query(
     `SELECT action FROM dating_swipes WHERE swiper_id = $1 AND target_id = $2 AND action = 'like'`,
     [targetId, userId]
@@ -285,7 +306,7 @@ async function swipe(userId, universityId, { targetId, action }) {
     return { matched: false, targetId };
   }
 
-  // 5. IT'S A MATCH! Create match and dedicated dating conversation
+  // 7. IT'S A MATCH! Create match and dedicated dating conversation
   const minId = userId < targetId ? userId : targetId;
   const maxId = userId < targetId ? targetId : userId;
 
@@ -301,34 +322,52 @@ async function swipe(userId, universityId, { targetId, action }) {
     const m = matchRows[0];
 
     // Create or locate dating conversation
-    const contextData = {
-      matchId: m.id,
-      matchedAt: new Date().toISOString(),
-      userA: { id: userId, name: myProfile.display_name },
-      userB: { id: targetId, name: targetProfile.display_name },
-    };
+    let conv = null;
+    if (m.conversation_id) {
+      const { rows: existingConv } = await client.query(
+        "SELECT * FROM conversations WHERE id = $1",
+        [m.conversation_id]
+      );
+      if (existingConv.length > 0) {
+        conv = existingConv[0];
+      }
+    }
 
-    const { rows: convRows } = await client.query(
-      `INSERT INTO conversations (university_id, type, context_type, context_id, context_data, last_message_preview)
-       VALUES ($1, 'dating', 'dating_match', $2, $3, 'It''s a Match! Start your conversation.')
-       RETURNING *`,
-      [universityId || targetProfile.university_id, m.id, JSON.stringify(contextData)]
-    );
-    const conv = convRows[0];
+    if (!conv) {
+      const contextData = {
+        matchId: m.id,
+        matchedAt: new Date().toISOString(),
+        userA: { id: userId, name: myProfile.display_name },
+        userB: { id: targetId, name: targetProfile.display_name },
+      };
 
-    // Add both participants
-    await client.query(
-      `INSERT INTO conversation_participants (conversation_id, user_id)
-       VALUES ($1, $2), ($1, $3)
-       ON CONFLICT (conversation_id, user_id) DO NOTHING`,
-      [conv.id, userId, targetId]
-    );
+      const { rows: convRows } = await client.query(
+        `INSERT INTO conversations (university_id, type, context_type, context_id, context_data, last_message_preview)
+         VALUES ($1, 'dating', 'dating_match', $2, $3, 'It''s a Match! Start your conversation.')
+         RETURNING *`,
+        [universityId || targetProfile.university_id, m.id, JSON.stringify(contextData)]
+      );
+      conv = convRows[0];
 
-    // Link conversation to match
-    await client.query(
-      `UPDATE dating_matches SET conversation_id = $1 WHERE id = $2`,
-      [conv.id, m.id]
-    );
+      // Add both participants
+      await client.query(
+        `INSERT INTO conversation_participants (conversation_id, user_id)
+         VALUES ($1, $2), ($1, $3)
+         ON CONFLICT (conversation_id, user_id) DO NOTHING`,
+        [conv.id, userId, targetId]
+      );
+
+      // Link conversation to match
+      await client.query(
+        `UPDATE dating_matches SET conversation_id = $1 WHERE id = $2`,
+        [conv.id, m.id]
+      );
+    } else {
+      await client.query(
+        `UPDATE conversations SET last_message_preview = 'It''s a Match! Start your conversation.', updated_at = NOW() WHERE id = $1`,
+        [conv.id]
+      );
+    }
 
     return { match: m, conversation: conv };
   });
@@ -438,6 +477,27 @@ async function unmatch(userId, matchId) {
     [userId, matchId]
   );
 
+  // If a conversation was linked to this match, update preview and emit event
+  if (match.conversation_id) {
+    await db.query(
+      `UPDATE conversations 
+       SET last_message_preview = '[Match ended]', updated_at = NOW() 
+       WHERE id = $1`,
+      [match.conversation_id]
+    );
+
+    emitToUser(match.user_a_id, "conversation:updated", {
+      conversationId: match.conversation_id,
+      isDatingUnmatched: true,
+      lastMessagePreview: "[Match ended]",
+    });
+    emitToUser(match.user_b_id, "conversation:updated", {
+      conversationId: match.conversation_id,
+      isDatingUnmatched: true,
+      lastMessagePreview: "[Match ended]",
+    });
+  }
+
   return { success: true, matchId };
 }
 
@@ -485,6 +545,36 @@ async function reportDatingProfile(reporterId, universityId, { targetId, categor
      ON CONFLICT (blocker_id, blocked_id) DO NOTHING`,
     [reporterId, targetId, `Dating report: ${description}`]
   );
+
+  // 4. Update any existing active match to 'blocked'
+  const minId = reporterId < targetId ? reporterId : targetId;
+  const maxId = reporterId < targetId ? targetId : reporterId;
+  const { rows: matchRows } = await db.query(
+    `UPDATE dating_matches 
+     SET status = 'blocked', unmatched_by = $1, unmatched_at = NOW(), updated_at = NOW() 
+     WHERE user_a_id = $2 AND user_b_id = $3 AND status = 'active'
+     RETURNING conversation_id`,
+    [reporterId, minId, maxId]
+  );
+
+  if (matchRows.length > 0 && matchRows[0].conversation_id) {
+    await db.query(
+      `UPDATE conversations 
+       SET last_message_preview = '[User blocked]', updated_at = NOW() 
+       WHERE id = $1`,
+      [matchRows[0].conversation_id]
+    );
+    emitToUser(reporterId, "conversation:updated", {
+      conversationId: matchRows[0].conversation_id,
+      isDatingUnmatched: true,
+      lastMessagePreview: "[User blocked]",
+    });
+    emitToUser(targetId, "conversation:updated", {
+      conversationId: matchRows[0].conversation_id,
+      isDatingUnmatched: true,
+      lastMessagePreview: "[User blocked]",
+    });
+  }
 
   return { success: true, reportId: rows[0].id };
 }

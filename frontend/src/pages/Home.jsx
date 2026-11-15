@@ -18,16 +18,16 @@ function categoryIcon(name = "") {
 
 const QUICK_ACTIONS = {
   guest: [
-    { to: "/register", icon: "user", label: "Create account", desc: "Join your campus marketplace" },
+    { to: "/confessions", icon: "fire", label: "Confessions ❤️🔥", desc: "Secret campus thoughts" },
     { to: "/marketplace", icon: "marketplace", label: "Browse marketplace", desc: "Explore verified merchants" },
     { to: "/events", icon: "events", label: "Explore events", desc: "Find tickets to campus happenings" },
     { to: "/lost-found", icon: "lost_found", label: "Lost & Found", desc: "Report & discover items" },
   ],
   student: [
+    { to: "/confessions", icon: "fire", label: "Confessions ❤️🔥", desc: "Secret campus stories" },
     { to: "/marketplace", icon: "marketplace", label: "Browse marketplace", desc: "Buy from verified merchants" },
     { to: "/lost-found", icon: "lost_found", label: "Lost & Found", desc: "Report or reclaim items" },
     { to: "/orders", icon: "orders", label: "My orders", desc: "Track purchases & pickup" },
-    { to: "/tickets", icon: "tickets", label: "My tickets", desc: "Your QR event passes" },
   ],
   merchant: [
     { to: "/merchant", icon: "products", label: "Post product", desc: "Add to your storefront" },
@@ -448,6 +448,33 @@ export default function Home() {
               className="rounded-2xl bg-white/10 px-5 py-2.5 text-xs font-bold text-white border border-white/30 backdrop-blur-xs transition hover:bg-white/20"
             >
               Open Messenger
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Gibiyachin Confessions ❤️🔥 Campus Anonymous Wall Banner ------------ */}
+      <section className="relative overflow-hidden rounded-3xl border border-rose-200 bg-linear-to-r from-purple-900 via-rose-950 to-slate-900 p-8 sm:p-10 text-white shadow-xl">
+        <div className="relative z-10 max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
+            <Icon name="mask" className="h-3.5 w-3.5" />
+            100% Anonymous • Gibiyachin Confessions
+          </span>
+          <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+            Gibiyachin Confessions ❤️🔥
+          </h2>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-rose-300">
+            "Your thoughts. Your stories. No identities."
+          </p>
+          <p className="mt-2 text-sm text-slate-200 leading-relaxed">
+            Spill the campus tea, confess your secret crush, rant about exams, or share funny university moments in complete secrecy.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              to="/confessions"
+              className="rounded-2xl bg-linear-to-r from-rose-500 to-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:scale-105 active:scale-95"
+            >
+              Enter Confession Wall
             </Link>
           </div>
         </div>

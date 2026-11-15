@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ToastProvider } from "./components/Toast";
@@ -56,6 +56,12 @@ import Dating from "./pages/Dating";
 import DatingMatches from "./pages/DatingMatches";
 import DatingProfile from "./pages/DatingProfile";
 import DatingSettings from "./pages/DatingSettings";
+import SocialFeed from "./pages/SocialFeed";
+import ExploreCommunities from "./pages/ExploreCommunities";
+import CommunityDetails from "./pages/CommunityDetails";
+import CreateCommunity from "./pages/CreateCommunity";
+import SavedPosts from "./pages/SavedPosts";
+import Announcements from "./pages/Announcements";
 import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SuperAdminApplications from "./pages/superadmin/SuperAdminApplications";
@@ -151,6 +157,20 @@ export default function App() {
             <Route path="/dating/matches" element={<ProtectedRoute><DatingMatches /></ProtectedRoute>} />
             <Route path="/dating/profile" element={<ProtectedRoute><DatingProfile /></ProtectedRoute>} />
             <Route path="/dating/settings" element={<ProtectedRoute><DatingSettings /></ProtectedRoute>} />
+
+            <Route path="/confessions" element={<SocialFeed />} />
+            <Route path="/confessions/my-posts" element={<ProtectedRoute><SocialFeed initialTab="my_posts" /></ProtectedRoute>} />
+            <Route path="/confessions/saved" element={<ProtectedRoute><SavedPosts /></ProtectedRoute>} />
+            <Route path="/confessions/:id" element={<SocialFeed />} />
+
+            <Route path="/community" element={<Navigate to="/confessions" replace />} />
+            <Route path="/community/feed" element={<Navigate to="/confessions" replace />} />
+            <Route path="/community/explore" element={<ExploreCommunities />} />
+            <Route path="/community/communities/:id" element={<CommunityDetails />} />
+            <Route path="/community/create-community" element={<ProtectedRoute><CreateCommunity /></ProtectedRoute>} />
+            <Route path="/community/saved" element={<Navigate to="/confessions/saved" replace />} />
+            <Route path="/community/announcements" element={<Announcements />} />
+
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/:id" element={<PublicProfile />} />
             <Route path="/verify" element={<ProtectedRoute><VerifyCampus /></ProtectedRoute>} />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Icon from "../Icon";
 
 export default function DatingCard({
@@ -9,14 +9,18 @@ export default function DatingCard({
   disabled = false,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, moved: false });
 
   if (!candidate) return null;
 
-  const photos = candidate.photos && candidate.photos.length > 0
-    ? candidate.photos
-    : candidate.avatarUrl
-    ? [candidate.avatarUrl]
-    : [];
+  const photos =
+    candidate.photos && candidate.photos.length > 0
+      ? candidate.photos
+      : candidate.avatarUrl
+      ? [candidate.avatarUrl]
+      : [];
 
   function nextPhoto(e) {
     e.stopPropagation();
@@ -32,18 +36,94 @@ export default function DatingCard({
     }
   }
 
+  function handlePointerDown(e) {
+    if (disabled) return;
+    // Don't drag if tapping interactive buttons or photo navigation
+    if (e.target.closest("button") || e.target.closest("a")) return;
+
+    dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false };
+    setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  }
+
+  function handlePointerMove(e) {
+    if (!isDragging) return;
+    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaY = e.clientY - dragStartRef.current.y;
+
+    if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
+      dragStartRef.current.moved = true;
+    }
+
+    setDragOffset(deltaX);
+  }
+
+  function handlePointerUp(e) {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+
+    const deltaX = dragOffset;
+    setDragOffset(0);
+
+    // Swipe threshold: 90px
+    if (deltaX > 90) {
+      onLike(candidate.userId);
+    } else if (deltaX < -90) {
+      onPass(candidate.userId);
+    }
+  }
+
+  const rotation = dragOffset * 0.06;
+  const likeOpacity = Math.min(1, Math.max(0, (dragOffset - 30) / 70));
+  const nopeOpacity = Math.min(1, Math.max(0, (-dragOffset - 30) / 70));
+
   return (
-    <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xl transition-all duration-300">
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{
+        transform: `translate3d(${dragOffset}px, 0, 0) rotate(${rotation}deg)`,
+        transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28)",
+        touchAction: "pan-y",
+      }}
+      className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xl cursor-grab active:cursor-grabbing select-none"
+    >
+      {/* Swipe Stamps */}
+      {likeOpacity > 0 && (
+        <div
+          style={{ opacity: likeOpacity }}
+          className="absolute top-6 left-6 z-30 pointer-events-none rounded-2xl border-4 border-emerald-500 bg-emerald-500/20 px-4 py-1 font-black uppercase tracking-wider text-emerald-600 shadow-lg -rotate-12 backdrop-blur-xs text-xl"
+        >
+          LIKE ❤️
+        </div>
+      )}
+      {nopeOpacity > 0 && (
+        <div
+          style={{ opacity: nopeOpacity }}
+          className="absolute top-6 right-6 z-30 pointer-events-none rounded-2xl border-4 border-rose-500 bg-rose-500/20 px-4 py-1 font-black uppercase tracking-wider text-rose-600 shadow-lg rotate-12 backdrop-blur-xs text-xl"
+        >
+          PASS ✕
+        </div>
+      )}
+
       {/* Photo Gallery Box */}
       <div className="relative h-96 w-full bg-slate-900 overflow-hidden select-none">
         {photos.length > 0 ? (
           <img
             src={photos[photoIndex]}
             alt=""
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover pointer-events-none"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-slate-800 to-slate-950 text-slate-500">
+          <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-slate-800 to-slate-950 text-slate-500 pointer-events-none">
             <Icon name="user" className="h-20 w-20 text-slate-600" />
           </div>
         )}
@@ -54,7 +134,7 @@ export default function DatingCard({
             <button
               type="button"
               onClick={prevPhoto}
-              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs hover:bg-black/60 transition"
+              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs hover:bg-black/60 transition z-20"
               aria-label="Previous photo"
             >
               <Icon name="arrowLeft" className="h-4 w-4" />
@@ -62,7 +142,7 @@ export default function DatingCard({
             <button
               type="button"
               onClick={nextPhoto}
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs hover:bg-black/60 transition"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs hover:bg-black/60 transition z-20"
               aria-label="Next photo"
             >
               <Icon name="arrowRight" className="h-4 w-4" />
@@ -86,7 +166,7 @@ export default function DatingCard({
         <div className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
         {/* Name & Age Overlay on photo bottom */}
-        <div className="absolute bottom-3 left-4 right-4 text-white">
+        <div className="absolute bottom-3 left-4 right-4 text-white pointer-events-none">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-black tracking-tight drop-shadow-md">
               {candidate.displayName}, {candidate.age}
@@ -107,7 +187,7 @@ export default function DatingCard({
           type="button"
           onClick={() => onReport(candidate)}
           title="Report profile"
-          className="absolute top-3 right-3 rounded-full bg-black/40 p-1.5 text-white/80 hover:bg-black/70 hover:text-white transition z-10"
+          className="absolute top-3 right-3 rounded-full bg-black/40 p-1.5 text-white/80 hover:bg-black/70 hover:text-white transition z-20"
         >
           <Icon name="alert" className="h-4 w-4" />
         </button>

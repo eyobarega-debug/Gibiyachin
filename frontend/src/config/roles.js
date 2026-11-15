@@ -16,6 +16,7 @@ export const TABS = [
   { key: "events", label: "Events", to: "/events", icon: "events", section: "Main" },
   { key: "rentals", label: "Rentals", to: "/rentals", icon: "rentals", section: "Main" },
   { key: "listings", label: "P2P Market", to: "/listings", icon: "listings", section: "Main" },
+  { key: "confessions", label: "Confessions ❤️🔥", to: "/confessions", icon: "fire", section: "Main" },
   { key: "lost_found", label: "Lost & Found", to: "/lost-found", icon: "lost_found", section: "Main" },
   { key: "messages", label: "Messages", to: "/messages", icon: "messages", section: "Main" },
   { key: "dating", label: "Connect ❤️", to: "/dating", icon: "heart", section: "Main" },
@@ -24,6 +25,8 @@ export const TABS = [
   { key: "orders", label: "My Orders", to: "/orders", icon: "orders", section: "My Activity", roles: ["student"] },
   { key: "tickets", label: "My Tickets", to: "/tickets", icon: "tickets", section: "My Activity", roles: ["student"] },
   { key: "favorites", label: "Favorites", to: "/favorites", icon: "favorites", section: "My Activity", roles: ["student"] },
+  { key: "my_confessions", label: "My Confessions", to: "/confessions/my-posts", icon: "confession", section: "My Activity", roles: ["student"] },
+  { key: "saved_confessions", label: "Saved Confessions", to: "/confessions/saved", icon: "bookmark", section: "My Activity", roles: ["student"] },
   { key: "payments_student", label: "Payments", to: "/payment-approvals", icon: "payments", section: "My Activity", roles: ["student"] },
   { key: "my_lost_found", label: "My Lost & Found", to: "/lost-found/my-items", icon: "lost_found", section: "My Activity", roles: ["student"] },
 
